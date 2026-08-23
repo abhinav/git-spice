@@ -56,6 +56,7 @@ func (g *Gateway) ReviewCapabilities(
 			version, build, _reviewMinVersion, _reviewMinBuildNumber),
 	}
 	capabilities.NativeDrafts = capabilities.Supported
+	capabilities.FileLevel = capabilities.Supported
 	capabilities.ThreadResolution = versionAtLeast(
 		version, build, _resolutionMinVersion, _resolutionMinBuild)
 	capabilities.Multiline = versionAtLeast(
@@ -126,6 +127,9 @@ func (g *Gateway) ReviewAnchor(
 	lines forge.ReviewThreadRange,
 	side forge.ReviewThreadSide,
 ) (bitbucket.ReviewAnchor, error) {
+	if lines.IsZero() {
+		return bitbucket.ReviewAnchor{}, nil
+	}
 	diff, _, err := g.client.PullRequestDiff(
 		ctx,
 		g.repoID.restProjectKey(),
@@ -265,8 +269,27 @@ func reviewThreadFromServerComment(
 	comment *Comment,
 ) (*bitbucket.ReviewThread, error) {
 	anchor := comment.Anchor
+	if isGeneralFileAnchor(anchor) {
+		thread := &bitbucket.ReviewThread{
+			RootCommentID: comment.ID,
+			Path:          reviewPath(anchor.Path),
+			Resolved:      comment.ThreadResolved,
+		}
+		appendServerReviewComment(&thread.Comments, comment)
+		return thread, nil
+	}
+	if anchor.Line <= 0 || anchor.LineType == "" {
+		return nil, fmt.Errorf(
+			"review comment %d has malformed line anchor", comment.ID)
+	}
 	start := anchor.Line
 	if anchor.MultilineMarker != nil {
+		if anchor.MultilineMarker.StartLine <= 0 ||
+			anchor.MultilineMarker.StartLine > anchor.Line ||
+			anchor.MultilineMarker.StartLineType == "" {
+			return nil, fmt.Errorf(
+				"review comment %d has malformed multiline anchor", comment.ID)
+		}
 		start = anchor.MultilineMarker.StartLine
 	}
 	var side forge.ReviewThreadSide
@@ -292,6 +315,24 @@ func reviewThreadFromServerComment(
 	}
 	appendServerReviewComment(&thread.Comments, comment)
 	return thread, nil
+}
+
+// isGeneralFileAnchor recognizes Data Center's general file-comment shape.
+// The API uses a RANGE anchor with both revisions, path, and srcPath, but no
+// fileType or line fields. Requiring that complete shape keeps missing line data
+// from being interpreted as a file-level thread.
+//
+// See https://developer.atlassian.com/server/bitbucket/rest/v904/api-group-pull-requests/
+func isGeneralFileAnchor(anchor *CommentAnchor) bool {
+	return anchor.DiffType == "RANGE" &&
+		anchor.FileType == "" &&
+		anchor.FromHash != "" &&
+		anchor.Line == 0 &&
+		anchor.LineType == "" &&
+		anchor.MultilineMarker == nil &&
+		reviewPath(anchor.Path) != "" &&
+		reviewPath(anchor.SrcPath) != "" &&
+		anchor.ToHash != ""
 }
 
 // appendServerReviewComment flattens Data Center's nested reply tree into the
@@ -366,19 +407,23 @@ func (g *Gateway) CreateReviewComment(
 func reviewCommentAnchor(
 	req bitbucket.CreateReviewCommentRequest,
 ) *CommentAnchorCreate {
+	anchor := &CommentAnchorCreate{
+		DiffType: "RANGE",
+		FromHash: string(req.ReviewContext.BaseHash),
+		Path:     req.Path,
+		ToHash:   string(req.ReviewContext.HeadHash),
+	}
+	if req.Range.IsZero() {
+		anchor.SrcPath = req.Path
+		return anchor
+	}
 	if req.ReviewAnchor.EndLineType == "" ||
 		(req.Range.StartLine != req.Range.EndLine &&
 			req.ReviewAnchor.StartLineType == "") {
 		panic("bitbucket: review comment anchor was not classified")
 	}
-	anchor := &CommentAnchorCreate{
-		DiffType: "RANGE",
-		FromHash: string(req.ReviewContext.BaseHash),
-		Line:     req.Range.EndLine,
-		LineType: req.ReviewAnchor.EndLineType,
-		Path:     req.Path,
-		ToHash:   string(req.ReviewContext.HeadHash),
-	}
+	anchor.Line = req.Range.EndLine
+	anchor.LineType = req.ReviewAnchor.EndLineType
 	switch req.Side {
 	case forge.ReviewThreadSideRight:
 		anchor.FileType = "TO"

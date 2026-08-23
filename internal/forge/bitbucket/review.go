@@ -196,6 +196,14 @@ func (r *reviewRepository) SubmitReview(
 ) (forge.SubmitReviewResult, error) {
 	mustReviewDisposition(req.Disposition)
 	prID := mustPR(id).Number
+	if !r.capabilities.FileLevel {
+		for _, comment := range req.Comments {
+			if comment.ReplyTo == nil && comment.Range.IsZero() {
+				return forge.SubmitReviewResult{}, fmt.Errorf(
+					"submit file-level comment: %w", forge.ErrUnsupported)
+			}
+		}
+	}
 	if r.capabilities.NativeDrafts {
 		return r.submitNativeReview(ctx, prID, req)
 	}
@@ -291,7 +299,8 @@ func (r *reviewRepository) submitNativeReview(
 	for _, comment := range req.Comments {
 		// Data Center versions before 9.2 have no multiline anchor shape.
 		// Preserve the requested start rather than rejecting the whole review.
-		if comment.ReplyTo == nil && !r.capabilities.Multiline {
+		if comment.ReplyTo == nil && !comment.Range.IsZero() &&
+			!r.capabilities.Multiline {
 			comment.Range = forge.ReviewThreadLine(comment.Range.StartLine)
 		}
 		apiReq := reviewCommentRequest(prID, reviewContext, comment)

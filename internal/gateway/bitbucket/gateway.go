@@ -158,9 +158,11 @@ type ReviewThread struct {
 	Path string
 
 	// Range is the inclusive range represented by the product anchor.
+	// A zero range identifies the whole file.
 	Range forge.ReviewThreadRange
 
 	// Side is the preimage or postimage file selected by the anchor.
+	// It is ignored when Range is zero.
 	Side forge.ReviewThreadSide
 
 	// Resolved is meaningful only when ReviewCapabilities.ThreadResolution is
@@ -198,6 +200,7 @@ type CreateReviewCommentRequest struct {
 	ParentID int64
 
 	// Path, Range, and Side locate a new thread and are ignored for replies.
+	// A zero Range identifies the whole file and ignores Side.
 	Path  string
 	Range forge.ReviewThreadRange
 	Side  forge.ReviewThreadSide
@@ -221,6 +224,9 @@ type ReviewCapabilities struct {
 	// NativeDrafts reports whether review contents remain pending until
 	// PublishReview.
 	NativeDrafts bool
+
+	// FileLevel reports whether root comments can be attached to a whole file.
+	FileLevel bool
 
 	// Multiline reports whether root anchors can span an inclusive range.
 	Multiline bool

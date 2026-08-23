@@ -46,6 +46,18 @@ func TestGateway_CreateReviewComment(t *testing.T) {
 			},
 		},
 		{
+			name: "FileLevel",
+			req: bitbucket.CreateReviewCommentRequest{
+				Path: "review.go",
+				Side: forge.ReviewThreadSide(99),
+				Body: "whole file",
+			},
+			want: CommentCreateRequest{
+				Content: Content{Raw: "whole file"},
+				Inline:  &Inline{Path: "review.go"},
+			},
+		},
+		{
 			name: "Reply",
 			req: bitbucket.CreateReviewCommentRequest{
 				ParentID: 10,
@@ -87,6 +99,46 @@ func TestGateway_CreateReviewComment(t *testing.T) {
 			}, comment)
 		})
 	}
+}
+
+func TestGateway_ListReviewThreads_fileLevel(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		require.NoError(t, json.MarshalWrite(w, CommentList{Values: []Comment{{
+			ID:      10,
+			Content: Content{Raw: "whole file"},
+			Inline:  &Inline{Path: "review.go"},
+		}}}))
+	}))
+	defer srv.Close()
+
+	var got []*bitbucket.ReviewThread
+	for thread, err := range newTestGateway(t, srv.URL).
+		ListReviewThreads(t.Context(), 7) {
+		require.NoError(t, err)
+		got = append(got, thread)
+	}
+
+	require.Len(t, got, 1)
+	assert.Equal(t, "review.go", got[0].Path)
+	assert.True(t, got[0].Range.IsZero())
+}
+
+func TestGateway_ListReviewThreads_rejectsMalformedInline(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		require.NoError(t, json.MarshalWrite(w, CommentList{Values: []Comment{{
+			ID:      10,
+			Content: Content{Raw: "missing endpoint"},
+			Inline:  &Inline{Path: "review.go", StartTo: new(3)},
+		}}}))
+	}))
+	defer srv.Close()
+
+	var gotErr error
+	for _, err := range newTestGateway(t, srv.URL).
+		ListReviewThreads(t.Context(), 7) {
+		gotErr = err
+	}
+	require.ErrorContains(t, gotErr, "malformed inline anchor")
 }
 
 func TestGateway_ListReviewThreads(t *testing.T) {

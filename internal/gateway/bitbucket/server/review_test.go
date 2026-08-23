@@ -30,6 +30,7 @@ func TestGateway_ReviewCapabilities(t *testing.T) {
 			want: bitbucket.ReviewCapabilities{
 				Supported:    true,
 				NativeDrafts: true,
+				FileLevel:    true,
 			},
 		},
 		{
@@ -38,6 +39,7 @@ func TestGateway_ReviewCapabilities(t *testing.T) {
 			want: bitbucket.ReviewCapabilities{
 				Supported:        true,
 				NativeDrafts:     true,
+				FileLevel:        true,
 				ThreadResolution: true,
 			},
 		},
@@ -47,6 +49,7 @@ func TestGateway_ReviewCapabilities(t *testing.T) {
 			want: bitbucket.ReviewCapabilities{
 				Supported:        true,
 				NativeDrafts:     true,
+				FileLevel:        true,
 				ThreadResolution: true,
 			},
 		},
@@ -56,6 +59,7 @@ func TestGateway_ReviewCapabilities(t *testing.T) {
 			want: bitbucket.ReviewCapabilities{
 				Supported:        true,
 				NativeDrafts:     true,
+				FileLevel:        true,
 				Multiline:        true,
 				ThreadResolution: true,
 			},
@@ -66,6 +70,7 @@ func TestGateway_ReviewCapabilities(t *testing.T) {
 			want: bitbucket.ReviewCapabilities{
 				Supported:        true,
 				NativeDrafts:     true,
+				FileLevel:        true,
 				Multiline:        true,
 				ThreadResolution: true,
 			},
@@ -85,6 +90,53 @@ func TestGateway_ReviewCapabilities(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestGateway_CreateReviewComment_fileLevel(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, json.UnmarshalRead(r.Body, &got))
+		gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{"id": 101})
+	}))
+	defer srv.Close()
+
+	_, err := newOpsTestServerGateway(t, srv).CreateReviewComment(
+		t.Context(), 7, bitbucket.CreateReviewCommentRequest{
+			Path: "internal/review.go",
+			Side: forge.ReviewThreadSide(99),
+			Body: "whole file",
+			ReviewContext: bitbucket.ReviewContext{
+				BaseHash: "base-sha",
+				HeadHash: "head-sha",
+			},
+		})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]any{
+		"text":  "whole file",
+		"state": "PENDING",
+		"anchor": map[string]any{
+			"diffType": "RANGE",
+			"fromHash": "base-sha",
+			"path":     "internal/review.go",
+			"srcPath":  "internal/review.go",
+			"toHash":   "head-sha",
+		},
+	}, got)
+}
+
+func TestGateway_ReviewAnchor_fileLevel(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		t.Fatalf("file-level anchor must not inspect the diff: %s %s", r.Method, r.URL.Path)
+	}))
+	defer srv.Close()
+
+	anchor, err := newOpsTestServerGateway(t, srv).ReviewAnchor(
+		t.Context(), 7,
+		bitbucket.ReviewContext{BaseHash: "base-sha", HeadHash: "head-sha"},
+		"internal/review.go", forge.ReviewThreadRange{}, forge.ReviewThreadSide(99),
+	)
+	require.NoError(t, err)
+	assert.Zero(t, anchor)
 }
 
 func TestGateway_CreateReviewComment_multilineAnchor(t *testing.T) {
@@ -397,6 +449,63 @@ func TestGateway_ListReviewThreads(t *testing.T) {
 	assert.Equal(t, int64(102), got[0].Comments[1].ID)
 	assert.Equal(t, "reply", got[0].Comments[1].Body)
 	assert.Equal(t, "kirk", got[0].Comments[1].Author)
+}
+
+func TestGateway_ListReviewThreads_fileLevel(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		gatewayWriteJSON(t, w, http.StatusOK, map[string]any{
+			"values": []any{map[string]any{
+				"id": 10, "text": "whole file",
+				"anchor": map[string]any{
+					"diffType": "RANGE",
+					"fromHash": "base-sha",
+					"path":     "internal/review.go",
+					"srcPath":  "internal/review.go",
+					"toHash":   "head-sha",
+				},
+			}},
+			"isLastPage": true,
+		})
+	}))
+	defer srv.Close()
+
+	var got []*bitbucket.ReviewThread
+	for thread, err := range newOpsTestServerGateway(t, srv).
+		ListReviewThreads(t.Context(), 7) {
+		require.NoError(t, err)
+		got = append(got, thread)
+	}
+
+	require.Len(t, got, 1)
+	assert.Equal(t, "internal/review.go", got[0].Path)
+	assert.True(t, got[0].Range.IsZero())
+}
+
+func TestGateway_ListReviewThreads_rejectsMalformedLineAnchor(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		gatewayWriteJSON(t, w, http.StatusOK, map[string]any{
+			"values": []any{map[string]any{
+				"id": 10, "text": "missing line",
+				"anchor": map[string]any{
+					"diffType": "RANGE",
+					"fileType": "TO",
+					"fromHash": "base-sha",
+					"path":     "internal/review.go",
+					"srcPath":  "internal/review.go",
+					"toHash":   "head-sha",
+				},
+			}},
+			"isLastPage": true,
+		})
+	}))
+	defer srv.Close()
+
+	var gotErr error
+	for _, err := range newOpsTestServerGateway(t, srv).
+		ListReviewThreads(t.Context(), 7) {
+		gotErr = err
+	}
+	require.ErrorContains(t, gotErr, "malformed line anchor")
 }
 
 func TestGateway_ResolveReviewThread(t *testing.T) {

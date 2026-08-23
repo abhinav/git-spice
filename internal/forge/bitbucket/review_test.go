@@ -167,6 +167,106 @@ func TestReviewRepository_SubmitReview_degradesUnsupportedMultiline(t *testing.T
 	assert.Equal(t, []string{"context", "anchor", "draft", "publish"}, actions)
 }
 
+func TestReviewRepository_SubmitReview_fileLevel(t *testing.T) {
+	reviewGW := &stubReviewGateway{
+		Gateway: NewMockGateway(gomock.NewController(t)),
+		capabilities: gw.ReviewCapabilities{
+			Supported: true,
+			FileLevel: true,
+		},
+		createReviewComment: func(
+			_ context.Context,
+			_ int64,
+			req gw.CreateReviewCommentRequest,
+		) (*gw.ReviewComment, error) {
+			assert.True(t, req.Range.IsZero())
+			assert.Equal(t, forge.ReviewThreadSide(99), req.Side)
+			return &gw.ReviewComment{ID: 10}, nil
+		},
+	}
+	repo := mustWithReviewRepository(
+		t.Context(), t, newRepository(new(Forge), silog.Nop(), reviewGW),
+	).(forge.ReviewRepository)
+
+	result, err := repo.SubmitReview(
+		t.Context(), &PR{Number: 7}, forge.SubmitReviewRequest{
+			Comments: []forge.SubmitReviewCommentRequest{{
+				Path: "review.go",
+				Side: forge.ReviewThreadSide(99),
+				Body: "whole file",
+			}},
+		})
+	require.NoError(t, err)
+	require.Len(t, result.Comments, 1)
+	assert.Equal(t, "10:7", result.Comments[0].ThreadID.String())
+}
+
+func TestReviewRepository_SubmitReview_nativeFileLevel(t *testing.T) {
+	var actions []string
+	base := &stubReviewGateway{
+		Gateway: NewMockGateway(gomock.NewController(t)),
+		capabilities: gw.ReviewCapabilities{
+			Supported:    true,
+			NativeDrafts: true,
+			FileLevel:    true,
+		},
+		createReviewComment: func(
+			_ context.Context,
+			_ int64,
+			req gw.CreateReviewCommentRequest,
+		) (*gw.ReviewComment, error) {
+			actions = append(actions, "draft")
+			assert.True(t, req.Range.IsZero())
+			assert.Zero(t, req.ReviewAnchor)
+			return &gw.ReviewComment{ID: 10}, nil
+		},
+	}
+	reviewGW := &stubPendingReviewGateway{
+		stubReviewGateway: base,
+		reviewContext: func(context.Context, int64) (gw.ReviewContext, error) {
+			actions = append(actions, "context")
+			return gw.ReviewContext{}, nil
+		},
+		reviewAnchor: func(
+			_ context.Context,
+			_ int64,
+			_ gw.ReviewContext,
+			_ string,
+			lines forge.ReviewThreadRange,
+			side forge.ReviewThreadSide,
+		) (gw.ReviewAnchor, error) {
+			actions = append(actions, "anchor")
+			assert.True(t, lines.IsZero())
+			assert.Equal(t, forge.ReviewThreadSide(99), side)
+			return gw.ReviewAnchor{}, nil
+		},
+		publishReview: func(
+			context.Context,
+			int64,
+			gw.ReviewContext,
+			string,
+			forge.ReviewDisposition,
+		) error {
+			actions = append(actions, "publish")
+			return nil
+		},
+	}
+	repo := mustWithReviewRepository(
+		t.Context(), t, newRepository(new(Forge), silog.Nop(), reviewGW),
+	).(forge.ReviewRepository)
+
+	_, err := repo.SubmitReview(
+		t.Context(), &PR{Number: 7}, forge.SubmitReviewRequest{
+			Comments: []forge.SubmitReviewCommentRequest{{
+				Path: "review.go",
+				Side: forge.ReviewThreadSide(99),
+				Body: "whole file",
+			}},
+		})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"context", "anchor", "draft", "publish"}, actions)
+}
+
 func TestReviewRepository_SubmitReview_invalidDispositionPanicsBeforeMutation(t *testing.T) {
 	var mutations int
 	mockGateway := NewMockGateway(gomock.NewController(t))
@@ -716,6 +816,7 @@ func (g *stubReviewGateway) ReviewCapabilities(
 	if g.capabilities == (gw.ReviewCapabilities{}) {
 		return gw.ReviewCapabilities{
 			Supported:        true,
+			FileLevel:        true,
 			Multiline:        true,
 			ThreadResolution: true,
 		}, nil

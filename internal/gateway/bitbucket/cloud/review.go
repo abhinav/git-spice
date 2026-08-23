@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"iter"
 	"strings"
@@ -22,6 +23,7 @@ func (*Gateway) ReviewCapabilities(
 ) (bitbucket.ReviewCapabilities, error) {
 	return bitbucket.ReviewCapabilities{
 		Supported:        true,
+		FileLevel:        true,
 		Multiline:        true,
 		ThreadResolution: true,
 	}, nil
@@ -98,7 +100,11 @@ func (g *Gateway) ListReviewThreads(
 				continue
 			}
 			if comment.Inline != nil {
-				thread := reviewThreadFromComment(comment)
+				thread, err := reviewThreadFromComment(comment)
+				if err != nil {
+					yield(nil, err)
+					return
+				}
 				threadsByComment[comment.ID] = thread
 				threads = append(threads, thread)
 			}
@@ -112,38 +118,65 @@ func (g *Gateway) ListReviewThreads(
 	}
 }
 
-// reviewThreadFromComment maps Cloud's to/start_to postimage coordinates or
-// from/start_from preimage coordinates into one inclusive forge range.
-func reviewThreadFromComment(comment *Comment) *bitbucket.ReviewThread {
+// reviewThreadFromComment maps Cloud's path-only file anchor or side-specific
+// line coordinates into a forge review location.
+func reviewThreadFromComment(comment *Comment) (*bitbucket.ReviewThread, error) {
 	inline := comment.Inline
-	side := forge.ReviewThreadSideRight
-	start, end := inlineLineRange(inline.StartTo, inline.To)
-	if inline.To == nil {
-		side = forge.ReviewThreadSideLeft
-		start, end = inlineLineRange(inline.StartFrom, inline.From)
+	if inline.Path == "" {
+		return nil, fmt.Errorf(
+			"review comment %d has malformed inline anchor: path is empty",
+			comment.ID)
+	}
+	lines, side, err := reviewInlineLocation(inline)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"review comment %d has malformed inline anchor: %w", comment.ID, err)
 	}
 	return &bitbucket.ReviewThread{
 		RootCommentID: comment.ID,
 		Path:          inline.Path,
-		Range: forge.ReviewThreadRange{
-			StartLine: start,
-			EndLine:   end,
-		},
-		Side:     side,
-		Resolved: comment.Resolution != nil,
-		Comments: []bitbucket.ReviewComment{reviewCommentFromAPI(comment)},
-	}
+		Range:         lines,
+		Side:          side,
+		Resolved:      comment.Resolution != nil,
+		Comments:      []bitbucket.ReviewComment{reviewCommentFromAPI(comment)},
+	}, nil
 }
 
-// inlineLineRange treats an omitted start coordinate as a single-line anchor.
-func inlineLineRange(start, end *int) (int, int) {
+// reviewInlineLocation recognizes Cloud's file-level comment shape.
+// The pull request comment API uses a path-only inline anchor for a whole-file
+// comment; any line coordinates select a side-specific line anchor.
+//
+// See https://developer.atlassian.com/cloud/bitbucket/rest/api-group-pullrequests/
+func reviewInlineLocation(
+	inline *Inline,
+) (forge.ReviewThreadRange, forge.ReviewThreadSide, error) {
+	if inline.From == nil && inline.To == nil &&
+		inline.StartFrom == nil && inline.StartTo == nil {
+		return forge.ReviewThreadRange{}, forge.ReviewThreadSideRight, nil
+	}
+
+	side := forge.ReviewThreadSideRight
+	start, end := inline.StartTo, inline.To
 	if end == nil {
-		return 0, 0
+		side = forge.ReviewThreadSideLeft
+		start, end = inline.StartFrom, inline.From
 	}
+	if end == nil {
+		return forge.ReviewThreadRange{}, 0, errors.New(
+			"line start is present without an endpoint")
+	}
+	startLine := *end
 	if start == nil {
-		return *end, *end
+		start = &startLine
 	}
-	return *start, *end
+	if *start <= 0 || *end < *start {
+		return forge.ReviewThreadRange{}, 0, fmt.Errorf(
+			"invalid line range %d-%d", *start, *end)
+	}
+	return forge.ReviewThreadRange{
+		StartLine: *start,
+		EndLine:   *end,
+	}, side, nil
 }
 
 // reviewCommentFromAPI retains the product fields exposed by ReviewComment.
@@ -188,6 +221,9 @@ func mustReviewInline(
 ) *Inline {
 	if path == "" {
 		panic("bitbucket: review comment path is empty")
+	}
+	if lines.IsZero() {
+		return &Inline{Path: path}
 	}
 	if lines.StartLine <= 0 || lines.EndLine < lines.StartLine {
 		panic(fmt.Sprintf("bitbucket: invalid review comment range: %d-%d",

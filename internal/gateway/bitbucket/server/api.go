@@ -662,9 +662,10 @@ type CommentAnchor struct {
 	LineType        string           `json:"lineType"`
 	MultilineMarker *MultilineMarker `json:"multilineMarker"`
 
-	// Path is returned as a structured object, normalized by RestPath.
-	Path   RestPath `json:"path"`
-	ToHash string   `json:"toHash"`
+	// Path and SrcPath are returned as structured objects, normalized by RestPath.
+	Path    RestPath `json:"path"`
+	SrcPath RestPath `json:"srcPath"`
+	ToHash  string   `json:"toHash"`
 }
 
 // RestPath is the structured path returned in a comment anchor.
@@ -720,18 +721,19 @@ type ReviewCommentCreateRequest struct {
 type CommentAnchorCreate struct {
 	// DiffType, FromHash, and ToHash identify the exact revision range.
 	DiffType string `json:"diffType"`
-	FileType string `json:"fileType"`
+	FileType string `json:"fileType,omitzero"`
 	FromHash string `json:"fromHash"`
 
 	// LineType and MultilineMarker are resolved from the structured diff before
 	// the pending comment mutation.
-	Line            int              `json:"line"`
-	LineType        string           `json:"lineType"`
+	Line            int              `json:"line,omitzero"`
+	LineType        string           `json:"lineType,omitzero"`
 	MultilineMarker *MultilineMarker `json:"multilineMarker,omitzero"`
 
-	// Data Center accepts a plain repository-relative path on create.
-	Path   string `json:"path"`
-	ToHash string `json:"toHash"`
+	// Data Center accepts plain repository-relative paths on create.
+	Path    string `json:"path"`
+	SrcPath string `json:"srcPath,omitzero"`
+	ToHash  string `json:"toHash"`
 }
 
 // commentText is the request body shared by comment create and update.
