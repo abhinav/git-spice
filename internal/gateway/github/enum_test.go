@@ -21,6 +21,10 @@ func TestGraphQLEnums_JSON(t *testing.T) {
 		{name: "CheckStatusState", give: CheckStatusStateInProgress, want: `"IN_PROGRESS"`},
 		{name: "CheckConclusionState", give: CheckConclusionStateStartupFailure, want: `"STARTUP_FAILURE"`},
 		{name: "MergeMethod", give: MergeMethodSquash, want: `"SQUASH"`},
+		{name: "DiffSide", give: DiffSideLeft, want: `"LEFT"`},
+		{name: "ReviewThreadSubjectType", give: ReviewThreadSubjectTypeFile, want: `"FILE"`},
+		{name: "ReviewState", give: ReviewStateChangesRequested, want: `"CHANGES_REQUESTED"`},
+		{name: "ReviewEvent", give: ReviewEventRequestChanges, want: `"REQUEST_CHANGES"`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

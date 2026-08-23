@@ -17,6 +17,9 @@ import (
 // githubGateway is the GitHub API boundary consumed by Repository.
 type githubGateway interface {
 	AddComment(context.Context, github.ID, string) (*github.AddedComment, error)
+	AddPullRequestReview(context.Context, *github.AddPullRequestReviewInput) (*github.AddedPullRequestReview, error)
+	AddPullRequestReviewThread(context.Context, *github.AddPullRequestReviewThreadInput) (*github.AddedPullRequestReviewThread, error)
+	AddPullRequestReviewThreadReply(context.Context, *github.AddPullRequestReviewThreadReplyInput) (*github.AddedPullRequestReviewComment, error)
 	AddPullRequestMetadata(context.Context, *github.PullRequestMetadataInput) error
 	ChangeStatuses(context.Context, []github.ID) ([]*github.ChangeStatus, error)
 	ChangeTemplates(context.Context, string, string) ([]*github.ChangeTemplate, error)
@@ -36,12 +39,18 @@ type githubGateway interface {
 	PullRequestComments(context.Context, github.ID, *github.PaginationOptions) iter.Seq2[*github.Comment, error]
 	PullRequestID(context.Context, string, string, int) (github.ID, error)
 	PullRequestMergeability(context.Context, github.ID) (*github.Mergeability, error)
+	PullRequestLatestOpinionatedReviews(context.Context, github.ID, *github.PaginationOptions) iter.Seq2[*github.PullRequestLatestOpinionatedReview, error]
+	PullRequestReviewThreads(context.Context, github.ID, *github.PaginationOptions) iter.Seq2[*github.PullRequestReviewThread, error]
 	PullRequestReviewThreadCounts(context.Context, []github.ID, *github.PaginationOptions) ([]*github.ReviewThreadCounts, error)
 	RefExists(context.Context, string, string, string) (bool, error)
 	RepositoryID(context.Context, string, string) (github.ID, error)
+	ResolveReviewThread(context.Context, github.ID) error
 	StatusChecks(context.Context, github.ID, *github.PaginationOptions) iter.Seq2[github.StatusCheck, error]
+	SubmitPullRequestReview(context.Context, *github.SubmitPullRequestReviewInput) error
+	UnresolveReviewThread(context.Context, github.ID) error
 	UpdateIssueComment(context.Context, github.ID, string) error
 	UpdatePullRequest(context.Context, *github.UpdatePullRequestInput) error
+	UpdatePullRequestReviewComment(context.Context, github.ID, string) error
 }
 
 var _ githubGateway = (*github.Gateway)(nil)
