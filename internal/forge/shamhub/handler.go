@@ -19,6 +19,20 @@ type shamhubEndpoint struct {
 	Handler func(*ShamHub, http.ResponseWriter, *http.Request)
 }
 
+type shamHubUserContextKey struct{}
+
+func contextWithShamHubUser(ctx context.Context, username string) context.Context {
+	return context.WithValue(ctx, shamHubUserContextKey{}, username)
+}
+
+func shamHubUserFromContext(ctx context.Context) (string, error) {
+	username, _ := ctx.Value(shamHubUserContextKey{}).(string)
+	if username == "" {
+		return "", errors.New("authenticated ShamHub user is missing")
+	}
+	return username, nil
+}
+
 var _handlers []shamhubEndpoint
 
 // buildRESTHandler creates a generic HTTP handler that processes JSON-based requests.
@@ -255,12 +269,14 @@ func (sh *ShamHub) apiHandler() http.Handler {
 			}
 
 			sh.mu.RLock()
-			_, ok := sh.tokens[token]
+			username, ok := sh.tokens[token]
 			sh.mu.RUnlock()
 			if !ok {
 				http.Error(w, "invalid token", http.StatusUnauthorized)
 				return
 			}
+
+			r = r.WithContext(contextWithShamHubUser(r.Context(), username))
 		}
 
 		mux.ServeHTTP(w, r)

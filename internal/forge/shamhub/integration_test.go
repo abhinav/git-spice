@@ -191,6 +191,7 @@ func TestIntegration(t *testing.T) {
 				))
 		},
 		SetCommentsPageSize: SetListChangeCommentsPageSize,
+		ReviewThreads:       true,
 		Reviewers:           []string{"reviewer1", "reviewer2"},
 		Assignees:           []string{"assignee1", "assignee2"},
 	})

@@ -3,6 +3,7 @@ package shamhub
 import (
 	"context"
 	json "encoding/json/v2"
+	"errors"
 	"net/http"
 	"slices"
 	"strconv"
@@ -57,6 +58,14 @@ var (
 		(*ShamHub).handleAdminDeleteComment,
 	)
 	_ = shamhubRESTHandler(
+		"POST /_shamhub/admin/reviews",
+		(*ShamHub).handleAdminSubmitFeedback,
+	)
+	_ = shamhubRESTHandler(
+		"POST /_shamhub/admin/review-comments",
+		(*ShamHub).handleAdminPostReviewComment,
+	)
+	_ = shamhubRESTHandler(
 		"GET /_shamhub/admin/dump/changes",
 		(*ShamHub).handleAdminDumpChanges,
 	)
@@ -67,6 +76,10 @@ var (
 	_ = shamhubHTTPHandler(
 		"GET /_shamhub/admin/dump/comments",
 		(*ShamHub).handleAdminDumpComments,
+	)
+	_ = shamhubHTTPHandler(
+		"GET /_shamhub/admin/dump/reviews",
+		(*ShamHub).handleAdminDumpReviews,
 	)
 )
 
@@ -412,6 +425,151 @@ func (sh *ShamHub) handleAdminDeleteComment(
 	return &adminDeleteCommentResponse{}, nil
 }
 
+type adminSubmitFeedbackBody struct {
+	Owner       string    `json:"owner"`
+	Repo        string    `json:"repo"`
+	Change      int       `json:"change"`
+	Submitter   string    `json:"submitter"`
+	Disposition int       `json:"disposition"`
+	Body        string    `json:"body,omitzero"`
+	Time        time.Time `json:"time"`
+}
+
+type adminSubmitFeedbackResponse struct{}
+
+// handleAdminSubmitFeedback records a feedback submission without requiring
+// forge authentication.
+func (sh *ShamHub) handleAdminSubmitFeedback(
+	_ context.Context,
+	req adminSubmitFeedbackBody,
+) (*adminSubmitFeedbackResponse, error) {
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	if !sh.changeBelongsToRepository(req.Change, req.Owner, req.Repo) {
+		return nil, notFoundErrorf(
+			"change %d not found in %s/%s",
+			req.Change,
+			req.Owner,
+			req.Repo,
+		)
+	}
+	submit := &submitReviewRequest{
+		Owner:       req.Owner,
+		Repo:        req.Repo,
+		Change:      req.Change,
+		Body:        req.Body,
+		Disposition: req.Disposition,
+	}
+	if err := sh.validateSubmitReviewHTTPRequest(submit); err != nil {
+		return nil, badRequestErrorf("%v", err)
+	}
+	if req.Time.IsZero() {
+		req.Time = time.Now()
+	}
+	if _, err := sh.submitReview(req.Submitter, submit, req.Time); err != nil {
+		return nil, err
+	}
+	return &adminSubmitFeedbackResponse{}, nil
+}
+
+type adminPostReviewCommentBody struct {
+	Owner string `json:"owner"`
+	Repo  string `json:"repo"`
+
+	Change     int       `json:"change"`
+	ID         int       `json:"id,omitzero"`
+	Author     string    `json:"author"`
+	Path       string    `json:"path,omitzero"`
+	RangeStart int       `json:"rangeStart,omitzero"`
+	RangeEnd   int       `json:"rangeEnd,omitzero"`
+	Side       int       `json:"side,omitzero"`
+	ThreadID   string    `json:"threadID,omitzero"`
+	Body       string    `json:"body"`
+	Resolved   bool      `json:"resolved,omitzero"`
+	Outdated   bool      `json:"outdated,omitzero"`
+	Time       time.Time `json:"time"`
+}
+
+type adminPostReviewCommentResponse struct {
+	ID       int    `json:"id"`
+	ThreadID string `json:"threadID"`
+}
+
+// Review-comment administration seeds a review thread root or reply.
+func (sh *ShamHub) handleAdminPostReviewComment(
+	_ context.Context,
+	req adminPostReviewCommentBody,
+) (*adminPostReviewCommentResponse, error) {
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	if !sh.changeBelongsToRepository(req.Change, req.Owner, req.Repo) {
+		return nil, notFoundErrorf(
+			"change %d not found in %s/%s",
+			req.Change,
+			req.Owner,
+			req.Repo,
+		)
+	}
+	if req.Body == "" {
+		return nil, badRequestErrorf("review comment body is required")
+	}
+
+	threadID := ReviewThreadID(req.ThreadID)
+	resolved := req.Resolved
+	if threadID == "" {
+		if req.Path == "" {
+			return nil, badRequestErrorf("review comment path is required")
+		}
+		if err := validateReviewRange(forge.ReviewThreadRange{
+			StartLine: req.RangeStart,
+			EndLine:   req.RangeEnd,
+		}); err != nil {
+			return nil, badRequestErrorf("%v", err)
+		}
+		if err := validateReviewSide(forge.ReviewThreadSide(req.Side)); err != nil {
+			return nil, badRequestErrorf("%v", err)
+		}
+	} else {
+		root := sh.reviewThreadRoot(threadID)
+		if root == nil || root.Change != req.Change {
+			return nil, notFoundErrorf("thread %q not found", req.ThreadID)
+		}
+		resolved = root.Resolved
+	}
+
+	id := req.ID
+	if id == 0 {
+		id = sh.nextCommentID()
+	} else if sh.commentByID(id) != nil {
+		return nil, badRequestErrorf("comment %d already exists", id)
+	}
+	if threadID == "" {
+		threadID = ReviewThreadID("thread-" + strconv.Itoa(id))
+	}
+	if req.Time.IsZero() {
+		req.Time = time.Now()
+	}
+	sh.comments = append(sh.comments, shamComment{
+		ID:         id,
+		Change:     req.Change,
+		Body:       req.Body,
+		Resolvable: true,
+		Resolved:   resolved,
+		Outdated:   req.Outdated,
+		Path:       req.Path,
+		Line:       req.RangeStart,
+		RangeStart: req.RangeStart,
+		RangeEnd:   req.RangeEnd,
+		Side:       forge.ReviewThreadSide(req.Side),
+		ThreadID:   threadID,
+		Author:     req.Author,
+		CreatedAt:  req.Time,
+	})
+	return &adminPostReviewCommentResponse{ID: id, ThreadID: threadID.String()}, nil
+}
+
 type adminDumpChangesRequest struct{}
 
 type adminDumpChangesResponse struct {
@@ -493,5 +651,158 @@ func (sh *ShamHub) handleAdminDumpComments(
 		Comments: comments,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+type adminDumpFeedbackResponse struct {
+	Changes []adminDumpFeedbackChange `json:"changes" yaml:"changes"`
+}
+
+type adminDumpFeedbackChange struct {
+	Change      int                           `json:"change" yaml:"change"`
+	Submissions []adminDumpFeedbackSubmission `json:"submissions" yaml:"submissions"`
+	Threads     []adminDumpReviewThread       `json:"threads" yaml:"threads"`
+}
+
+type adminDumpFeedbackSubmission struct {
+	Submitter   string `json:"submitter" yaml:"submitter"`
+	Disposition string `json:"disposition" yaml:"disposition"`
+	Body        string `json:"body,omitzero" yaml:"body,omitempty"`
+	CommentIDs  []int  `json:"commentIDs,omitempty" yaml:"commentIDs,omitempty"`
+}
+
+type adminDumpReviewThread struct {
+	ID       string                   `json:"id" yaml:"id"`
+	Path     string                   `json:"path" yaml:"path"`
+	Range    adminDumpReviewRange     `json:"range" yaml:"range"`
+	Side     string                   `json:"side" yaml:"side"`
+	Resolved bool                     `json:"resolved" yaml:"resolved"`
+	Outdated bool                     `json:"outdated" yaml:"outdated"`
+	Comments []adminDumpReviewComment `json:"comments" yaml:"comments"`
+}
+
+type adminDumpReviewRange struct {
+	Start int `json:"start" yaml:"start"`
+	End   int `json:"end" yaml:"end"`
+}
+
+type adminDumpReviewComment struct {
+	ID     int    `json:"id" yaml:"id"`
+	Author string `json:"author" yaml:"author"`
+	Body   string `json:"body" yaml:"body"`
+}
+
+// Feedback dumps preserve the storage order of changes, submissions,
+// and comments while omitting nondeterministic metadata.
+func (sh *ShamHub) handleAdminDumpReviews(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	changeIDs, err := adminDumpChangeIDs(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	sh.mu.RLock()
+	defer sh.mu.RUnlock()
+
+	changes := make(map[int]*adminDumpFeedbackChange)
+	appendChange := func(id int) *adminDumpFeedbackChange {
+		if change, ok := changes[id]; ok {
+			return change
+		}
+		change := &adminDumpFeedbackChange{Change: id}
+		changes[id] = change
+		return change
+	}
+	for _, submission := range sh.feedbackSubmissions {
+		if len(changeIDs) > 0 {
+			if _, ok := changeIDs[submission.Change]; !ok {
+				continue
+			}
+		}
+		change := appendChange(submission.Change)
+		// A feedback submission owns this grouping, including IDs of comments
+		// it created. The comments alone cannot reconstruct that submission.
+		change.Submissions = append(change.Submissions, adminDumpFeedbackSubmission{
+			Submitter:   submission.Submitter,
+			Disposition: reviewDispositionName(submission.Disposition),
+			Body:        submission.Body,
+			CommentIDs:  submission.CommentIDs,
+		})
+	}
+	type threadLocation struct {
+		change *adminDumpFeedbackChange
+		index  int
+	}
+	// Store locations by index rather than pointers because appending a later
+	// thread can reallocate a change's Threads slice.
+	threads := make(map[ReviewThreadID]threadLocation)
+	for _, comment := range sh.comments {
+		if comment.ThreadID == "" {
+			continue
+		}
+		if len(changeIDs) > 0 {
+			if _, ok := changeIDs[comment.Change]; !ok {
+				continue
+			}
+		}
+		change := appendChange(comment.Change)
+		location, ok := threads[comment.ThreadID]
+		if !ok {
+			change.Threads = append(change.Threads, adminDumpReviewThread{
+				ID:       comment.ThreadID.String(),
+				Path:     comment.Path,
+				Range:    adminDumpReviewRange{Start: comment.RangeStart, End: comment.RangeEnd},
+				Side:     comment.Side.String(),
+				Resolved: comment.Resolved,
+				Outdated: comment.Outdated,
+			})
+			location = threadLocation{change: change, index: len(change.Threads) - 1}
+			threads[comment.ThreadID] = location
+		}
+		thread := &location.change.Threads[location.index]
+		thread.Comments = append(thread.Comments, adminDumpReviewComment{
+			ID:     comment.ID,
+			Author: comment.Author,
+			Body:   comment.Body,
+		})
+	}
+
+	var result adminDumpFeedbackResponse
+	for _, change := range sh.changes {
+		if dumped, ok := changes[change.Number]; ok {
+			result.Changes = append(result.Changes, *dumped)
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.MarshalWrite(w, result); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func adminDumpChangeIDs(r *http.Request) (map[int]struct{}, error) {
+	ids := make(map[int]struct{})
+	for _, value := range r.URL.Query()["change"] {
+		id, err := strconv.Atoi(value)
+		if err != nil {
+			return nil, errors.New("invalid change query")
+		}
+		ids[id] = struct{}{}
+	}
+	return ids, nil
+}
+
+func reviewDispositionName(disposition forge.ReviewDisposition) string {
+	switch disposition {
+	case forge.ReviewDispositionNone:
+		return "comment"
+	case forge.ReviewDispositionApprove:
+		return "approve"
+	case forge.ReviewDispositionRequestChanges:
+		return "request-changes"
+	default:
+		return strconv.Itoa(int(disposition))
 	}
 }

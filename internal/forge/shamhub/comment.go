@@ -8,6 +8,7 @@ import (
 	"iter"
 	"slices"
 	"strconv"
+	"time"
 
 	"go.abhg.dev/gs/internal/forge"
 )
@@ -19,18 +20,21 @@ type ChangeComment struct {
 	Body   string `json:"body"`
 }
 
-// ListChangeComments returns all comments on all changes in ShamHub.
+// ListChangeComments returns all ordinary change comments in ShamHub.
 func (sh *ShamHub) ListChangeComments() ([]*ChangeComment, error) {
 	sh.mu.RLock()
 	defer sh.mu.RUnlock()
 
-	comments := make([]*ChangeComment, len(sh.comments))
-	for i, c := range sh.comments {
-		comments[i] = &ChangeComment{
+	var comments []*ChangeComment
+	for _, c := range sh.comments {
+		if c.ThreadID != "" {
+			continue
+		}
+		comments = append(comments, &ChangeComment{
 			ID:     c.ID,
 			Change: c.Change,
 			Body:   c.Body,
-		}
+		})
 	}
 
 	return comments, nil
@@ -140,6 +144,19 @@ type shamComment struct {
 
 	// Resolved indicates this comment has been resolved.
 	Resolved bool
+
+	// Outdated indicates this comment is attached to an earlier revision.
+	Outdated bool
+
+	// Review-thread fields are empty for ordinary change comments.
+	Path       string
+	Line       int
+	RangeStart int
+	RangeEnd   int
+	Side       forge.ReviewThreadSide
+	ThreadID   ReviewThreadID
+	Author     string
+	CreatedAt  time.Time
 }
 
 var (
@@ -308,7 +325,15 @@ func (r *forgeRepository) UpdateChangeComment(
 	markdown string,
 ) error {
 	cid := int(id.(ChangeCommentID))
-	u := r.apiURL.JoinPath(r.owner, r.repo, "comments", strconv.Itoa(cid))
+	return r.updateComment(ctx, cid, markdown)
+}
+
+func (r *forgeRepository) updateComment(
+	ctx context.Context,
+	id int,
+	markdown string,
+) error {
+	u := r.apiURL.JoinPath(r.owner, r.repo, "comments", strconv.Itoa(id))
 	req := updateCommentRequest{Body: markdown}
 	var res updateCommentResponse
 	if err := r.client.Patch(ctx, u.String(), req, &res); err != nil {
@@ -381,7 +406,7 @@ func (sh *ShamHub) handleListChangeComments(_ context.Context, req *listChangeCo
 	sh.mu.RLock()
 	var comments []shamComment
 	for _, c := range sh.comments {
-		if c.Change == changeNum {
+		if c.Change == changeNum && c.ThreadID == "" {
 			comments = append(comments, c)
 		}
 	}
