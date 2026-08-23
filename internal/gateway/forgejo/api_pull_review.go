@@ -3,6 +3,7 @@ package forgejo
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 // PullReviewList lists pull request reviews.
@@ -95,8 +96,9 @@ func (c *Client) PullReviewCommentCreate(
 	index int64,
 	reviewID int64,
 	opt *CreatePullReviewCommentOptions,
-) (*Response, error) {
-	return c.post(
+) (*PullReviewComment, *Response, error) {
+	var response PullReviewComment
+	resp, err := c.post(
 		ctx,
 		fmt.Sprintf(
 			"%s/pulls/%d/reviews/%d/comments",
@@ -106,8 +108,12 @@ func (c *Client) PullReviewCommentCreate(
 		),
 		nil,
 		opt,
-		nil,
+		&response,
 	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
 }
 
 // ReviewerList lists users who can review pull requests.
@@ -194,14 +200,38 @@ type PullReview struct {
 	ID int64 `json:"id"`
 
 	// State is the review state.
-	State string `json:"state"`
+	State PullReviewState `json:"state"`
 
 	// Body is the review body.
 	Body string `json:"body"`
 
 	// User is the review author.
 	User *User `json:"user"`
+
+	// CommitID is the reviewed commit SHA.
+	CommitID string `json:"commit_id"`
+
+	// Stale reports whether the review applies to an earlier revision.
+	Stale bool `json:"stale"`
+
+	// Dismissed reports whether the review was dismissed.
+	Dismissed bool `json:"dismissed"`
+
+	// SubmittedAt is when the review was submitted.
+	SubmittedAt time.Time `json:"submitted_at"`
 }
+
+// PullReviewState identifies a Forgejo review state.
+type PullReviewState string
+
+// Forgejo pull review states.
+const (
+	PullReviewStateApproved       PullReviewState = "APPROVED"
+	PullReviewStatePending        PullReviewState = "PENDING"
+	PullReviewStateComment        PullReviewState = "COMMENT"
+	PullReviewStateRequestChanges PullReviewState = "REQUEST_CHANGES"
+	PullReviewStateRequestReview  PullReviewState = "REQUEST_REVIEW"
+)
 
 // PullReviewComment matches a Forgejo pull request review comment.
 //
@@ -210,6 +240,9 @@ type PullReview struct {
 type PullReviewComment struct {
 	// ID is the review comment ID.
 	ID int64 `json:"id"`
+
+	// ReviewID is the pull request review that owns the comment.
+	ReviewID int64 `json:"pull_request_review_id"`
 
 	// Body is the review comment body.
 	Body string `json:"body"`
@@ -234,6 +267,12 @@ type PullReviewComment struct {
 
 	// User is the comment author.
 	User *User `json:"user"`
+
+	// Resolver is the user who resolved the comment thread, when resolved.
+	Resolver *User `json:"resolver"`
+
+	// CreatedAt is when the comment was created.
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // CreatePullReviewOptions is the request body for creating a review.
@@ -245,7 +284,10 @@ type CreatePullReviewOptions struct {
 	Body string `json:"body,omitzero"`
 
 	// Event selects the review action.
-	Event string `json:"event,omitzero"`
+	Event PullReviewState `json:"event,omitzero"`
+
+	// CommitID is the commit SHA being reviewed.
+	CommitID string `json:"commit_id,omitzero"`
 
 	// Comments are draft review comments to create with the review.
 	Comments []CreatePullReviewCommentOptions `json:"comments,omitempty"`

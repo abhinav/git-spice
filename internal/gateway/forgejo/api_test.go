@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -249,6 +250,100 @@ func TestClient_IssueCommentCreate(t *testing.T) {
 	assert.Equal(t, int64(99), comment.ID)
 	require.NotNil(t, comment.User)
 	assert.Equal(t, "contributor", comment.User.Login)
+}
+
+func TestClient_PullReviewCreate(t *testing.T) {
+	submittedAt := time.Date(2026, 8, 22, 12, 34, 56, 0, time.UTC)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v1/repos/owner/repo/pulls/55/reviews", r.URL.Path)
+		assertJSONBody(t, r, `{
+			"body":"Review body.",
+			"event":"REQUEST_CHANGES",
+			"commit_id":"abc123",
+			"comments":[
+				{"body":"Right side.","path":"new.go","new_position":42},
+				{"body":"Left side.","path":"old.go","old_position":7}
+			]
+		}`)
+		writeJSON(t, w, http.StatusOK, PullReview{
+			ID:          70,
+			State:       PullReviewStateRequestChanges,
+			CommitID:    "abc123",
+			SubmittedAt: submittedAt,
+			User:        &User{Login: "reviewer"},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	review, _, err := client.PullReviewCreate(
+		t.Context(),
+		"owner",
+		"repo",
+		55,
+		&CreatePullReviewOptions{
+			Body:     "Review body.",
+			Event:    PullReviewStateRequestChanges,
+			CommitID: "abc123",
+			Comments: []CreatePullReviewCommentOptions{
+				{Body: "Right side.", Path: "new.go", NewPosition: 42},
+				{Body: "Left side.", Path: "old.go", OldPosition: 7},
+			},
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(70), review.ID)
+	assert.Equal(t, PullReviewStateRequestChanges, review.State)
+	assert.Equal(t, "abc123", review.CommitID)
+	assert.Equal(t, submittedAt, review.SubmittedAt)
+	require.NotNil(t, review.User)
+	assert.Equal(t, "reviewer", review.User.Login)
+}
+
+func TestClient_PullReviewCommentCreate(t *testing.T) {
+	createdAt := time.Date(2026, 8, 22, 12, 35, 56, 0, time.UTC)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(
+			t,
+			"/api/v1/repos/owner/repo/pulls/55/reviews/70/comments",
+			r.URL.Path,
+		)
+		assertJSONBody(t, r, `{
+			"body":"Reply body.",
+			"path":"new.go",
+			"new_position":42
+		}`)
+		writeJSON(t, w, http.StatusOK, PullReviewComment{
+			ID:        101,
+			ReviewID:  70,
+			Body:      "Reply body.",
+			Path:      "new.go",
+			Position:  42,
+			CreatedAt: createdAt,
+			User:      &User{Login: "reviewer"},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	comment, _, err := client.PullReviewCommentCreate(
+		t.Context(),
+		"owner",
+		"repo",
+		55,
+		70,
+		&CreatePullReviewCommentOptions{
+			Body:        "Reply body.",
+			Path:        "new.go",
+			NewPosition: 42,
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(101), comment.ID)
+	assert.Equal(t, int64(70), comment.ReviewID)
+	assert.Equal(t, createdAt, comment.CreatedAt)
 }
 
 func TestClient_CommitStatusCreate(t *testing.T) {
