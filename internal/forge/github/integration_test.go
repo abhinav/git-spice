@@ -123,7 +123,8 @@ func TestIntegration(t *testing.T) {
 			return newRepo
 		},
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, github.CloseChange(t.Context(), repo.(*github.Repository), change.(*github.PR)))
+			ctx := context.WithoutCancel(t.Context())
+			require.NoError(t, github.CloseChange(ctx, repo.(*github.Repository), change.(*github.PR)))
 		},
 		SetChangeCheck: func(
 			t *testing.T,
@@ -143,6 +144,8 @@ func TestIntegration(t *testing.T) {
 			))
 		},
 		SetCommentsPageSize: github.SetListChangeCommentsPageSize,
+		ReviewThreads:       true,
+		FileReviewThreads:   true,
 		Reviewers:           []string{cfg.Reviewer},
 		Assignees:           []string{cfg.Assignee},
 	})

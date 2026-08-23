@@ -1,0 +1,130 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 141
+        host: api.github.com
+        body: '{"query":"query($owner:String!$repo:String!){repository(owner: $owner, name: $repo){id}}","variables":{"owner":"test-owner","repo":"test-repo"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"id":"R_kgDOMVd0xg"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 292.916709ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 312
+        host: api.github.com
+        body: '{"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"OP9eHcoB","title":"Testing file review thread OP9eHcoB","body":"Test change for a file-level review thread"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABAr5W2w","number":184,"url":"https://github.com/test-owner/test-repo/pull/184"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 1.051303208s
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 295
+        host: api.github.com
+        body: '{"query":"mutation($input: AddPullRequestReviewThreadInput!){addPullRequestReviewThread(input: $input){thread{id,comments(first: 1){nodes{id,url}}}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABAr5W2w","path":"review.go","subjectType":"FILE","body":"File-level review comment."}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"addPullRequestReviewThread":{"thread":{"id":"PRRT_kwDOMVd0xs6bdXZQ","comments":{"nodes":[{"id":"PRRC_kwDOMVd0xs7kv_jl","url":"https://github.com/test-owner/test-repo/pull/184#discussion_r3837786341"}]}}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 712.480541ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 508
+        host: api.github.com
+        body: '{"query":"query($after: String,$commentsFirst: Int!,$first: Int!,$id: ID!,){node(id: $id){... on PullRequest{reviewThreads(first: $first, after: $after){pageInfo{endCursor,hasNextPage},nodes{id,path,subjectType,diffSide,startDiffSide,line,startLine,originalLine,originalStartLine,isResolved,isOutdated,comments(first: $commentsFirst){pageInfo{endCursor,hasNextPage},nodes{id,url,body,author{login},createdAt}}}}}}}","variables":{"after":null,"commentsFirst":100,"first":100,"id":"PR_kwDOMVd0xs8AAAABAr5W2w"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"node":{"reviewThreads":{"pageInfo":{"endCursor":"Y3Vyc29yOnYyOpK0MjAyNi0wOC0yM1QwNTozMjo1MVrOm3V2UA==","hasNextPage":false},"nodes":[{"id":"PRRT_kwDOMVd0xs6bdXZQ","path":"review.go","subjectType":"FILE","diffSide":"RIGHT","startDiffSide":null,"line":1,"startLine":null,"originalLine":1,"originalStartLine":null,"isResolved":false,"isOutdated":false,"comments":{"pageInfo":{"endCursor":"Y3Vyc29yOnYyOpK0MjAyNi0wOC0yM1QwNTozMjo1MVrO5L_45Q==","hasNextPage":false},"nodes":[{"id":"PRRC_kwDOMVd0xs7kv_jl","url":"https://github.com/test-owner/test-repo/pull/184#discussion_r3837786341","body":"File-level review comment.","author":{"login":"test-owner"},"createdAt":"2026-08-23T05:32:51Z"}]}}]}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 543.1935ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 188
+        host: api.github.com
+        body: '{"query":"mutation($input:UpdatePullRequestInput!){updatePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABAr5W2w","state":"CLOSED"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"updatePullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABAr5W2w"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 642.65675ms
