@@ -138,6 +138,10 @@ type IntegrationConfig struct {
 	// SkipCommentCounts skips the CommentCountsByChange test.
 	// Set to true for forges that don't support comment resolution tracking.
 	SkipCommentCounts bool // optional
+
+	// ReviewThreads enables the shared review-thread scenario.
+	// Enable it only when OpenRepository returns a forge.ReviewRepository.
+	ReviewThreads bool // optional
 }
 
 // RunIntegration runs integration tests with the given configuration.
@@ -296,6 +300,14 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 			t.Parallel()
 
 			suite.TestCommentCountsByChange(t)
+		})
+	}
+
+	if config.ReviewThreads {
+		t.Run("ReviewThreads", func(t *testing.T) {
+			t.Parallel()
+
+			suite.TestReviewThreads(t)
 		})
 	}
 }
