@@ -1,6 +1,7 @@
 package bitbucket
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -189,18 +190,27 @@ func TestForge_OpenRepository_requiresURL(t *testing.T) {
 }
 
 func TestForge_OpenRepository_serverUsesRepositoryIDURL(t *testing.T) {
+	apiSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/rest/api/1.0/application-properties", r.URL.Path)
+		_, err := w.Write([]byte(`{"version":"7.6.9"}`))
+		assert.NoError(t, err)
+	}))
+	defer apiSrv.Close()
+	webSrv := httptest.NewServer(http.NotFoundHandler())
+	defer webSrv.Close()
+
 	f := newForgeForTest(t,
 		Options{
 			Kind: KindDataCenter,
-			URL:  "https://wrong.example.com",
+			URL:  apiSrv.URL,
 		},
-		"https://wrong.example.com/scm/KEY/repo.git")
+		apiSrv.URL+"/scm/KEY/repo.git")
 
 	repo, err := f.OpenRepository(
 		t.Context(),
 		&AuthenticationToken{AccessToken: "tok"},
 		&RepositoryID{
-			url:        "https://bitbucket.example.com",
+			url:        webSrv.URL,
 			kind:       KindDataCenter,
 			projectKey: "KEY",
 			slug:       "repo",
@@ -209,13 +219,92 @@ func TestForge_OpenRepository_serverUsesRepositoryIDURL(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		"https://bitbucket.example.com/projects/KEY/repos/repo/pull-requests/42/overview",
+		webSrv.URL+"/projects/KEY/repos/repo/pull-requests/42/overview",
 		repo.(forge.WithChangeURL).ChangeURL(&PR{Number: 42}))
+}
+
+func TestForge_OpenRepository_reviewCapabilityProbeError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/rest/api/1.0/application-properties", r.URL.Path)
+		http.Error(w, "boom", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	f := newForgeForTest(t,
+		Options{Kind: KindDataCenter, URL: srv.URL},
+		srv.URL+"/scm/KEY/repo.git")
+	_, err := f.OpenRepository(
+		t.Context(),
+		&AuthenticationToken{AccessToken: "tok"},
+		&RepositoryID{
+			url:        srv.URL,
+			kind:       KindDataCenter,
+			projectKey: "KEY",
+			slug:       "repo",
+		},
+	)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "review capabilities")
+}
+
+func TestForge_OpenRepository_reviewCapabilities(t *testing.T) {
+	tests := []struct {
+		version      string
+		wantReview   bool
+		wantResolver bool
+	}{
+		{version: "7.6.9"},
+		{version: "7.7.0", wantReview: true},
+		{version: "8.9.0", wantReview: true, wantResolver: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, "/rest/api/1.0/application-properties", r.URL.Path)
+				_, err := fmt.Fprintf(w, `{"version":%q}`, tt.version)
+				assert.NoError(t, err)
+			}))
+			defer srv.Close()
+
+			f := newForgeForTest(t,
+				Options{Kind: KindDataCenter, URL: srv.URL},
+				srv.URL+"/scm/KEY/repo.git")
+			repo, err := f.OpenRepository(
+				t.Context(),
+				&AuthenticationToken{AccessToken: "tok"},
+				&RepositoryID{
+					url:        srv.URL,
+					kind:       KindDataCenter,
+					projectKey: "KEY",
+					slug:       "repo",
+				},
+			)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantReview,
+				implementsReviewRepository(repo))
+			assert.Equal(t, tt.wantResolver,
+				implementsReviewThreadResolver(repo))
+		})
+	}
+}
+
+func implementsReviewRepository(repo forge.Repository) bool {
+	_, ok := repo.(forge.ReviewRepository)
+	return ok
+}
+
+func implementsReviewThreadResolver(repo forge.Repository) bool {
+	_, ok := repo.(forge.ReviewThreadResolver)
+	return ok
 }
 
 func TestForge_OpenRepository_personalRepositoryUsesTildeRESTProjectKey(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case "/rest/api/1.0/application-properties":
+			_, err := w.Write([]byte(`{"version":"7.6.9"}`))
+			assert.NoError(t, err)
 		case "/rest/api/1.0/projects/~jcaptain/repos/warp-core/raw/PULL_REQUEST_TEMPLATE.md":
 			_, err := w.Write([]byte("personal template\n"))
 			assert.NoError(t, err)

@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"iter"
+	"time"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
@@ -129,6 +130,176 @@ type ResolvableComment struct {
 	// Only Bitbucket Data Center reports pending comments;
 	// it is always false on Bitbucket Cloud.
 	Pending bool
+}
+
+// ReviewerState is the latest effective review state of a pull request
+// participant.
+type ReviewerState struct {
+	// Reviewer is the participant's Bitbucket username.
+	Reviewer string
+
+	// Disposition is the participant's current review outcome.
+	Disposition forge.ReviewDisposition
+
+	// CommitHash is the revision reviewed by the participant.
+	CommitHash git.Hash
+
+	// SubmittedAt is when the participant established this state.
+	SubmittedAt time.Time
+}
+
+// ReviewThread is a comment-backed discussion attached to a pull request diff.
+// RootCommentID identifies the top-level inline comment that owns the replies.
+type ReviewThread struct {
+	// RootCommentID is the top-level anchored comment that owns the thread.
+	RootCommentID int64
+
+	// Path is the repository-relative file path attached to the root.
+	Path string
+
+	// Range is the inclusive range represented by the product anchor.
+	Range forge.ReviewThreadRange
+
+	// Side is the preimage or postimage file selected by the anchor.
+	Side forge.ReviewThreadSide
+
+	// Resolved is meaningful only when ReviewCapabilities.ThreadResolution is
+	// true for the gateway.
+	Resolved bool
+
+	// Comments contains the root followed by its replies in product order.
+	Comments []ReviewComment
+}
+
+// ReviewComment is one comment in a comment-backed review thread.
+type ReviewComment struct {
+	// ID is the product comment ID.
+	ID int64
+
+	// Version is the optimistic-locking version used by Data Center edits.
+	// It is zero for Bitbucket Cloud.
+	Version int
+
+	// Body is the raw comment text.
+	Body string
+
+	// Author is the comment author's Bitbucket username.
+	Author string
+
+	// CreatedAt is the product-reported creation time.
+	CreatedAt time.Time
+}
+
+// CreateReviewCommentRequest describes an inline comment or thread reply.
+// ParentID is zero for a new inline comment. When it is non-zero, the location
+// fields are ignored and the comment replies to that root comment.
+type CreateReviewCommentRequest struct {
+	// ParentID is the root comment ID for a reply, or zero for a new thread.
+	ParentID int64
+
+	// Path, Range, and Side locate a new thread and are ignored for replies.
+	Path  string
+	Range forge.ReviewThreadRange
+	Side  forge.ReviewThreadSide
+
+	// Body is the comment text.
+	Body string
+
+	// ReviewContext and ReviewAnchor carry Data Center's native draft anchor
+	// inputs. Cloud ignores them.
+	ReviewContext ReviewContext
+	ReviewAnchor  ReviewAnchor
+}
+
+// ReviewCapabilities reports the review features available from a gateway.
+// Bitbucket Cloud reports static capabilities. Bitbucket Data Center derives
+// them from the running product version.
+type ReviewCapabilities struct {
+	// Supported reports whether the product can satisfy ReviewRepository.
+	Supported bool
+
+	// NativeDrafts reports whether review contents remain pending until
+	// PublishReview.
+	NativeDrafts bool
+
+	// Multiline reports whether root anchors can span an inclusive range.
+	Multiline bool
+
+	// ThreadResolution reports whether the product exposes resolution state and
+	// permits ResolveReviewThread and UnresolveReviewThread.
+	ThreadResolution bool
+}
+
+// ReviewContext identifies the Data Center pull request revision on which a
+// pending review is built. Cloud review submissions do not use it.
+type ReviewContext struct {
+	// BaseHash and HeadHash are the exact sinceId/untilId revision pair used by
+	// Data Center diff lookup and comment anchors.
+	BaseHash git.Hash
+	HeadHash git.Hash
+
+	// Version is the Data Center pull request optimistic-locking version used
+	// when publishing the native review.
+	Version int
+}
+
+// ReviewAnchor carries Data Center's diff-segment classifications for the
+// inclusive review range. Cloud review submissions do not use it.
+type ReviewAnchor struct {
+	// StartLineType and EndLineType are Data Center diff segment values:
+	// ADDED, REMOVED, or CONTEXT.
+	StartLineType string
+	EndLineType   string
+}
+
+// ReviewGateway is implemented by Bitbucket products that expose review
+// conversations through pull request comments.
+type ReviewGateway interface {
+	Gateway
+
+	ReviewCapabilities(context.Context) (ReviewCapabilities, error)
+	ListReviewerStates(context.Context, int64) iter.Seq2[*ReviewerState, error]
+	ListReviewThreads(context.Context, int64) iter.Seq2[*ReviewThread, error]
+	CreateReviewComment(
+		context.Context,
+		int64,
+		CreateReviewCommentRequest,
+	) (*ReviewComment, error)
+	ResolveReviewThread(context.Context, int64, int64) error
+	UnresolveReviewThread(context.Context, int64, int64) error
+}
+
+// EmulatedReviewGateway applies dispositions outside a pending review workflow.
+// Bitbucket Cloud implements this because its review resources publish
+// immediately rather than through one native completion endpoint.
+type EmulatedReviewGateway interface {
+	ReviewGateway
+
+	SetReviewDisposition(context.Context, int64, forge.ReviewDisposition) error
+}
+
+// PendingReviewGateway publishes comments, summary, and disposition as one
+// native review. Bitbucket Data Center implements this interface from version
+// 7.7 onward.
+type PendingReviewGateway interface {
+	ReviewGateway
+
+	ReviewContext(context.Context, int64) (ReviewContext, error)
+	ReviewAnchor(
+		context.Context,
+		int64,
+		ReviewContext,
+		string,
+		forge.ReviewThreadRange,
+		forge.ReviewThreadSide,
+	) (ReviewAnchor, error)
+	PublishReview(
+		context.Context,
+		int64,
+		ReviewContext,
+		string,
+		forge.ReviewDisposition,
+	) error
 }
 
 // FindChangesOptions filters pull requests

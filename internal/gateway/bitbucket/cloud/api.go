@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Bitbucket Cloud REST API references:
@@ -21,16 +22,17 @@ const (
 
 // PullRequest is a Bitbucket pull request.
 type PullRequest struct {
-	ID          int64            `json:"id"`
-	Title       string           `json:"title"`
-	Description string           `json:"description"`
-	State       string           `json:"state"`
-	Draft       bool             `json:"draft"`
-	Source      BranchRef        `json:"source"`
-	Destination BranchRef        `json:"destination"`
-	Reviewers   []User           `json:"reviewers"`
-	Links       PullRequestLinks `json:"links"`
-	MergeCommit *Commit          `json:"merge_commit,omitzero"`
+	ID           int64            `json:"id"`
+	Title        string           `json:"title"`
+	Description  string           `json:"description"`
+	State        string           `json:"state"`
+	Draft        bool             `json:"draft"`
+	Source       BranchRef        `json:"source"`
+	Destination  BranchRef        `json:"destination"`
+	Reviewers    []User           `json:"reviewers"`
+	Participants []Participant    `json:"participants"`
+	Links        PullRequestLinks `json:"links"`
+	MergeCommit  *Commit          `json:"merge_commit,omitzero"`
 
 	// Mergeable reports Bitbucket Cloud's current merge decision.
 	//
@@ -93,12 +95,22 @@ type Comment struct {
 	ID         int64       `json:"id"`
 	Content    Content     `json:"content"`
 	Inline     *Inline     `json:"inline,omitzero"`
+	Parent     *CommentRef `json:"parent,omitzero"`
 	Resolution *Resolution `json:"resolution,omitzero"`
+	User       User        `json:"user"`
+	CreatedOn  time.Time   `json:"created_on"`
 }
 
 // CommentCreateRequest is the request body for creating or updating a comment.
 type CommentCreateRequest struct {
-	Content Content `json:"content"`
+	Content Content     `json:"content"`
+	Inline  *Inline     `json:"inline,omitzero"`
+	Parent  *CommentRef `json:"parent,omitzero"`
+}
+
+// CommentRef identifies another pull request comment.
+type CommentRef struct {
+	ID int64 `json:"id"`
 }
 
 // CommentList is the paginated response for listing comments.
@@ -166,6 +178,15 @@ type Reviewer struct {
 	UUID string `json:"uuid"`
 }
 
+// Participant is a user who has acted on a pull request.
+type Participant struct {
+	User           User       `json:"user"`
+	Role           string     `json:"role"`
+	Approved       bool       `json:"approved"`
+	State          string     `json:"state"`
+	ParticipatedOn *time.Time `json:"participated_on,omitzero"`
+}
+
 // User is a Bitbucket user.
 type User struct {
 	UUID        string `json:"uuid"`
@@ -197,9 +218,11 @@ type Content struct {
 
 // Inline identifies an inline comment location.
 type Inline struct {
-	Path string `json:"path"`
-	From *int   `json:"from,omitzero"`
-	To   *int   `json:"to,omitzero"`
+	Path      string `json:"path"`
+	From      *int   `json:"from,omitzero"`
+	To        *int   `json:"to,omitzero"`
+	StartFrom *int   `json:"start_from,omitzero"`
+	StartTo   *int   `json:"start_to,omitzero"`
 }
 
 // Resolution indicates a comment resolution state.
@@ -375,6 +398,60 @@ func (c *Client) CommentList(
 		return nil, resp, err
 	}
 	return &response, resp, nil
+}
+
+// PullRequestApprove approves a pull request as the authenticated user.
+func (c *Client) PullRequestApprove(
+	ctx context.Context,
+	workspace string,
+	repo string,
+	prID int64,
+) (*Response, error) {
+	return c.post(ctx, fmt.Sprintf(
+		"/repositories/%s/%s/pullrequests/%d/approve",
+		workspace, repo, prID,
+	), nil, nil, nil)
+}
+
+// PullRequestRequestChanges requests changes as the authenticated user.
+func (c *Client) PullRequestRequestChanges(
+	ctx context.Context,
+	workspace string,
+	repo string,
+	prID int64,
+) (*Response, error) {
+	return c.post(ctx, fmt.Sprintf(
+		"/repositories/%s/%s/pullrequests/%d/request-changes",
+		workspace, repo, prID,
+	), nil, nil, nil)
+}
+
+// CommentResolve resolves the thread rooted at commentID.
+func (c *Client) CommentResolve(
+	ctx context.Context,
+	workspace string,
+	repo string,
+	prID int64,
+	commentID int64,
+) (*Response, error) {
+	return c.post(ctx, fmt.Sprintf(
+		"/repositories/%s/%s/pullrequests/%d/comments/%d/resolve",
+		workspace, repo, prID, commentID,
+	), nil, nil, nil)
+}
+
+// CommentUnresolve reopens the thread rooted at commentID.
+func (c *Client) CommentUnresolve(
+	ctx context.Context,
+	workspace string,
+	repo string,
+	prID int64,
+	commentID int64,
+) (*Response, error) {
+	return c.delete(ctx, fmt.Sprintf(
+		"/repositories/%s/%s/pullrequests/%d/comments/%d/resolve",
+		workspace, repo, prID, commentID,
+	), nil)
 }
 
 // WorkspaceMemberList lists workspace members.

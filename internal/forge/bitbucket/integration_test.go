@@ -86,7 +86,7 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t,
 				bitbucket.MergeChange(
 					t.Context(),
-					repo.(*bitbucket.Repository),
+					repo,
 					change.(*bitbucket.PR),
 				))
 		},
@@ -98,7 +98,7 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t,
 				bitbucket.CloseChange(
 					t.Context(),
-					repo.(*bitbucket.Repository),
+					repo,
 					change.(*bitbucket.PR),
 				))
 		},
@@ -126,7 +126,8 @@ func TestIntegration(t *testing.T) {
 		// because no working test account is available.
 		SetCommentsPageSize: bitbucket.SetListChangeCommentsPageSize,
 		Reviewers:           []string{cfg.Reviewer},
-		Assignees:           []string{},
+		// ReviewThreads:       true,
+		Assignees: []string{},
 		// Bitbucket limitations:
 		SkipLabels:            true, // no PR labels
 		SkipAssignees:         true, // no PR assignees
