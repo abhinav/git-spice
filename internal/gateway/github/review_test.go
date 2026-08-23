@@ -202,3 +202,25 @@ func TestGateway_DirectReviewCommentMutations(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, ID("C_2"), reply.ID)
 }
+
+func TestGateway_FileReviewCommentMutation(t *testing.T) {
+	gateway := newTestGateway(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		var request struct {
+			Query     string         `json:"query"`
+			Variables jsontext.Value `json:"variables"`
+		}
+		require.NoError(t, json.UnmarshalRead(r.Body, &request))
+
+		assert.Contains(t, request.Query, "addPullRequestReviewThread")
+		assert.JSONEq(t, `{"input":{"pullRequestId":"PR_1","path":"a.go","subjectType":"FILE","body":"thread"}}`, string(request.Variables))
+		response := `{"data":{"addPullRequestReviewThread":{"thread":{"id":"T_1","comments":{"nodes":[{"id":"C_1","url":"https://example.com/c1"}]}}}}}`
+		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Body: io.NopCloser(strings.NewReader(response))}, nil
+	}))
+
+	thread, err := gateway.AddPullRequestReviewThread(t.Context(), &AddPullRequestReviewThreadInput{
+		PullRequestID: "PR_1", Path: "a.go", SubjectType: ReviewThreadSubjectTypeFile, Body: "thread",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, ID("T_1"), thread.ID)
+	assert.Equal(t, ID("C_1"), thread.Comment.ID)
+}

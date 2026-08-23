@@ -231,11 +231,14 @@ type AddPullRequestReviewThreadInput struct {
 	// Path is relative to the repository root.
 	Path string `json:"path"`
 
-	// Line is the inclusive end line.
-	Line int `json:"line"`
+	// SubjectType identifies a whole-file thread when set to FILE.
+	SubjectType ReviewThreadSubjectType `json:"subjectType,omitzero"`
 
-	// Side identifies the side containing Line.
-	Side DiffSide `json:"side"`
+	// Line is the inclusive end line for a line thread.
+	Line int `json:"line,omitzero"`
+
+	// Side identifies the side containing Line for a line thread.
+	Side DiffSide `json:"side,omitzero"`
 
 	// StartLine is the inclusive start line for a multiline thread.
 	StartLine *int `json:"startLine,omitzero"`

@@ -145,6 +145,7 @@ func TestIntegration(t *testing.T) {
 		},
 		SetCommentsPageSize: github.SetListChangeCommentsPageSize,
 		ReviewThreads:       true,
+		FileReviewThreads:   true,
 		Reviewers:           []string{cfg.Reviewer},
 		Assignees:           []string{cfg.Assignee},
 	})

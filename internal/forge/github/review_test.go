@@ -51,6 +51,9 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 	gateway.EXPECT().PullRequestReviewThreads(gomock.Any(), github.ID("PR_1"), nil).Return(threadSeq(
 		&github.PullRequestReviewThread{
 			ID: "T_file", Path: "file.go", SubjectType: github.ReviewThreadSubjectTypeFile,
+			Comments: []github.PullRequestReviewComment{{
+				ID: "C_file", URL: "https://example.com/file", Body: "file",
+			}},
 		},
 		&github.PullRequestReviewThread{
 			ID: "T_1", Path: "a.go", SubjectType: github.ReviewThreadSubjectTypeLine,
@@ -70,17 +73,22 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 		require.NoError(t, err)
 		got = append(got, thread)
 	}
-	require.Len(t, got, 1)
-	assert.Equal(t, forge.ReviewThreadRange{StartLine: 17, EndLine: 19}, got[0].Range)
-	assert.Equal(t, forge.ReviewThreadSideLeft, got[0].Side)
-	assert.Equal(t, true, *got[0].Resolved)
-	assert.Equal(t, true, *got[0].Outdated)
+	require.Len(t, got, 2)
+	assert.Equal(t, "file.go", got[0].Path)
+	assert.True(t, got[0].Range.IsZero())
 	require.Len(t, got[0].Comments, 1)
-	commentID, ok := got[0].Comments[0].ID.(*PRReviewComment)
+	assert.Equal(t, github.ID("C_file"), got[0].Comments[0].ID.(*PRReviewComment).GQLID)
+
+	assert.Equal(t, forge.ReviewThreadRange{StartLine: 17, EndLine: 19}, got[1].Range)
+	assert.Equal(t, forge.ReviewThreadSideLeft, got[1].Side)
+	assert.Equal(t, true, *got[1].Resolved)
+	assert.Equal(t, true, *got[1].Outdated)
+	require.Len(t, got[1].Comments, 1)
+	commentID, ok := got[1].Comments[0].ID.(*PRReviewComment)
 	require.True(t, ok)
 	assert.Equal(t, github.ID("C_1"), commentID.GQLID)
-	assert.Equal(t, "octo", got[0].Comments[0].Author)
-	assert.Equal(t, createdAt, got[0].Comments[0].CreatedAt)
+	assert.Equal(t, "octo", got[1].Comments[0].Author)
+	assert.Equal(t, createdAt, got[1].Comments[0].CreatedAt)
 }
 
 func TestRepository_SubmitReview_preservesMixedCommentOrder(t *testing.T) {
@@ -93,6 +101,10 @@ func TestRepository_SubmitReview_preservesMixedCommentOrder(t *testing.T) {
 			PullRequestReviewID: "R_1", Path: "a.go", Line: 9, Side: github.DiffSideLeft,
 			StartLine: new(7), StartSide: new(github.DiffSideLeft), Body: "first",
 		}).Return(&github.AddedPullRequestReviewThread{ID: "T_1", Comment: &github.AddedPullRequestReviewComment{ID: "C_1", URL: "https://example.com/c1"}}, nil),
+		gateway.EXPECT().AddPullRequestReviewThread(gomock.Any(), &github.AddPullRequestReviewThreadInput{
+			PullRequestReviewID: "R_1", Path: "file.go",
+			SubjectType: github.ReviewThreadSubjectTypeFile, Body: "file",
+		}).Return(&github.AddedPullRequestReviewThread{ID: "T_file", Comment: &github.AddedPullRequestReviewComment{ID: "C_file", URL: "https://example.com/file"}}, nil),
 		gateway.EXPECT().AddPullRequestReviewThreadReply(gomock.Any(), &github.AddPullRequestReviewThreadReplyInput{
 			PullRequestReviewThreadID: "T_existing", PullRequestReviewID: "R_1", Body: "reply",
 		}).Return(&github.AddedPullRequestReviewComment{ID: "C_2", URL: "https://example.com/c2"}, nil),
@@ -108,6 +120,7 @@ func TestRepository_SubmitReview_preservesMixedCommentOrder(t *testing.T) {
 		Body: "summary", Disposition: forge.ReviewDispositionRequestChanges,
 		Comments: []forge.SubmitReviewCommentRequest{
 			{Path: "a.go", Range: forge.ReviewThreadRange{StartLine: 7, EndLine: 9}, Side: forge.ReviewThreadSideLeft, Body: "first"},
+			{Path: "file.go", Side: forge.ReviewThreadSide(42), Body: "file"},
 			{
 				ReplyTo: &PRReviewThread{GQLID: "T_existing"},
 				Path:    "", Range: forge.ReviewThreadRange{StartLine: 9, EndLine: 1},
@@ -117,10 +130,12 @@ func TestRepository_SubmitReview_preservesMixedCommentOrder(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.Len(t, result.Comments, 3)
+	require.Len(t, result.Comments, 4)
 	assert.Equal(t, github.ID("C_1"), result.Comments[0].CommentID.(*PRReviewComment).GQLID)
-	assert.Equal(t, github.ID("T_existing"), result.Comments[1].ThreadID.(*PRReviewThread).GQLID)
-	assert.Equal(t, github.ID("C_3"), result.Comments[2].CommentID.(*PRReviewComment).GQLID)
+	assert.Equal(t, github.ID("T_file"), result.Comments[1].ThreadID.(*PRReviewThread).GQLID)
+	assert.Equal(t, github.ID("C_file"), result.Comments[1].CommentID.(*PRReviewComment).GQLID)
+	assert.Equal(t, github.ID("T_existing"), result.Comments[2].ThreadID.(*PRReviewThread).GQLID)
+	assert.Equal(t, github.ID("C_3"), result.Comments[3].CommentID.(*PRReviewComment).GQLID)
 }
 
 func TestRepository_SubmitReview_withoutDispositionPublishesContentDirectly(t *testing.T) {
@@ -132,6 +147,10 @@ func TestRepository_SubmitReview_withoutDispositionPublishesContentDirectly(t *t
 		gateway.EXPECT().AddPullRequestReviewThread(gomock.Any(), &github.AddPullRequestReviewThreadInput{
 			PullRequestID: "PR_1", Path: "a.go", Line: 9, Side: github.DiffSideLeft, Body: "first",
 		}).Return(&github.AddedPullRequestReviewThread{ID: "T_1", Comment: &github.AddedPullRequestReviewComment{ID: "C_1", URL: "https://example.com/c1"}}, nil),
+		gateway.EXPECT().AddPullRequestReviewThread(gomock.Any(), &github.AddPullRequestReviewThreadInput{
+			PullRequestID: "PR_1", Path: "file.go",
+			SubjectType: github.ReviewThreadSubjectTypeFile, Body: "file",
+		}).Return(&github.AddedPullRequestReviewThread{ID: "T_file", Comment: &github.AddedPullRequestReviewComment{ID: "C_file", URL: "https://example.com/file"}}, nil),
 		gateway.EXPECT().AddPullRequestReviewThreadReply(gomock.Any(), &github.AddPullRequestReviewThreadReplyInput{
 			PullRequestReviewThreadID: "T_existing", Body: "reply",
 		}).Return(&github.AddedPullRequestReviewComment{ID: "C_2", URL: "https://example.com/c2"}, nil),
@@ -141,15 +160,18 @@ func TestRepository_SubmitReview_withoutDispositionPublishesContentDirectly(t *t
 		Body: "summary",
 		Comments: []forge.SubmitReviewCommentRequest{
 			{Path: "a.go", Range: forge.ReviewThreadLine(9), Side: forge.ReviewThreadSideLeft, Body: "first"},
+			{Path: "file.go", Side: forge.ReviewThreadSide(42), Body: "file"},
 			{ReplyTo: &PRReviewThread{GQLID: "T_existing"}, Body: "reply"},
 		},
 	})
 	require.NoError(t, err)
-	require.Len(t, result.Comments, 2)
+	require.Len(t, result.Comments, 3)
 	assert.Equal(t, github.ID("T_1"), result.Comments[0].ThreadID.(*PRReviewThread).GQLID)
 	assert.Equal(t, github.ID("C_1"), result.Comments[0].CommentID.(*PRReviewComment).GQLID)
-	assert.Equal(t, github.ID("T_existing"), result.Comments[1].ThreadID.(*PRReviewThread).GQLID)
-	assert.Equal(t, github.ID("C_2"), result.Comments[1].CommentID.(*PRReviewComment).GQLID)
+	assert.Equal(t, github.ID("T_file"), result.Comments[1].ThreadID.(*PRReviewThread).GQLID)
+	assert.Equal(t, github.ID("C_file"), result.Comments[1].CommentID.(*PRReviewComment).GQLID)
+	assert.Equal(t, github.ID("T_existing"), result.Comments[2].ThreadID.(*PRReviewThread).GQLID)
+	assert.Equal(t, github.ID("C_2"), result.Comments[2].CommentID.(*PRReviewComment).GQLID)
 }
 
 func TestRepository_SubmitReview_withoutDispositionReportsPullRequestCommentError(t *testing.T) {

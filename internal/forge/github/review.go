@@ -82,11 +82,18 @@ func (r *Repository) ListReviewThreads(ctx context.Context, id forge.ChangeID) i
 				yield(nil, err)
 				return
 			}
-			if thread.SubjectType == github.ReviewThreadSubjectTypeFile {
-				continue
+			var (
+				threadRange forge.ReviewThreadRange
+				threadSide  forge.ReviewThreadSide
+			)
+			if thread.SubjectType != github.ReviewThreadSubjectTypeFile {
+				endLine := reviewLine(thread.Line, thread.OriginalLine, 0)
+				threadRange = forge.ReviewThreadRange{
+					StartLine: reviewLine(thread.StartLine, thread.OriginalStartLine, endLine),
+					EndLine:   endLine,
+				}
+				threadSide = reviewThreadSide(thread.DiffSide)
 			}
-			endLine := reviewLine(thread.Line, thread.OriginalLine, 0)
-			startLine := reviewLine(thread.StartLine, thread.OriginalStartLine, endLine)
 			comments := make([]forge.ReviewComment, len(thread.Comments))
 			for i, comment := range thread.Comments {
 				comments[i] = forge.ReviewComment{
@@ -98,13 +105,10 @@ func (r *Repository) ListReviewThreads(ctx context.Context, id forge.ChangeID) i
 			}
 			resolved, outdated := thread.IsResolved, thread.IsOutdated
 			if !yield(&forge.ReviewThread{
-				ID:   &PRReviewThread{GQLID: thread.ID},
-				Path: thread.Path,
-				Range: forge.ReviewThreadRange{
-					StartLine: startLine,
-					EndLine:   endLine,
-				},
-				Side:     reviewThreadSide(thread.DiffSide),
+				ID:       &PRReviewThread{GQLID: thread.ID},
+				Path:     thread.Path,
+				Range:    threadRange,
+				Side:     threadSide,
 				Resolved: &resolved,
 				Outdated: &outdated,
 				Comments: comments,
@@ -168,8 +172,6 @@ func (r *Repository) SubmitReview(ctx context.Context, id forge.ChangeID, req fo
 		input := &github.AddPullRequestReviewThreadInput{
 			PullRequestReviewID: reviewID,
 			Path:                comment.Path,
-			Line:                comment.Range.EndLine,
-			Side:                diffSide(comment.Side),
 			Body:                comment.Body,
 		}
 		if reviewID == "" {
@@ -177,9 +179,15 @@ func (r *Repository) SubmitReview(ctx context.Context, id forge.ChangeID, req fo
 			// disposition-bearing threads attach to the pending review.
 			input.PullRequestID = gqlID
 		}
-		if comment.Range.StartLine != comment.Range.EndLine {
-			input.StartLine = &comment.Range.StartLine
-			input.StartSide = &input.Side
+		if comment.Range.IsZero() {
+			input.SubjectType = github.ReviewThreadSubjectTypeFile
+		} else {
+			input.Line = comment.Range.EndLine
+			input.Side = diffSide(comment.Side)
+			if comment.Range.StartLine != comment.Range.EndLine {
+				input.StartLine = &comment.Range.StartLine
+				input.StartSide = &input.Side
+			}
 		}
 		thread, err := r.gateway.AddPullRequestReviewThread(ctx, input)
 		if err != nil {
