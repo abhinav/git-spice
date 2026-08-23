@@ -92,6 +92,15 @@ type ReviewThread struct {
 	// It is ignored when Range is zero.
 	Side ReviewThreadSide
 
+	// CommitHash is the change head revision against which the root comment was
+	// created. It does not identify the commit that introduced the commented
+	// line and is never inferred from the change's current head.
+	// Range and Side locate the root within that reviewed diff.
+	// Left-side and file-level threads may still have a non-zero CommitHash.
+	// Replies inherit the root's CommitHash.
+	// CommitHash is zero when the forge does not expose the reviewed revision.
+	CommitHash git.Hash
+
 	// Resolved reports whether the forge marks the thread as resolved.
 	// It is nil when the forge does not expose thread resolution state.
 	Resolved *bool

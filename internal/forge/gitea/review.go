@@ -148,6 +148,7 @@ func (r *Repository) ListReviewThreads(
 	return func(yield func(*forge.ReviewThread, error) bool) {
 		prNumber := mustPR(id).Number
 		threadsByID := make(map[reviewThreadID]*forge.ReviewThread)
+		commitHashesByCommentID := make(map[reviewCommentID]git.Hash)
 		var threads []*forge.ReviewThread
 
 		// One conversation may span several submitted reviews, so collect all
@@ -190,7 +191,9 @@ func (r *Repository) ListReviewThreads(
 				} else if comment.Resolver != nil {
 					*thread.Resolved = true
 				}
-				thread.Comments = append(thread.Comments, reviewCommentFromGitea(comment))
+				reviewComment := reviewCommentFromGitea(comment)
+				thread.Comments = append(thread.Comments, reviewComment)
+				commitHashesByCommentID[mustReviewCommentID(reviewComment.ID)] = git.Hash(review.CommitID)
 			}
 		}
 
@@ -198,6 +201,7 @@ func (r *Repository) ListReviewThreads(
 			// Replies from later reviews must follow earlier comments in the
 			// reconstructed conversation.
 			slices.SortStableFunc(thread.Comments, compareReviewComments)
+			thread.CommitHash = commitHashesByCommentID[mustReviewCommentID(thread.Comments[0].ID)]
 			if !yield(thread, nil) {
 				return
 			}

@@ -19,13 +19,14 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
+        uncompressed: true
         body: '{"data":{"repository":{"id":"R_kgDOMVd0xg"}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 293.512875ms
+        duration: 172.992875ms
     - id: 1
       request:
         proto: HTTP/1.1
@@ -33,7 +34,7 @@ interactions:
         proto_minor: 1
         content_length: 296
         host: api.github.com
-        body: '{"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"EzuHkZEH","title":"Testing review threads EzuHkZEH","body":"Test change for review threads"}}}'
+        body: '{"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"w3wbggbq","title":"Testing review threads w3wbggbq","body":"Test change for review threads"}}}'
         headers:
             Content-Type:
                 - application/json
@@ -44,13 +45,14 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABArqVoA","number":182,"url":"https://github.com/test-owner/test-repo/pull/182"}}}}'
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABAtgnfw","number":186,"url":"https://github.com/test-owner/test-repo/pull/186"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.124243958s
+        duration: 1.044255875s
     - id: 2
       request:
         proto: HTTP/1.1
@@ -58,7 +60,7 @@ interactions:
         proto_minor: 1
         content_length: 301
         host: api.github.com
-        body: '{"query":"mutation($input: AddPullRequestReviewThreadInput!){addPullRequestReviewThread(input: $input){thread{id,comments(first: 1){nodes{id,url}}}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABArqVoA","path":"review.go","line":3,"side":"RIGHT","body":"First batched review comment."}}}'
+        body: '{"query":"mutation($input: AddPullRequestReviewThreadInput!){addPullRequestReviewThread(input: $input){thread{id,comments(first: 1){nodes{id,url}}}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABAtgnfw","path":"review.go","line":3,"side":"RIGHT","body":"First batched review comment."}}}'
         headers:
             Content-Type:
                 - application/json
@@ -69,14 +71,13 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        uncompressed: true
-        body: '{"data":{"addPullRequestReviewThread":{"thread":{"id":"PRRT_kwDOMVd0xs6bc9FU","comments":{"nodes":[{"id":"PRRC_kwDOMVd0xs7kvaDc","url":"https://github.com/test-owner/test-repo/pull/182#discussion_r3837632732"}]}}}}}'
+        body: '{"data":{"addPullRequestReviewThread":{"thread":{"id":"PRRT_kwDOMVd0xs6bgUeA","comments":{"nodes":[{"id":"PRRC_kwDOMVd0xs7k0SEo","url":"https://github.com/test-owner/test-repo/pull/186#discussion_r3838910760"}]}}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 686.055291ms
+        duration: 699.349084ms
     - id: 3
       request:
         proto: HTTP/1.1
@@ -84,7 +85,32 @@ interactions:
         proto_minor: 1
         content_length: 302
         host: api.github.com
-        body: '{"query":"mutation($input: AddPullRequestReviewThreadInput!){addPullRequestReviewThread(input: $input){thread{id,comments(first: 1){nodes{id,url}}}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABArqVoA","path":"review.go","line":4,"side":"RIGHT","body":"Second batched review comment."}}}'
+        body: '{"query":"mutation($input: AddPullRequestReviewThreadInput!){addPullRequestReviewThread(input: $input){thread{id,comments(first: 1){nodes{id,url}}}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABAtgnfw","path":"review.go","line":4,"side":"RIGHT","body":"Second batched review comment."}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"addPullRequestReviewThread":{"thread":{"id":"PRRT_kwDOMVd0xs6bgUeK","comments":{"nodes":[{"id":"PRRC_kwDOMVd0xs7k0SE5","url":"https://github.com/test-owner/test-repo/pull/186#discussion_r3838910777"}]}}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 470.739875ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 528
+        host: api.github.com
+        body: '{"query":"query($after: String,$commentsFirst: Int!,$first: Int!,$id: ID!,){node(id: $id){... on PullRequest{reviewThreads(first: $first, after: $after){pageInfo{endCursor,hasNextPage},nodes{id,path,subjectType,diffSide,startDiffSide,line,startLine,originalLine,originalStartLine,isResolved,isOutdated,comments(first: $commentsFirst){pageInfo{endCursor,hasNextPage},nodes{id,url,body,author{login},originalCommit{oid},createdAt}}}}}}}","variables":{"after":null,"commentsFirst":100,"first":100,"id":"PR_kwDOMVd0xs8AAAABAtgnfw"}}'
         headers:
             Content-Type:
                 - application/json
@@ -96,21 +122,21 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"addPullRequestReviewThread":{"thread":{"id":"PRRT_kwDOMVd0xs6bc9Fe","comments":{"nodes":[{"id":"PRRC_kwDOMVd0xs7kvaDs","url":"https://github.com/test-owner/test-repo/pull/182#discussion_r3837632748"}]}}}}}'
+        body: '{"data":{"node":{"reviewThreads":{"pageInfo":{"endCursor":"Y3Vyc29yOnYyOpK0MjAyNi0wOC0yM1QxNTo0NDo0OFrOm4FHig==","hasNextPage":false},"nodes":[{"id":"PRRT_kwDOMVd0xs6bgUeA","path":"review.go","subjectType":"LINE","diffSide":"RIGHT","startDiffSide":null,"line":3,"startLine":3,"originalLine":3,"originalStartLine":null,"isResolved":false,"isOutdated":false,"comments":{"pageInfo":{"endCursor":"Y3Vyc29yOnYyOpK0MjAyNi0wOC0yM1QxNTo0NDo0OFrO5NEhKA==","hasNextPage":false},"nodes":[{"id":"PRRC_kwDOMVd0xs7k0SEo","url":"https://github.com/test-owner/test-repo/pull/186#discussion_r3838910760","body":"First batched review comment.","author":{"login":"test-owner"},"originalCommit":{"oid":"d669b8cd4bbf21aa0e408c5188ef2f1071e9fa9e"},"createdAt":"2026-08-23T15:44:48Z"}]}},{"id":"PRRT_kwDOMVd0xs6bgUeK","path":"review.go","subjectType":"LINE","diffSide":"RIGHT","startDiffSide":null,"line":4,"startLine":4,"originalLine":4,"originalStartLine":null,"isResolved":false,"isOutdated":false,"comments":{"pageInfo":{"endCursor":"Y3Vyc29yOnYyOpK0MjAyNi0wOC0yM1QxNTo0NDo0OFrO5NEhOQ==","hasNextPage":false},"nodes":[{"id":"PRRC_kwDOMVd0xs7k0SE5","url":"https://github.com/test-owner/test-repo/pull/186#discussion_r3838910777","body":"Second batched review comment.","author":{"login":"test-owner"},"originalCommit":{"oid":"d669b8cd4bbf21aa0e408c5188ef2f1071e9fa9e"},"createdAt":"2026-08-23T15:44:48Z"}]}}]}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 830.500083ms
-    - id: 4
+        duration: 451.220459ms
+    - id: 5
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 508
+        content_length: 188
         host: api.github.com
-        body: '{"query":"query($after: String,$commentsFirst: Int!,$first: Int!,$id: ID!,){node(id: $id){... on PullRequest{reviewThreads(first: $first, after: $after){pageInfo{endCursor,hasNextPage},nodes{id,path,subjectType,diffSide,startDiffSide,line,startLine,originalLine,originalStartLine,isResolved,isOutdated,comments(first: $commentsFirst){pageInfo{endCursor,hasNextPage},nodes{id,url,body,author{login},createdAt}}}}}}}","variables":{"after":null,"commentsFirst":100,"first":100,"id":"PR_kwDOMVd0xs8AAAABArqVoA"}}'
+        body: '{"query":"mutation($input:UpdatePullRequestInput!){updatePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABAtgnfw","state":"CLOSED"}}}'
         headers:
             Content-Type:
                 - application/json
@@ -121,10 +147,11 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        body: '{"data":{"node":{"reviewThreads":{"pageInfo":{"endCursor":"Y3Vyc29yOnYyOpK0MjAyNi0wOC0yM1QwMzo0MTowM1rOm3PRXg==","hasNextPage":false},"nodes":[{"id":"PRRT_kwDOMVd0xs6bc9FU","path":"review.go","subjectType":"LINE","diffSide":"RIGHT","startDiffSide":null,"line":3,"startLine":3,"originalLine":3,"originalStartLine":null,"isResolved":false,"isOutdated":false,"comments":{"pageInfo":{"endCursor":"Y3Vyc29yOnYyOpK0MjAyNi0wOC0yM1QwMzo0MTowM1rO5L2g3A==","hasNextPage":false},"nodes":[{"id":"PRRC_kwDOMVd0xs7kvaDc","url":"https://github.com/test-owner/test-repo/pull/182#discussion_r3837632732","body":"First batched review comment.","author":{"login":"test-owner"},"createdAt":"2026-08-23T03:41:03Z"}]}},{"id":"PRRT_kwDOMVd0xs6bc9Fe","path":"review.go","subjectType":"LINE","diffSide":"RIGHT","startDiffSide":null,"line":4,"startLine":4,"originalLine":4,"originalStartLine":null,"isResolved":false,"isOutdated":false,"comments":{"pageInfo":{"endCursor":"Y3Vyc29yOnYyOpK0MjAyNi0wOC0yM1QwMzo0MTowNFrO5L2g7A==","hasNextPage":false},"nodes":[{"id":"PRRC_kwDOMVd0xs7kvaDs","url":"https://github.com/test-owner/test-repo/pull/182#discussion_r3837632748","body":"Second batched review comment.","author":{"login":"test-owner"},"createdAt":"2026-08-23T03:41:04Z"}]}}]}}}}'
+        uncompressed: true
+        body: '{"data":{"updatePullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABAtgnfw"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 431.67475ms
+        duration: 810.073709ms

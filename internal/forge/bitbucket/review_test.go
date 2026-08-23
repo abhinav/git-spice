@@ -45,6 +45,7 @@ func TestReviewRepository_ListReviewThreads(t *testing.T) {
 			return func(yield func(*gw.ReviewThread, error) bool) {
 				yield(&gw.ReviewThread{
 					RootCommentID: 10,
+					CommitHash:    "1111111111111111111111111111111111111111",
 					Path:          "review.go",
 					Range:         forge.ReviewThreadLine(3),
 					Side:          forge.ReviewThreadSideRight,
@@ -67,6 +68,7 @@ func TestReviewRepository_ListReviewThreads(t *testing.T) {
 
 	require.Len(t, got, 1)
 	assert.Equal(t, "10:7", got[0].ID.String())
+	assert.Equal(t, "1111111111111111111111111111111111111111", got[0].CommitHash.String())
 	assert.Equal(t, reviewCommentID{CommentID: 10, PRID: 7}, got[0].Comments[0].ID)
 	assert.Equal(t, reviewCommentID{CommentID: 11, PRID: 7}, got[0].Comments[1].ID)
 	assert.Equal(t, &resolved, got[0].Resolved)

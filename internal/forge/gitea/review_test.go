@@ -321,8 +321,18 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 		switch r.URL.Path {
 		case "/api/v1/repos/captain/warp-core/pulls/42/reviews":
 			writeJSON(t, w, http.StatusOK, []*giteagw.PullReview{
-				{ID: 101, State: giteagw.ReviewStateComment, CodeCommentsCount: 1},
-				{ID: 100, State: giteagw.ReviewStateComment, CodeCommentsCount: 2},
+				{
+					ID:                101,
+					State:             giteagw.ReviewStateComment,
+					CommitID:          "2222222222222222222222222222222222222222",
+					CodeCommentsCount: 1,
+				},
+				{
+					ID:                100,
+					State:             giteagw.ReviewStateComment,
+					CommitID:          "1111111111111111111111111111111111111111",
+					CodeCommentsCount: 2,
+				},
 				{ID: 102},
 			})
 		case "/api/v1/repos/captain/warp-core/pulls/42/reviews/100/comments":
@@ -372,6 +382,7 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 	assert.Equal(t, "engine.go", threads[0].Path)
 	assert.Equal(t, forge.ReviewThreadLine(12), threads[0].Range)
 	assert.Equal(t, forge.ReviewThreadSideRight, threads[0].Side)
+	assert.Equal(t, "1111111111111111111111111111111111111111", threads[0].CommitHash.String())
 	require.NotNil(t, threads[0].Resolved)
 	assert.False(t, *threads[0].Resolved)
 	require.Len(t, threads[0].Comments, 2)

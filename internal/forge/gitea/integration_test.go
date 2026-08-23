@@ -137,11 +137,12 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL:     remoteURL,
-		PushRemoteURL: pushRemoteURL,
-		Forge:         giteaForge,
-		Sanitizers:    sanitizers,
-		ReviewThreads: true,
+		RemoteURL:              remoteURL,
+		PushRemoteURL:          pushRemoteURL,
+		Forge:                  giteaForge,
+		Sanitizers:             sanitizers,
+		ReviewThreads:          true,
+		ReviewThreadCommitHash: true,
 
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			gc := newTestGiteaClient(t, cfg, httpClient)

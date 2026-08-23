@@ -27,9 +27,10 @@ func TestGateway_PullRequestReviewThreads_paginatesThreadsAndComments(t *testing
 		case 1:
 			assert.Contains(t, request.Query, "reviewThreads(first: $first, after: $after)")
 			assert.Contains(t, request.Query, "comments(first: $commentsFirst)")
+			assert.Contains(t, request.Query, "originalCommit{oid}")
 			assert.Contains(t, request.Query, "subjectType")
 			assert.JSONEq(t, `{"after":null,"commentsFirst":100,"first":10,"id":"PR_1"}`, string(request.Variables))
-			response = `{"data":{"node":{"reviewThreads":{"pageInfo":{"endCursor":"threads-next","hasNextPage":true},"nodes":[{"id":"T_1","path":"a.go","subjectType":"LINE","diffSide":"LEFT","startDiffSide":"LEFT","line":9,"startLine":7,"originalLine":19,"originalStartLine":17,"isResolved":true,"isOutdated":false,"comments":{"pageInfo":{"endCursor":"comments-next","hasNextPage":true},"nodes":[{"id":"C_1","url":"https://example.com/c1","body":"first","author":{"login":"octo"},"createdAt":"2026-08-22T10:00:00Z"}]}}]}}}}`
+			response = `{"data":{"node":{"reviewThreads":{"pageInfo":{"endCursor":"threads-next","hasNextPage":true},"nodes":[{"id":"T_1","path":"a.go","subjectType":"LINE","diffSide":"LEFT","startDiffSide":"LEFT","line":9,"startLine":7,"originalLine":19,"originalStartLine":17,"isResolved":true,"isOutdated":false,"comments":{"pageInfo":{"endCursor":"comments-next","hasNextPage":true},"nodes":[{"id":"C_1","url":"https://example.com/c1","body":"first","author":{"login":"octo"},"originalCommit":{"oid":"1111111111111111111111111111111111111111"},"createdAt":"2026-08-22T10:00:00Z"}]}}]}}}}`
 		case 2:
 			assert.Contains(t, request.Query, "comments(first: $first, after: $after)")
 			assert.JSONEq(t, `{"after":"comments-next","first":100,"id":"T_1"}`, string(request.Variables))
@@ -60,6 +61,7 @@ func TestGateway_PullRequestReviewThreads_paginatesThreadsAndComments(t *testing
 	assert.Equal(t, ReviewThreadSubjectTypeLine, threads[0].SubjectType)
 	assert.Equal(t, 7, *threads[0].StartLine)
 	require.Len(t, threads[0].Comments, 2)
+	assert.Equal(t, "1111111111111111111111111111111111111111", threads[0].Comments[0].OriginalCommit.OID)
 	assert.Equal(t, ID("C_2"), threads[0].Comments[1].ID)
 	assert.Equal(t, ReviewThreadSubjectTypeFile, threads[1].SubjectType)
 	assert.Nil(t, threads[1].Line)

@@ -21,6 +21,12 @@ func (s *integrationSuite) TestReviewThreads(t *testing.T) {
 }
 
 func (s *integrationSuite) TestReviewThreadsSingleAndReply(t *testing.T) {
+	rootCommitHash, setRootCommitHash := fixturetest.Stored[string](
+		s.Fixtures, "rootCommitHash",
+	)
+	replyHeadHash, setReplyHeadHash := fixturetest.Stored[string](
+		s.Fixtures, "replyHeadHash",
+	)
 	branchName := fixturetest.New(s.Fixtures, "branch", func() string {
 		return randomString(8)
 	}).Get(t)
@@ -39,8 +45,11 @@ func (s *integrationSuite) TestReviewThreadsSingleAndReply(t *testing.T) {
 			"\treturn 1",
 			"}",
 		)
-		testRepo.AddAllAndCommit("commit for review comments")
+		rootHash := testRepo.AddAllAndCommit("commit for review comments")
 		testRepo.Push(branchName)
+		if s.reviewThreadCommitHash {
+			setRootCommitHash(rootHash.String())
+		}
 
 		t.Cleanup(func() {
 			testRepo.DeleteRemoteBranch(branchName)
@@ -88,6 +97,33 @@ func (s *integrationSuite) TestReviewThreadsSingleAndReply(t *testing.T) {
 	single := singleReview.Comments[0]
 	require.NotNil(t, single.ThreadID)
 	require.NotNil(t, single.CommentID)
+	if s.reviewThreadCommitHash {
+		threads, err := sliceutil.CollectErr(
+			reviewRepo.ListReviewThreads(t.Context(), change.ID))
+		require.NoError(t, err, "list review threads after root creation")
+		var rootThread *forge.ReviewThread
+		for _, thread := range threads {
+			for _, comment := range thread.Comments {
+				if comment.Body == "Single-line review comment." {
+					rootThread = thread
+				}
+			}
+		}
+		require.NotNil(t, rootThread, "single review thread not found")
+		wantRootHash := rootCommitHash.Get(t)
+		t.Run("RootCommitHash", func(t *testing.T) {
+			assert.Equal(t, wantRootHash, rootThread.CommitHash.String())
+		})
+	}
+
+	if s.reviewThreadCommitHash && Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo.CheckoutBranch(branchName)
+		testRepo.WriteFile("reply.go", "package review")
+		replyHash := testRepo.AddAllAndCommit("advance change before reply")
+		testRepo.Push(branchName)
+		setReplyHeadHash(replyHash.String())
+	}
 
 	replyReview, err := reviewRepo.SubmitReview(
 		t.Context(),
@@ -137,6 +173,15 @@ func (s *integrationSuite) TestReviewThreadsSingleAndReply(t *testing.T) {
 	assert.Equal(t, single.ThreadID, replyThread.ID)
 	assert.Equal(t, "review.go", singleThread.Path)
 	assert.Equal(t, forge.ReviewThreadLine(3), singleThread.Range)
+
+	if s.reviewThreadCommitHash {
+		wantRootHash := rootCommitHash.Get(t)
+		wantReplyHeadHash := replyHeadHash.Get(t)
+		t.Run("ReplyRetainsRootCommitHash", func(t *testing.T) {
+			assert.NotEqual(t, wantRootHash, wantReplyHeadHash)
+			assert.Equal(t, wantRootHash, replyThread.CommitHash.String())
+		})
+	}
 
 	// Editing and resolution are independent optional upgrades.
 	// Exercise each one only when the repository advertises it.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"iter"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -243,10 +244,23 @@ func (sh *ShamHub) handleSubmitReview(
 	if err != nil {
 		return nil, err
 	}
+	if err := validateSubmitReviewRequest(req); err != nil {
+		return nil, badRequestErrorf("%v", err)
+	}
+
+	rootCommitHash, err := sh.reviewRootCommitHash(
+		ctx,
+		req.Owner,
+		req.Repo,
+		req.Change,
+		submitReviewCreatesRoot(req),
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
-
 	if !sh.changeBelongsToRepository(req.Change, req.Owner, req.Repo) {
 		return nil, notFoundErrorf(
 			"change %d not found in %s/%s",
@@ -255,11 +269,87 @@ func (sh *ShamHub) handleSubmitReview(
 			req.Repo,
 		)
 	}
-	if err := sh.validateSubmitReviewHTTPRequest(req); err != nil {
+	if err := sh.validateSubmitReviewThreadIdentities(req); err != nil {
 		return nil, badRequestErrorf("%v", err)
 	}
 
-	return sh.submitReview(submitter, req, time.Now())
+	return sh.submitReview(submitter, req, rootCommitHash, time.Now())
+}
+
+func submitReviewCreatesRoot(req *submitReviewRequest) bool {
+	for _, comment := range req.Comments {
+		if comment.ThreadID == "" {
+			return true
+		}
+	}
+	return false
+}
+
+type reviewHeadSnapshot struct {
+	Hash   git.Hash
+	Owner  string
+	Repo   string
+	Branch string
+}
+
+// reviewRootCommitHash captures the change head selected when root creation
+// begins. That revision remains the thread's identity if the branch later moves.
+func (sh *ShamHub) reviewRootCommitHash(
+	ctx context.Context,
+	owner string,
+	repo string,
+	changeNumber int,
+	createsRoot bool,
+) (git.Hash, error) {
+	if !createsRoot {
+		return "", nil
+	}
+
+	sh.mu.RLock()
+	var head reviewHeadSnapshot
+	for _, change := range sh.changes {
+		if change.Number != changeNumber ||
+			change.Base.Owner != owner ||
+			change.Base.Repo != repo {
+			continue
+		}
+		if change.HeadHash != "" {
+			head.Hash = git.Hash(change.HeadHash)
+			break
+		}
+		if change.Head == nil {
+			sh.mu.RUnlock()
+			return "", errors.New("change head is missing")
+		}
+		head.Owner = change.Head.Owner
+		head.Repo = change.Head.Repo
+		head.Branch = change.Head.Name
+		break
+	}
+	sh.mu.RUnlock()
+
+	if head.Hash != "" {
+		return head.Hash, nil
+	}
+	if head.Branch == "" {
+		return "", notFoundErrorf(
+			"change %d not found in %s/%s",
+			changeNumber,
+			owner,
+			repo,
+		)
+	}
+	out, err := sh.gitCmd(
+		ctx,
+		head.Owner,
+		head.Repo,
+		"rev-parse",
+		head.Branch,
+	).Output()
+	if err != nil {
+		return "", fmt.Errorf("resolve change head: %w", err)
+	}
+	return git.Hash(strings.TrimSpace(string(out))), nil
 }
 
 // submitReview records one validated feedback submission while the caller
@@ -267,6 +357,7 @@ func (sh *ShamHub) handleSubmitReview(
 func (sh *ShamHub) submitReview(
 	submitter string,
 	req *submitReviewRequest,
+	rootCommitHash git.Hash,
 	now time.Time,
 ) (*submitReviewResponse, error) {
 	commentIDs := make([]int, 0, len(req.Comments)+1)
@@ -286,28 +377,13 @@ func (sh *ShamHub) submitReview(
 	response := &submitReviewResponse{
 		Comments: make([]submitReviewCommentResponse, 0, len(req.Comments)),
 	}
-	// A root derives its stable thread ID from its globally allocated comment ID.
-	// Replies preserve that ID and inherit the thread's current resolution state.
 	for _, requestComment := range req.Comments {
-		commentID := sh.nextCommentID()
 		threadID := ReviewThreadID(requestComment.ThreadID)
-		resolved := false
-		if threadID == "" {
-			threadID = ReviewThreadID(fmt.Sprintf("thread-%d", commentID))
-		} else {
-			root := sh.reviewThreadRoot(threadID)
-			resolved = root.Resolved
-		}
-
 		comment := shamComment{
-			ID:         commentID,
-			Change:     req.Change,
-			Body:       requestComment.Body,
-			Resolvable: true,
-			Resolved:   resolved,
-			ThreadID:   threadID,
-			Author:     submitter,
-			CreatedAt:  now,
+			Change:    req.Change,
+			Body:      requestComment.Body,
+			Author:    submitter,
+			CreatedAt: now,
 		}
 		if requestComment.ThreadID == "" {
 			comment.Path = requestComment.Path
@@ -318,12 +394,12 @@ func (sh *ShamHub) submitReview(
 				comment.Side = forge.ReviewThreadSide(requestComment.Side)
 			}
 		}
-		sh.comments = append(sh.comments, comment)
+		comment = sh.storeReviewComment(comment, threadID, rootCommitHash)
 		response.Comments = append(response.Comments, submitReviewCommentResponse{
-			ThreadID:  threadID.String(),
-			CommentID: commentID,
+			ThreadID:  comment.ThreadID.String(),
+			CommentID: comment.ID,
 		})
-		commentIDs = append(commentIDs, commentID)
+		commentIDs = append(commentIDs, comment.ID)
 	}
 
 	sh.feedbackSubmissions = append(sh.feedbackSubmissions, shamFeedbackSubmission{
@@ -337,10 +413,33 @@ func (sh *ShamHub) submitReview(
 	return response, nil
 }
 
-// validateSubmitReviewHTTPRequest owns validation of untrusted decoded HTTP
-// values before ShamHub mutates storage. The forge adapter instead relies on
-// the invariants of its internally constructed typed request.
-func (sh *ShamHub) validateSubmitReviewHTTPRequest(req *submitReviewRequest) error {
+// storeReviewComment records a validated root or reply while the caller holds
+// sh.mu. Roots own the reviewed revision; replies inherit it with thread state.
+func (sh *ShamHub) storeReviewComment(
+	comment shamComment,
+	threadID ReviewThreadID,
+	rootCommitHash git.Hash,
+) shamComment {
+	if comment.ID == 0 {
+		comment.ID = sh.nextCommentID()
+	}
+	comment.Resolvable = true
+	comment.ThreadID = threadID
+	if threadID == "" {
+		comment.ThreadID = ReviewThreadID(fmt.Sprintf("thread-%d", comment.ID))
+		comment.CommitHash = rootCommitHash
+	} else {
+		root := sh.reviewThreadRoot(threadID)
+		comment.Resolved = root.Resolved
+		comment.CommitHash = root.CommitHash
+	}
+	sh.comments = append(sh.comments, comment)
+	return comment
+}
+
+// validateSubmitReviewRequest rejects malformed path and JSON values without
+// consulting ShamHub storage.
+func validateSubmitReviewRequest(req *submitReviewRequest) error {
 	if req.Body == "" &&
 		len(req.Comments) == 0 &&
 		req.Disposition == int(forge.ReviewDispositionNone) {
@@ -354,17 +453,6 @@ func (sh *ShamHub) validateSubmitReviewHTTPRequest(req *submitReviewRequest) err
 			return fmt.Errorf("comment %d body is required", i)
 		}
 		if comment.ThreadID != "" {
-			root := sh.reviewThreadRoot(ReviewThreadID(comment.ThreadID))
-			if root == nil {
-				return fmt.Errorf("thread %q not found", comment.ThreadID)
-			}
-			if root.Change != req.Change {
-				return fmt.Errorf(
-					"thread %q does not belong to change %d",
-					comment.ThreadID,
-					req.Change,
-				)
-			}
 			continue
 		}
 		if comment.Path == "" {
@@ -379,6 +467,30 @@ func (sh *ShamHub) validateSubmitReviewHTTPRequest(req *submitReviewRequest) err
 		}
 		if err := validateReviewSide(forge.ReviewThreadSide(comment.Side)); err != nil {
 			return fmt.Errorf("comment %d: %w", i, err)
+		}
+	}
+	return nil
+}
+
+// validateSubmitReviewThreadIdentities checks storage-owned thread identities
+// while the caller holds sh.mu.
+func (sh *ShamHub) validateSubmitReviewThreadIdentities(
+	req *submitReviewRequest,
+) error {
+	for _, comment := range req.Comments {
+		if comment.ThreadID == "" {
+			continue
+		}
+		root := sh.reviewThreadRoot(ReviewThreadID(comment.ThreadID))
+		if root == nil {
+			return fmt.Errorf("thread %q not found", comment.ThreadID)
+		}
+		if root.Change != req.Change {
+			return fmt.Errorf(
+				"thread %q does not belong to change %d",
+				comment.ThreadID,
+				req.Change,
+			)
 		}
 	}
 	return nil
@@ -461,12 +573,13 @@ func (r *forgeRepository) ListReviewThreads(
 				resolved := item.Resolved
 				outdated := item.Outdated
 				thread = &forge.ReviewThread{
-					ID:       ReviewThreadID(item.ThreadID),
-					Path:     item.Path,
-					Range:    reviewRangeFromItem(item),
-					Side:     forge.ReviewThreadSide(item.Side),
-					Resolved: &resolved,
-					Outdated: &outdated,
+					ID:         ReviewThreadID(item.ThreadID),
+					Path:       item.Path,
+					Range:      reviewRangeFromItem(item),
+					Side:       forge.ReviewThreadSide(item.Side),
+					CommitHash: git.Hash(item.CommitHash),
+					Resolved:   &resolved,
+					Outdated:   &outdated,
 				}
 				threadsByID[item.ThreadID] = thread
 				threads = append(threads, thread)
@@ -497,8 +610,9 @@ type listReviewThreadsResponse struct {
 	Items []reviewCommentItem `json:"items,omitempty"`
 }
 
-// reviewCommentItem is one flat protocol row. The root carries coordinates;
-// replies share its thread ID and leave their coordinate fields empty.
+// reviewCommentItem is one flat protocol row. The root carries coordinates and
+// the reviewed change head; replies share its thread ID and CommitHash while
+// leaving their coordinate fields empty.
 type reviewCommentItem struct {
 	ID         int       `json:"id"`
 	ThreadID   string    `json:"threadID"`
@@ -507,6 +621,7 @@ type reviewCommentItem struct {
 	RangeStart int       `json:"rangeStart,omitzero"`
 	RangeEnd   int       `json:"rangeEnd,omitzero"`
 	Side       int       `json:"side,omitzero"`
+	CommitHash string    `json:"commitHash,omitzero"`
 	Body       string    `json:"body"`
 	Author     string    `json:"author"`
 	Resolved   bool      `json:"resolved"`
@@ -551,6 +666,7 @@ func (sh *ShamHub) handleListReviewThreads(
 			RangeStart: comment.RangeStart,
 			RangeEnd:   comment.RangeEnd,
 			Side:       int(comment.Side),
+			CommitHash: comment.CommitHash.String(),
 			Body:       comment.Body,
 			Author:     comment.Author,
 			Resolved:   comment.Resolved,

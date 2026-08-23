@@ -461,13 +461,13 @@ func (sh *ShamHub) handleAdminSubmitFeedback(
 		Body:        req.Body,
 		Disposition: req.Disposition,
 	}
-	if err := sh.validateSubmitReviewHTTPRequest(submit); err != nil {
+	if err := validateSubmitReviewRequest(submit); err != nil {
 		return nil, badRequestErrorf("%v", err)
 	}
 	if req.Time.IsZero() {
 		req.Time = time.Now()
 	}
-	if _, err := sh.submitReview(req.Submitter, submit, req.Time); err != nil {
+	if _, err := sh.submitReview(req.Submitter, submit, "", req.Time); err != nil {
 		return nil, err
 	}
 	return &adminSubmitFeedbackResponse{}, nil
@@ -498,31 +498,17 @@ type adminPostReviewCommentResponse struct {
 
 // Review-comment administration seeds a review thread root or reply.
 func (sh *ShamHub) handleAdminPostReviewComment(
-	_ context.Context,
+	ctx context.Context,
 	req adminPostReviewCommentBody,
 ) (*adminPostReviewCommentResponse, error) {
-	sh.mu.Lock()
-	defer sh.mu.Unlock()
-
-	if !sh.changeBelongsToRepository(req.Change, req.Owner, req.Repo) {
-		return nil, notFoundErrorf(
-			"change %d not found in %s/%s",
-			req.Change,
-			req.Owner,
-			req.Repo,
-		)
-	}
-	if req.Body == "" {
-		return nil, badRequestErrorf("review comment body is required")
-	}
-
-	threadID := ReviewThreadID(req.ThreadID)
-	resolved := req.Resolved
 	reviewRange := forge.ReviewThreadRange{
 		StartLine: req.RangeStart,
 		EndLine:   req.RangeEnd,
 	}
-	if threadID == "" {
+	if req.Body == "" {
+		return nil, badRequestErrorf("review comment body is required")
+	}
+	if req.ThreadID == "" {
 		if req.Path == "" {
 			return nil, badRequestErrorf("review comment path is required")
 		}
@@ -534,46 +520,67 @@ func (sh *ShamHub) handleAdminPostReviewComment(
 				return nil, badRequestErrorf("%v", err)
 			}
 		}
-	} else {
+	}
+
+	rootCommitHash, err := sh.reviewRootCommitHash(
+		ctx,
+		req.Owner,
+		req.Repo,
+		req.Change,
+		req.ThreadID == "",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	if !sh.changeBelongsToRepository(req.Change, req.Owner, req.Repo) {
+		return nil, notFoundErrorf(
+			"change %d not found in %s/%s",
+			req.Change,
+			req.Owner,
+			req.Repo,
+		)
+	}
+	threadID := ReviewThreadID(req.ThreadID)
+	if threadID != "" {
 		root := sh.reviewThreadRoot(threadID)
 		if root == nil || root.Change != req.Change {
 			return nil, notFoundErrorf("thread %q not found", req.ThreadID)
 		}
-		resolved = root.Resolved
 	}
 
-	id := req.ID
-	if id == 0 {
-		id = sh.nextCommentID()
-	} else if sh.commentByID(id) != nil {
-		return nil, badRequestErrorf("comment %d already exists", id)
-	}
-	if threadID == "" {
-		threadID = ReviewThreadID("thread-" + strconv.Itoa(id))
+	if req.ID != 0 && sh.commentByID(req.ID) != nil {
+		return nil, badRequestErrorf("comment %d already exists", req.ID)
 	}
 	if req.Time.IsZero() {
 		req.Time = time.Now()
 	}
 	comment := shamComment{
-		ID:         id,
-		Change:     req.Change,
-		Body:       req.Body,
-		Resolvable: true,
-		Resolved:   resolved,
-		Outdated:   req.Outdated,
-		Path:       req.Path,
-		ThreadID:   threadID,
-		Author:     req.Author,
-		CreatedAt:  req.Time,
+		ID:        req.ID,
+		Change:    req.Change,
+		Body:      req.Body,
+		Resolved:  req.Resolved,
+		Outdated:  req.Outdated,
+		Author:    req.Author,
+		CreatedAt: req.Time,
 	}
-	if req.ThreadID == "" && !reviewRange.IsZero() {
-		comment.Line = req.RangeStart
-		comment.RangeStart = req.RangeStart
-		comment.RangeEnd = req.RangeEnd
-		comment.Side = forge.ReviewThreadSide(req.Side)
+	if req.ThreadID == "" {
+		comment.Path = req.Path
+		if !reviewRange.IsZero() {
+			comment.Line = req.RangeStart
+			comment.RangeStart = req.RangeStart
+			comment.RangeEnd = req.RangeEnd
+			comment.Side = forge.ReviewThreadSide(req.Side)
+		}
 	}
-	sh.comments = append(sh.comments, comment)
-	return &adminPostReviewCommentResponse{ID: id, ThreadID: threadID.String()}, nil
+	comment = sh.storeReviewComment(comment, threadID, rootCommitHash)
+	return &adminPostReviewCommentResponse{
+		ID:       comment.ID,
+		ThreadID: comment.ThreadID.String(),
+	}, nil
 }
 
 type adminDumpChangesRequest struct{}

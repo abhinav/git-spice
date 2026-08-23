@@ -278,12 +278,13 @@ func groupReviewComments(
 			resolved := comment.Resolver != nil
 			threadID := key
 			thread = &forge.ReviewThread{
-				ID:       &threadID,
-				Path:     comment.Path,
-				Range:    forge.ReviewThreadLine(int(max(position, -position))),
-				Side:     side,
-				Resolved: &resolved,
-				Outdated: &outdated,
+				ID:         &threadID,
+				Path:       comment.Path,
+				Range:      forge.ReviewThreadLine(int(max(position, -position))),
+				Side:       side,
+				CommitHash: git.Hash(review.CommitID),
+				Resolved:   &resolved,
+				Outdated:   &outdated,
 			}
 			byID[key] = thread
 			threads = append(threads, thread)

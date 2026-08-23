@@ -15,28 +15,28 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 81
+        content_length: 79
         body: |-
             {
-              "number": 14,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/14"
+              "number": 1,
+              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/1"
             }
         headers:
             Content-Length:
-                - "81"
+                - "79"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 20.174833ms
+        duration: 10.012041ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 93
+        content_length: 92
         host: 127.0.0.1:56373
-        body: '{"change":14,"comments":[{"path":"review.go","line":3,"body":"Single-line review comment."}]}'
+        body: '{"change":1,"comments":[{"path":"review.go","line":3,"body":"Single-line review comment."}]}'
         url: http://127.0.0.1:56373/abhinav/test-repo/reviews
         method: POST
       response:
@@ -48,8 +48,8 @@ interactions:
             {
               "comments": [
                 {
-                  "threadID": "thread-5",
-                  "commentID": 5
+                  "threadID": "thread-1",
+                  "commentID": 1
                 }
               ]
             }
@@ -60,40 +60,8 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 542.792µs
+        duration: 16.453834ms
     - id: 2
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 81
-        host: 127.0.0.1:56373
-        body: '{"change":14,"comments":[{"threadID":"thread-5","body":"Reply review comment."}]}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/reviews
-        method: POST
-      response:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 86
-        body: |-
-            {
-              "comments": [
-                {
-                  "threadID": "thread-5",
-                  "commentID": 7
-                }
-              ]
-            }
-        headers:
-            Content-Length:
-                - "86"
-            Content-Type:
-                - application/json
-        status: 200 OK
-        code: 200
-        duration: 112.333µs
-    - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
@@ -102,50 +70,125 @@ interactions:
         host: 127.0.0.1:56373
         form:
             change:
-                - "14"
-        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=14
+                - "1"
+        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=1
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 564
+        content_length: 363
         body: |-
             {
               "items": [
                 {
-                  "id": 5,
-                  "threadID": "thread-5",
+                  "id": 1,
+                  "threadID": "thread-1",
                   "path": "review.go",
                   "line": 3,
+                  "commitHash": "39a47f102b0d81f30d7ce07b8c7d2630aeb10deb",
                   "body": "Single-line review comment.",
                   "author": "test-user",
                   "resolved": false,
                   "outdated": false,
-                  "createdAt": "2026-08-22T13:40:08.557434-07:00"
-                },
-                {
-                  "id": 7,
-                  "threadID": "thread-5",
-                  "path": "",
-                  "line": 0,
-                  "body": "Reply review comment.",
-                  "author": "test-user",
-                  "resolved": false,
-                  "outdated": false,
-                  "createdAt": "2026-08-22T13:40:08.557864-07:00"
+                  "createdAt": "2026-08-23T07:46:58.397927-07:00"
                 }
               ]
             }
         headers:
             Content-Length:
-                - "564"
+                - "363"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 237.708µs
+        duration: 650.708µs
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        host: 127.0.0.1:56373
+        body: '{"change":1,"comments":[{"threadID":"thread-1","body":"Reply review comment."}]}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/reviews
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 86
+        body: |-
+            {
+              "comments": [
+                {
+                  "threadID": "thread-1",
+                  "commentID": 2
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "86"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 223.334µs
     - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        form:
+            change:
+                - "1"
+        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=1
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 675
+        body: |-
+            {
+              "items": [
+                {
+                  "id": 1,
+                  "threadID": "thread-1",
+                  "path": "review.go",
+                  "line": 3,
+                  "commitHash": "39a47f102b0d81f30d7ce07b8c7d2630aeb10deb",
+                  "body": "Single-line review comment.",
+                  "author": "test-user",
+                  "resolved": false,
+                  "outdated": false,
+                  "createdAt": "2026-08-23T07:46:58.397927-07:00"
+                },
+                {
+                  "id": 2,
+                  "threadID": "thread-1",
+                  "path": "",
+                  "commitHash": "39a47f102b0d81f30d7ce07b8c7d2630aeb10deb",
+                  "body": "Reply review comment.",
+                  "author": "test-user",
+                  "resolved": false,
+                  "outdated": false,
+                  "createdAt": "2026-08-23T07:46:58.653008-07:00"
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "675"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 163.416µs
+    - id: 5
       request:
         proto: HTTP/1.1
         proto_major: 1
@@ -153,7 +196,7 @@ interactions:
         content_length: 45
         host: 127.0.0.1:56373
         body: '{"body":"Edited single-line review comment."}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/comments/5
+        url: http://127.0.0.1:56373/abhinav/test-repo/comments/1
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -162,7 +205,7 @@ interactions:
         content_length: 13
         body: |-
             {
-              "id": 5
+              "id": 1
             }
         headers:
             Content-Length:
@@ -171,144 +214,69 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 1.795125ms
-    - id: 5
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 0
-        host: 127.0.0.1:56373
-        form:
-            change:
-                - "14"
-        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=14
-        method: GET
-      response:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 571
-        body: |-
-            {
-              "items": [
-                {
-                  "id": 5,
-                  "threadID": "thread-5",
-                  "path": "review.go",
-                  "line": 3,
-                  "body": "Edited single-line review comment.",
-                  "author": "test-user",
-                  "resolved": false,
-                  "outdated": false,
-                  "createdAt": "2026-08-22T13:40:08.557434-07:00"
-                },
-                {
-                  "id": 7,
-                  "threadID": "thread-5",
-                  "path": "",
-                  "line": 0,
-                  "body": "Reply review comment.",
-                  "author": "test-user",
-                  "resolved": false,
-                  "outdated": false,
-                  "createdAt": "2026-08-22T13:40:08.557864-07:00"
-                }
-              ]
-            }
-        headers:
-            Content-Length:
-                - "571"
-            Content-Type:
-                - application/json
-        status: 200 OK
-        code: 200
-        duration: 516.291µs
+        duration: 84.417µs
     - id: 6
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 2
+        content_length: 0
         host: 127.0.0.1:56373
-        body: '{}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/threads/thread-5/resolve
-        method: POST
+        form:
+            change:
+                - "1"
+        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=1
+        method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 2
-        body: '{}'
+        content_length: 682
+        body: |-
+            {
+              "items": [
+                {
+                  "id": 1,
+                  "threadID": "thread-1",
+                  "path": "review.go",
+                  "line": 3,
+                  "commitHash": "39a47f102b0d81f30d7ce07b8c7d2630aeb10deb",
+                  "body": "Edited single-line review comment.",
+                  "author": "test-user",
+                  "resolved": false,
+                  "outdated": false,
+                  "createdAt": "2026-08-23T07:46:58.397927-07:00"
+                },
+                {
+                  "id": 2,
+                  "threadID": "thread-1",
+                  "path": "",
+                  "commitHash": "39a47f102b0d81f30d7ce07b8c7d2630aeb10deb",
+                  "body": "Reply review comment.",
+                  "author": "test-user",
+                  "resolved": false,
+                  "outdated": false,
+                  "createdAt": "2026-08-23T07:46:58.653008-07:00"
+                }
+              ]
+            }
         headers:
             Content-Length:
-                - "2"
+                - "682"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 126.458µs
+        duration: 69.875µs
     - id: 7
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 0
-        host: 127.0.0.1:56373
-        form:
-            change:
-                - "14"
-        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=14
-        method: GET
-      response:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 569
-        body: |-
-            {
-              "items": [
-                {
-                  "id": 5,
-                  "threadID": "thread-5",
-                  "path": "review.go",
-                  "line": 3,
-                  "body": "Edited single-line review comment.",
-                  "author": "test-user",
-                  "resolved": true,
-                  "outdated": false,
-                  "createdAt": "2026-08-22T13:40:08.557434-07:00"
-                },
-                {
-                  "id": 7,
-                  "threadID": "thread-5",
-                  "path": "",
-                  "line": 0,
-                  "body": "Reply review comment.",
-                  "author": "test-user",
-                  "resolved": true,
-                  "outdated": false,
-                  "createdAt": "2026-08-22T13:40:08.557864-07:00"
-                }
-              ]
-            }
-        headers:
-            Content-Length:
-                - "569"
-            Content-Type:
-                - application/json
-        status: 200 OK
-        code: 200
-        duration: 209.458µs
-    - id: 8
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
         content_length: 2
         host: 127.0.0.1:56373
         body: '{}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/threads/thread-5/unresolve
+        url: http://127.0.0.1:56373/abhinav/test-repo/threads/thread-1/resolve
         method: POST
       response:
         proto: HTTP/1.1
@@ -323,8 +291,8 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 444.791µs
-    - id: 9
+        duration: 93.375µs
+    - id: 8
       request:
         proto: HTTP/1.1
         proto_major: 1
@@ -333,46 +301,124 @@ interactions:
         host: 127.0.0.1:56373
         form:
             change:
-                - "14"
-        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=14
+                - "1"
+        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=1
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 571
+        content_length: 680
         body: |-
             {
               "items": [
                 {
-                  "id": 5,
-                  "threadID": "thread-5",
+                  "id": 1,
+                  "threadID": "thread-1",
                   "path": "review.go",
                   "line": 3,
+                  "commitHash": "39a47f102b0d81f30d7ce07b8c7d2630aeb10deb",
                   "body": "Edited single-line review comment.",
                   "author": "test-user",
-                  "resolved": false,
+                  "resolved": true,
                   "outdated": false,
-                  "createdAt": "2026-08-22T13:40:08.557434-07:00"
+                  "createdAt": "2026-08-23T07:46:58.397927-07:00"
                 },
                 {
-                  "id": 7,
-                  "threadID": "thread-5",
+                  "id": 2,
+                  "threadID": "thread-1",
                   "path": "",
-                  "line": 0,
+                  "commitHash": "39a47f102b0d81f30d7ce07b8c7d2630aeb10deb",
                   "body": "Reply review comment.",
                   "author": "test-user",
-                  "resolved": false,
+                  "resolved": true,
                   "outdated": false,
-                  "createdAt": "2026-08-22T13:40:08.557864-07:00"
+                  "createdAt": "2026-08-23T07:46:58.653008-07:00"
                 }
               ]
             }
         headers:
             Content-Length:
-                - "571"
+                - "680"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 227µs
+        duration: 109.708µs
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 2
+        host: 127.0.0.1:56373
+        body: '{}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/threads/thread-1/unresolve
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 2
+        body: '{}'
+        headers:
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 93.667µs
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        form:
+            change:
+                - "1"
+        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=1
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 682
+        body: |-
+            {
+              "items": [
+                {
+                  "id": 1,
+                  "threadID": "thread-1",
+                  "path": "review.go",
+                  "line": 3,
+                  "commitHash": "39a47f102b0d81f30d7ce07b8c7d2630aeb10deb",
+                  "body": "Edited single-line review comment.",
+                  "author": "test-user",
+                  "resolved": false,
+                  "outdated": false,
+                  "createdAt": "2026-08-23T07:46:58.397927-07:00"
+                },
+                {
+                  "id": 2,
+                  "threadID": "thread-1",
+                  "path": "",
+                  "commitHash": "39a47f102b0d81f30d7ce07b8c7d2630aeb10deb",
+                  "body": "Reply review comment.",
+                  "author": "test-user",
+                  "resolved": false,
+                  "outdated": false,
+                  "createdAt": "2026-08-23T07:46:58.653008-07:00"
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "682"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 106.042µs

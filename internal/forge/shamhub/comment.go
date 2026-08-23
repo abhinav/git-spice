@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git"
 )
 
 // ChangeComment is a comment made on ShamHub.
@@ -154,9 +155,13 @@ type shamComment struct {
 	RangeStart int
 	RangeEnd   int
 	Side       forge.ReviewThreadSide
-	ThreadID   ReviewThreadID
-	Author     string
-	CreatedAt  time.Time
+
+	// CommitHash is captured from a root's change head and copied to replies.
+	CommitHash git.Hash
+
+	ThreadID  ReviewThreadID
+	Author    string
+	CreatedAt time.Time
 }
 
 var (

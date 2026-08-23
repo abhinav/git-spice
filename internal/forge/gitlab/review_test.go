@@ -84,6 +84,7 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 							Resolved:   true,
 							Position: &gitlabgateway.DiscussionPosition{
 								PositionType: "text",
+								HeadSHA:      "1111111111111111111111111111111111111111",
 								NewPath:      "new/name.go",
 								OldPath:      "old/name.go",
 								NewLine:      12,
@@ -149,6 +150,7 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 	assert.Equal(t, "new/name.go", threads[0].Path)
 	assert.Equal(t, forge.ReviewThreadRange{StartLine: 10, EndLine: 12}, threads[0].Range)
 	assert.Equal(t, forge.ReviewThreadSideRight, threads[0].Side)
+	assert.Equal(t, "1111111111111111111111111111111111111111", threads[0].CommitHash.String())
 	require.NotNil(t, threads[0].Resolved)
 	assert.True(t, *threads[0].Resolved)
 	assert.Nil(t, threads[0].Outdated)
