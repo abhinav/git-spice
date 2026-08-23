@@ -151,6 +151,7 @@ func TestIntegration(t *testing.T) {
 		Reviewers:           []string{cfg.Reviewer},
 		Assignees:           []string{cfg.Assignee},
 		SetCommentsPageSize: forgejo.SetChangeCommentsPageSize,
+		ReviewThreads:       true,
 	})
 }
 
