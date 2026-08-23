@@ -65,7 +65,6 @@ func TestRepository_SubmitReview(t *testing.T) {
 				{
 					ReplyTo: &reviewThreadID{prNumber: 42, path: "engine.go", line: 12},
 					Path:    "ignored.go",
-					Range:   forge.ReviewThreadLine(99),
 					Body:    "Reply note.",
 					Side:    forge.ReviewThreadSideLeft,
 				},

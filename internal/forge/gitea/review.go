@@ -322,6 +322,13 @@ func (r *Repository) SubmitReview(
 	id forge.ChangeID,
 	req forge.SubmitReviewRequest,
 ) (forge.SubmitReviewResult, error) {
+	for _, comment := range req.Comments {
+		if comment.ReplyTo == nil && comment.Range.IsZero() {
+			return forge.SubmitReviewResult{}, fmt.Errorf(
+				"submit file-level comment: %w", forge.ErrUnsupported)
+		}
+	}
+
 	prNumber := mustPR(id).Number
 	body, err := reviewBodyForGitea(req)
 	if err != nil {
