@@ -837,6 +837,9 @@ type DiscussionNoteUser struct {
 
 // DiscussionPosition describes the location of a diff discussion.
 type DiscussionPosition struct {
+	// PositionType determines which coordinates identify the location.
+	PositionType string `json:"position_type"`
+
 	NewPath   string     `json:"new_path"`
 	OldPath   string     `json:"old_path"`
 	OldLine   int64      `json:"old_line"`
@@ -1066,7 +1069,7 @@ type CreateMergeRequestDiscussionOptions struct {
 	Position *PositionOptions `json:"position,omitzero"`
 }
 
-// PositionOptions describes an inline discussion position.
+// PositionOptions describes a positioned discussion.
 type PositionOptions struct {
 	BaseSHA      *string           `json:"base_sha,omitzero"`
 	HeadSHA      *string           `json:"head_sha,omitzero"`

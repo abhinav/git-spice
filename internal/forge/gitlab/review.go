@@ -13,6 +13,11 @@ import (
 	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
+const (
+	positionTypeFile = "file"
+	positionTypeText = "text"
+)
+
 // GitLab review mapping
 //
 // GitLab stores a code-review thread as one merge request discussion whose
@@ -29,11 +34,12 @@ import (
 //
 // New positioned discussions also require the merge request's base, start,
 // and head diff refs. SubmitReview fetches those refs once before creating its
-// first new thread. The shared review API supplies a path, range, and one diff
-// side, so changed-side ranges use zero for the absent old or new coordinate
-// in GitLab's SHA1(path)_old_new line code. Context ranges require both real
-// coordinates; they remain unsupported until the provider parses the diff to
-// recover that mapping.
+// first new thread. A zero shared range maps to GitLab's file position type,
+// which has no line or side coordinates. For line ranges, the shared review
+// API supplies one diff side, so changed-side ranges use zero for the absent
+// old or new coordinate in GitLab's SHA1(path)_old_new line code. Context
+// ranges require both real coordinates; they remain unsupported until the
+// provider parses the diff to recover that mapping.
 
 var (
 	_ forge.ReviewRepository     = (*Repository)(nil)
@@ -329,11 +335,22 @@ func reviewThread(
 	return thread, true, nil
 }
 
-// reviewThreadPosition uses GitLab's selected range endpoint type as the
-// forge-neutral side and never substitutes an opposite-side coordinate.
+// reviewThreadPosition decodes GitLab's position type before interpreting its
+// type-specific coordinates. Text ranges use GitLab's selected endpoint type
+// as the forge-neutral side and never substitute an opposite-side coordinate.
 func reviewThreadPosition(
 	position *gitlab.DiscussionPosition,
 ) (string, forge.ReviewThreadRange, forge.ReviewThreadSide, error) {
+	switch position.PositionType {
+	case positionTypeFile:
+		return position.NewPath, forge.ReviewThreadRange{},
+			forge.ReviewThreadSideRight, nil
+	case positionTypeText:
+	default:
+		return "", forge.ReviewThreadRange{}, forge.ReviewThreadSideRight,
+			fmt.Errorf("unknown position type %q", position.PositionType)
+	}
+
 	if position.LineRange != nil {
 		start, end := position.LineRange.Start, position.LineRange.End
 		if start.Type != end.Type {
@@ -420,29 +437,30 @@ func (r *Repository) submitReviewComment(
 		mrNumber,
 		newDiscussionOptions(req, refs),
 	)
+	location := req.Path
+	if !req.Range.IsZero() {
+		location = fmt.Sprintf("%s:%d", req.Path, req.Range.StartLine)
+	}
 	if err != nil {
 		if req.Range.StartLine != req.Range.EndLine {
 			return forge.SubmitReviewCommentResult{}, fmt.Errorf(
-				"create discussion on %s:%d: %w; "+
+				"create discussion on %s: %w; "+
 					"GitLab context ranges require both old and new "+
 					"coordinates, which ReviewRepository does not expose",
-				req.Path,
-				req.Range.StartLine,
+				location,
 				err,
 			)
 		}
 		return forge.SubmitReviewCommentResult{}, fmt.Errorf(
-			"create discussion on %s:%d: %w",
-			req.Path,
-			req.Range.StartLine,
+			"create discussion on %s: %w",
+			location,
 			err,
 		)
 	}
 	if len(discussion.Notes) == 0 {
 		return forge.SubmitReviewCommentResult{}, fmt.Errorf(
-			"create discussion on %s:%d: response has no root note",
-			req.Path,
-			req.Range.StartLine,
+			"create discussion on %s: response has no root note",
+			location,
 		)
 	}
 
@@ -459,13 +477,17 @@ func (r *Repository) submitReviewComment(
 	}, nil
 }
 
-// newDiscussionOptions anchors GitLab's top-level position at the inclusive
-// range end and adds line-range endpoints when the request spans lines.
+// newDiscussionOptions maps a zero range to GitLab's coordinate-free file
+// position. Text positions anchor at the inclusive range end and add
+// line-range endpoints when the request spans lines.
 func newDiscussionOptions(
 	req forge.SubmitReviewCommentRequest,
 	refs *gitlab.MergeRequestDiffRefs,
 ) *gitlab.CreateMergeRequestDiscussionOptions {
-	positionType := "text"
+	positionType := positionTypeFile
+	if !req.Range.IsZero() {
+		positionType = positionTypeText
+	}
 	position := &gitlab.PositionOptions{
 		BaseSHA:      &refs.BaseSHA,
 		HeadSHA:      &refs.HeadSHA,
@@ -473,6 +495,12 @@ func newDiscussionOptions(
 		PositionType: &positionType,
 		NewPath:      &req.Path,
 		OldPath:      &req.Path,
+	}
+	if req.Range.IsZero() {
+		return &gitlab.CreateMergeRequestDiscussionOptions{
+			Body:     &req.Body,
+			Position: position,
+		}
 	}
 
 	start := int64(req.Range.StartLine)

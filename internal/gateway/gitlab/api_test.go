@@ -565,17 +565,25 @@ func TestClient_MergeRequestDiscussionList(t *testing.T) {
 		w.Header().Set("X-Page", "2")
 		w.Header().Set("X-Next-Page", "3")
 		w.Header().Set("X-Total-Pages", "4")
-		writeJSON(t, w, http.StatusOK, []*Discussion{
-			{
-				ID: "discussion-1",
-				Notes: []*DiscussionNote{
-					{Resolvable: true, Resolved: false},
+		writeJSON(t, w, http.StatusOK, []any{
+			map[string]any{
+				"id": "discussion-1",
+				"notes": []any{
+					map[string]any{
+						"resolvable": true,
+						"resolved":   false,
+						"position": map[string]any{
+							"position_type": "file",
+							"new_path":      "warp.go",
+							"old_path":      "warp.go",
+						},
+					},
 				},
 			},
-			{
-				ID: "discussion-2",
-				Notes: []*DiscussionNote{
-					{Resolvable: true, Resolved: true},
+			map[string]any{
+				"id": "discussion-2",
+				"notes": []any{
+					map[string]any{"resolvable": true, "resolved": true},
 				},
 			},
 		})
@@ -598,6 +606,8 @@ func TestClient_MergeRequestDiscussionList(t *testing.T) {
 	require.Len(t, discussions[0].Notes, 1)
 	assert.True(t, discussions[0].Notes[0].Resolvable)
 	assert.False(t, discussions[0].Notes[0].Resolved)
+	require.NotNil(t, discussions[0].Notes[0].Position)
+	assert.Equal(t, "file", discussions[0].Notes[0].Position.PositionType)
 	assert.Equal(t, 100, resp.ItemsPerPage)
 	assert.Equal(t, 2, resp.CurrentPage)
 	assert.Equal(t, 3, resp.NextPage)
@@ -665,6 +675,49 @@ func TestClient_MergeRequestDiscussionCreate(t *testing.T) {
 	assert.Equal(t, "discussion-1", discussion.ID)
 	require.Len(t, discussion.Notes, 1)
 	assert.Equal(t, int64(88), discussion.Notes[0].ID)
+}
+
+func TestClient_MergeRequestDiscussionCreate_filePosition(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/discussions", r.URL.Path)
+		assertJSONBody(t, r, `{
+			"body":"Check this file.",
+			"position":{
+				"base_sha":"base",
+				"head_sha":"head",
+				"start_sha":"start",
+				"position_type":"file",
+				"new_path":"warp.go",
+				"old_path":"warp.go"
+			}
+		}`)
+		writeJSON(t, w, http.StatusCreated, Discussion{
+			ID: "discussion-1",
+			Notes: []*DiscussionNote{
+				{ID: 88, Body: "Check this file."},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	discussion, _, err := client.MergeRequestDiscussionCreate(
+		t.Context(), 42, 55,
+		&CreateMergeRequestDiscussionOptions{
+			Body: new("Check this file."),
+			Position: &PositionOptions{
+				BaseSHA:      new("base"),
+				HeadSHA:      new("head"),
+				StartSHA:     new("start"),
+				PositionType: new("file"),
+				NewPath:      new("warp.go"),
+				OldPath:      new("warp.go"),
+			},
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "discussion-1", discussion.ID)
 }
 
 func TestClient_MergeRequestDiscussionMutations(t *testing.T) {

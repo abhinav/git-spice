@@ -83,9 +83,10 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 							Resolvable: true,
 							Resolved:   true,
 							Position: &gitlabgateway.DiscussionPosition{
-								NewPath: "new/name.go",
-								OldPath: "old/name.go",
-								NewLine: 12,
+								PositionType: "text",
+								NewPath:      "new/name.go",
+								OldPath:      "old/name.go",
+								NewLine:      12,
 								LineRange: &gitlabgateway.LineRange{
 									Start: gitlabgateway.LinePosition{Type: "new", NewLine: 10},
 									End:   gitlabgateway.LinePosition{Type: "new", NewLine: 12},
@@ -108,9 +109,25 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 							Body:       "Removed line.",
 							Resolvable: true,
 							Position: &gitlabgateway.DiscussionPosition{
-								NewPath: "new/name.go",
-								OldPath: "old/name.go",
-								OldLine: 8,
+								PositionType: "text",
+								NewPath:      "new/name.go",
+								OldPath:      "old/name.go",
+								OldLine:      8,
+							},
+						},
+					},
+				},
+				{
+					ID: "file",
+					Notes: []*gitlabgateway.DiscussionNote{
+						{
+							ID:         84,
+							Body:       "Whole file.",
+							Resolvable: true,
+							Position: &gitlabgateway.DiscussionPosition{
+								PositionType: "file",
+								NewPath:      "new/file.go",
+								OldPath:      "old/file.go",
 							},
 						},
 					},
@@ -126,7 +143,7 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 	threads, err := sliceutil.CollectErr(
 		repo.ListReviewThreads(t.Context(), &MR{Number: 55}))
 	require.NoError(t, err)
-	require.Len(t, threads, 2)
+	require.Len(t, threads, 3)
 
 	assert.Equal(t, &MRDiscussion{DiscussionID: "right-range", MRNumber: 55}, threads[0].ID)
 	assert.Equal(t, "new/name.go", threads[0].Path)
@@ -146,6 +163,20 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 	assert.Equal(t, forge.ReviewThreadSideLeft, threads[1].Side)
 	require.NotNil(t, threads[1].Resolved)
 	assert.False(t, *threads[1].Resolved)
+
+	assert.Equal(t, &MRDiscussion{DiscussionID: "file", MRNumber: 55}, threads[2].ID)
+	assert.Equal(t, "new/file.go", threads[2].Path)
+	assert.True(t, threads[2].Range.IsZero())
+}
+
+func TestReviewThreadPosition_textWithoutLine(t *testing.T) {
+	_, _, _, err := reviewThreadPosition(&gitlabgateway.DiscussionPosition{
+		PositionType: "text",
+		NewPath:      "new/name.go",
+		OldPath:      "old/name.go",
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "position has no line")
 }
 
 func TestRepository_SubmitReview(t *testing.T) {
@@ -181,7 +212,7 @@ func TestRepository_SubmitReview(t *testing.T) {
 			require.NoError(t, decodeJSON(r, &req))
 			require.NotNil(t, req.Body)
 			assert.Equal(t, "Reply.", *req.Body)
-			writeJSON(t, w, gitlabgateway.DiscussionNote{ID: 103})
+			writeJSON(t, w, gitlabgateway.DiscussionNote{ID: 104})
 		case "/api/v4/projects/42/merge_requests/55/notes":
 			assert.Equal(t, http.MethodPost, r.Method)
 			require.NoError(t, decodeJSON(r, &summary))
@@ -213,6 +244,11 @@ func TestRepository_SubmitReview(t *testing.T) {
 					Side:  forge.ReviewThreadSideLeft,
 					Body:  "Removed.",
 				},
+				{
+					Path: "file.go",
+					Side: forge.ReviewThreadSide(99),
+					Body: "Whole file.",
+				},
 				{ReplyTo: existing, Body: "Reply."},
 			},
 		},
@@ -222,12 +258,14 @@ func TestRepository_SubmitReview(t *testing.T) {
 		Comments: []forge.SubmitReviewCommentResult{
 			{ThreadID: &MRDiscussion{DiscussionID: "discussion-1", MRNumber: 55}, CommentID: &MRReviewComment{DiscussionID: "discussion-1", NoteID: 101, MRNumber: 55}},
 			{ThreadID: &MRDiscussion{DiscussionID: "discussion-2", MRNumber: 55}, CommentID: &MRReviewComment{DiscussionID: "discussion-2", NoteID: 102, MRNumber: 55}},
-			{ThreadID: existing, CommentID: &MRReviewComment{DiscussionID: "existing/thread", NoteID: 103, MRNumber: 55}},
+			{ThreadID: &MRDiscussion{DiscussionID: "discussion-3", MRNumber: 55}, CommentID: &MRReviewComment{DiscussionID: "discussion-3", NoteID: 103, MRNumber: 55}},
+			{ThreadID: existing, CommentID: &MRReviewComment{DiscussionID: "existing/thread", NoteID: 104, MRNumber: 55}},
 		},
 	}, result)
-	require.Len(t, discussions, 2)
+	require.Len(t, discussions, 3)
 	assertRightRangePosition(t, discussions[0].Position, "new.go", 10, 12)
 	assertLeftLinePosition(t, discussions[1].Position, "old.go", 8)
+	assertFilePosition(t, discussions[2].Position, "file.go")
 	require.NotNil(t, summary.Body)
 	assert.Equal(t, "Review summary.", *summary.Body)
 }
@@ -462,6 +500,18 @@ func TestNewDiscussionOptions_leftRange(t *testing.T) {
 	assertLinePosition(t, position.LineRange.End, "old.go", "old", 8, 0)
 }
 
+func TestNewDiscussionOptions_fileIgnoresSide(t *testing.T) {
+	options := newDiscussionOptions(forge.SubmitReviewCommentRequest{
+		Path: "file.go",
+		Side: forge.ReviewThreadSide(99),
+		Body: "Whole file.",
+	}, &gitlabgateway.MergeRequestDiffRefs{
+		BaseSHA: "base", HeadSHA: "head", StartSHA: "start",
+	})
+
+	assertFilePosition(t, options.Position, "file.go")
+}
+
 func TestNewDiscussionOptions_panicsForUnknownSide(t *testing.T) {
 	assert.Panics(t, func() {
 		newDiscussionOptions(forge.SubmitReviewCommentRequest{
@@ -604,6 +654,8 @@ func assertRightRangePosition(
 ) {
 	t.Helper()
 	require.NotNil(t, position)
+	require.NotNil(t, position.PositionType)
+	assert.Equal(t, "text", *position.PositionType)
 	assert.Equal(t, path, *position.OldPath)
 	assert.Equal(t, path, *position.NewPath)
 	assert.Nil(t, position.OldLine)
@@ -622,10 +674,28 @@ func assertLeftLinePosition(
 ) {
 	t.Helper()
 	require.NotNil(t, position)
+	require.NotNil(t, position.PositionType)
+	assert.Equal(t, "text", *position.PositionType)
 	assert.Equal(t, path, *position.OldPath)
 	assert.Equal(t, path, *position.NewPath)
 	require.NotNil(t, position.OldLine)
 	assert.Equal(t, line, *position.OldLine)
+	assert.Nil(t, position.NewLine)
+	assert.Nil(t, position.LineRange)
+}
+
+func assertFilePosition(
+	t *testing.T,
+	position *gitlabgateway.PositionOptions,
+	path string,
+) {
+	t.Helper()
+	require.NotNil(t, position)
+	require.NotNil(t, position.PositionType)
+	assert.Equal(t, "file", *position.PositionType)
+	assert.Equal(t, path, *position.OldPath)
+	assert.Equal(t, path, *position.NewPath)
+	assert.Nil(t, position.OldLine)
 	assert.Nil(t, position.NewLine)
 	assert.Nil(t, position.LineRange)
 }
