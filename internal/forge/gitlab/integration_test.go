@@ -105,6 +105,7 @@ func TestIntegration(t *testing.T) {
 		PushRemoteURL: pushRemoteURL,
 		Forge:         &gitlabForge,
 		Sanitizers:    sanitizers,
+		ReviewThreads: true,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			ghc := newGitLabClient(t, httpClient)
 			newRepo, err := gitlabforge.NewRepository(
