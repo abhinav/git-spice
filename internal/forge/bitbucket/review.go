@@ -159,9 +159,10 @@ func (r *reviewRepository) ListReviewThreads(
 					CommentID: thread.RootCommentID,
 					PRID:      prID,
 				},
-				Path:  thread.Path,
-				Range: thread.Range,
-				Side:  thread.Side,
+				Path:       thread.Path,
+				Range:      thread.Range,
+				Side:       thread.Side,
+				CommitHash: thread.CommitHash,
 			}
 			if r.capabilities.ThreadResolution {
 				resolved := thread.Resolved

@@ -147,6 +147,10 @@ type IntegrationConfig struct {
 	// file-level review threads.
 	// It is used only when ReviewThreads is enabled.
 	FileReviewThreads bool // optional
+
+	// ReviewThreadCommitHash indicates that review threads expose the change
+	// head against which the root comment was created.
+	ReviewThreadCommitHash bool // optional
 }
 
 // RunIntegration runs integration tests with the given configuration.
@@ -169,22 +173,23 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		Fixtures: fixturetest.Config{
 			Update: Update,
 		},
-		RemoteURL:             config.RemoteURL,
-		PushRemoteURL:         config.PushRemoteURL,
-		openRepository:        config.OpenRepository,
-		MergeChange:           mergeChange,
-		CloseChange:           config.CloseChange,
-		SetChangeCheck:        config.SetChangeCheck,
-		Reviewers:             config.Reviewers,
-		Assignees:             config.Assignees,
-		SetCommentsPageSize:   config.SetCommentsPageSize,
-		Sanitizers:            config.Sanitizers,
-		shortHeadHash:         config.ShortHeadHash,
-		skipReviewers:         config.SkipReviewers,
-		skipMerge:             config.SkipMerge,
-		skipCommentPagination: config.SkipCommentPagination,
-		skipCommentCounts:     config.SkipCommentCounts,
-		fileReviewThreads:     config.FileReviewThreads,
+		RemoteURL:              config.RemoteURL,
+		PushRemoteURL:          config.PushRemoteURL,
+		openRepository:         config.OpenRepository,
+		MergeChange:            mergeChange,
+		CloseChange:            config.CloseChange,
+		SetChangeCheck:         config.SetChangeCheck,
+		Reviewers:              config.Reviewers,
+		Assignees:              config.Assignees,
+		SetCommentsPageSize:    config.SetCommentsPageSize,
+		Sanitizers:             config.Sanitizers,
+		shortHeadHash:          config.ShortHeadHash,
+		skipReviewers:          config.SkipReviewers,
+		skipMerge:              config.SkipMerge,
+		skipCommentPagination:  config.SkipCommentPagination,
+		skipCommentCounts:      config.SkipCommentCounts,
+		fileReviewThreads:      config.FileReviewThreads,
+		reviewThreadCommitHash: config.ReviewThreadCommitHash,
 	}
 
 	t.Run("SubmitEditChange", func(t *testing.T) {
@@ -372,6 +377,10 @@ type integrationSuite struct {
 
 	// fileReviewThreads indicates that file-level review threads are supported.
 	fileReviewThreads bool
+
+	// reviewThreadCommitHash indicates that review threads expose the root's
+	// reviewed change head.
+	reviewThreadCommitHash bool
 
 	openRepository func(*testing.T, *http.Client) forge.Repository
 }

@@ -71,6 +71,7 @@ func TestCLI_postReviewComment(t *testing.T) {
 		Resolvable: true,
 		Resolved:   true,
 		Outdated:   true,
+		CommitHash: "1111111111111111111111111111111111111111",
 		Path:       "review.go",
 		Line:       3,
 		RangeStart: 3,
@@ -121,6 +122,7 @@ func TestCLI_postReviewComment_fileLevel(t *testing.T) {
 		Change:     1,
 		Body:       "File-level comment.",
 		Resolvable: true,
+		CommitHash: "1111111111111111111111111111111111111111",
 		Path:       "review.go",
 		ThreadID:   "thread-100",
 		Author:     "alice",
@@ -131,10 +133,12 @@ func TestCLI_postReviewComment_fileLevel(t *testing.T) {
 func TestCLI_replyReviewComment(t *testing.T) {
 	sh, getenv := newReviewCLITestShamHub(t)
 	sh.comments = append(sh.comments, shamComment{
-		ID:       7,
-		Change:   1,
-		ThreadID: "thread-7",
+		ID:         7,
+		Change:     1,
+		CommitHash: "1111111111111111111111111111111111111111",
+		ThreadID:   "thread-7",
 	})
+	sh.changes[0].HeadHash = "2222222222222222222222222222222222222222"
 	stdout := new(bytes.Buffer)
 
 	require.NoError(t, runCLI(
@@ -155,6 +159,7 @@ func TestCLI_replyReviewComment(t *testing.T) {
 		Change:     1,
 		Body:       "Reply.",
 		Resolvable: true,
+		CommitHash: "1111111111111111111111111111111111111111",
 		ThreadID:   "thread-7",
 		Author:     "bob",
 		CreatedAt:  mustReviewTime(t, "2026-08-22T12:00:00Z"),
@@ -269,6 +274,7 @@ func newReviewCLITestShamHub(t *testing.T) (*ShamHub, func(string) string) {
 		assert.NoError(t, sh.Close())
 	})
 	seedMergeabilityChange(sh)
+	sh.changes[0].HeadHash = "1111111111111111111111111111111111111111"
 	return sh, func(key string) string {
 		switch key {
 		case "SHAMHUB_API_URL":

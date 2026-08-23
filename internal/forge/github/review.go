@@ -104,14 +104,19 @@ func (r *Repository) ListReviewThreads(ctx context.Context, id forge.ChangeID) i
 				}
 			}
 			resolved, outdated := thread.IsResolved, thread.IsOutdated
+			var commitHash git.Hash
+			if len(thread.Comments) > 0 {
+				commitHash = git.Hash(thread.Comments[0].OriginalCommit.OID)
+			}
 			if !yield(&forge.ReviewThread{
-				ID:       &PRReviewThread{GQLID: thread.ID},
-				Path:     thread.Path,
-				Range:    threadRange,
-				Side:     threadSide,
-				Resolved: &resolved,
-				Outdated: &outdated,
-				Comments: comments,
+				ID:         &PRReviewThread{GQLID: thread.ID},
+				Path:       thread.Path,
+				Range:      threadRange,
+				Side:       threadSide,
+				CommitHash: commitHash,
+				Resolved:   &resolved,
+				Outdated:   &outdated,
+				Comments:   comments,
 			}, nil) {
 				return
 			}

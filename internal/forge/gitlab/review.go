@@ -11,6 +11,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/gitlab"
+	"go.abhg.dev/gs/internal/git"
 )
 
 const (
@@ -308,10 +309,11 @@ func reviewThread(
 			DiscussionID: discussion.ID,
 			MRNumber:     mrNumber,
 		},
-		Path:     path,
-		Range:    lines,
-		Side:     side,
-		Resolved: &resolved,
+		Path:       path,
+		Range:      lines,
+		Side:       side,
+		CommitHash: git.Hash(root.Position.HeadSHA),
+		Resolved:   &resolved,
 	}
 	for _, note := range discussion.Notes {
 		if note == nil {

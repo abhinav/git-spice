@@ -410,6 +410,7 @@ func TestGateway_ListReviewThreads(t *testing.T) {
 					"threadResolved": true,
 					"anchor": map[string]any{
 						"fileType": "TO", "line": 14, "lineType": "ADDED",
+						"toHash":          "1111111111111111111111111111111111111111",
 						"multilineMarker": map[string]any{"startLine": 12, "startLineType": "CONTEXT"},
 						"path":            map[string]any{"components": []string{"internal", "review.go"}},
 					},
@@ -441,6 +442,7 @@ func TestGateway_ListReviewThreads(t *testing.T) {
 	assert.Equal(t, "internal/review.go", got[0].Path)
 	assert.Equal(t, forge.ReviewThreadRange{StartLine: 12, EndLine: 14}, got[0].Range)
 	assert.Equal(t, forge.ReviewThreadSideRight, got[0].Side)
+	assert.Equal(t, "1111111111111111111111111111111111111111", got[0].CommitHash.String())
 	assert.True(t, got[0].Resolved)
 	require.Len(t, got[0].Comments, 2)
 	assert.Equal(t, int64(101), got[0].Comments[0].ID)
@@ -479,6 +481,7 @@ func TestGateway_ListReviewThreads_fileLevel(t *testing.T) {
 	require.Len(t, got, 1)
 	assert.Equal(t, "internal/review.go", got[0].Path)
 	assert.True(t, got[0].Range.IsZero())
+	assert.Equal(t, "head-sha", got[0].CommitHash.String())
 }
 
 func TestGateway_ListReviewThreads_rejectsMalformedLineAnchor(t *testing.T) {

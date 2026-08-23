@@ -510,7 +510,7 @@ func TestRepository_ListReviews(t *testing.T) {
 					{
 						ID:          70,
 						State:       forgejo.PullReviewStateComment,
-						CommitID:    "abc123",
+						CommitID:    "1111111111111111111111111111111111111111",
 						Stale:       true,
 						SubmittedAt: submittedAt,
 						User:        &forgejo.User{Login: "alice"},
@@ -518,7 +518,7 @@ func TestRepository_ListReviews(t *testing.T) {
 					{
 						ID:          71,
 						State:       forgejo.PullReviewStateApproved,
-						CommitID:    "def456",
+						CommitID:    "2222222222222222222222222222222222222222",
 						SubmittedAt: updatedAt,
 						User:        &forgejo.User{Login: "alice"},
 					},
@@ -592,6 +592,7 @@ func TestRepository_ListReviews(t *testing.T) {
 	assert.Equal(t, "42:70:review.go:3", threads[0].ID.String())
 	assert.Equal(t, forge.ReviewThreadLine(3), threads[0].Range)
 	assert.Equal(t, forge.ReviewThreadSideRight, threads[0].Side)
+	assert.Equal(t, "1111111111111111111111111111111111111111", threads[0].CommitHash.String())
 	require.NotNil(t, threads[0].Resolved)
 	assert.True(t, *threads[0].Resolved)
 	require.NotNil(t, threads[0].Outdated)
@@ -610,7 +611,10 @@ func TestRepository_ListReviews(t *testing.T) {
 	require.Len(t, states, 1)
 	assert.Equal(t, "alice", states[0].Reviewer)
 	assert.Equal(t, forge.ReviewDispositionApprove, states[0].Disposition)
-	assert.Equal(t, git.Hash("def456"), states[0].CommitHash)
+	assert.Equal(t,
+		git.Hash("2222222222222222222222222222222222222222"),
+		states[0].CommitHash,
+	)
 	assert.Equal(t, updatedAt, states[0].SubmittedAt)
 
 	require.NoError(t, repo.UpdateReviewComment(

@@ -165,6 +165,10 @@ type ReviewThread struct {
 	// It is ignored when Range is zero.
 	Side forge.ReviewThreadSide
 
+	// CommitHash is the change head revision against which the root comment was
+	// created. It is zero when the product does not expose that revision.
+	CommitHash git.Hash
+
 	// Resolved is meaningful only when ReviewCapabilities.ThreadResolution is
 	// true for the gateway.
 	Resolved bool

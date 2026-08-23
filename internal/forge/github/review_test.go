@@ -48,6 +48,11 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 	gateway := NewMockGithubGateway(gomock.NewController(t))
 	line, originalLine, originalStartLine := 0, 19, 17
 	createdAt := time.Date(2026, 8, 22, 10, 0, 0, 0, time.UTC)
+	rootComment := github.PullRequestReviewComment{
+		ID: "C_1", URL: "https://example.com/c1", Body: "first",
+		Author: github.ReviewAuthor{Login: "octo"}, CreatedAt: createdAt,
+	}
+	rootComment.OriginalCommit.OID = "1111111111111111111111111111111111111111"
 	gateway.EXPECT().PullRequestReviewThreads(gomock.Any(), github.ID("PR_1"), nil).Return(threadSeq(
 		&github.PullRequestReviewThread{
 			ID: "T_file", Path: "file.go", SubjectType: github.ReviewThreadSubjectTypeFile,
@@ -60,10 +65,7 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 			DiffSide: github.DiffSideLeft,
 			Line:     &line, OriginalLine: &originalLine, OriginalStartLine: &originalStartLine,
 			IsResolved: true, IsOutdated: true,
-			Comments: []github.PullRequestReviewComment{{
-				ID: "C_1", URL: "https://example.com/c1", Body: "first",
-				Author: github.ReviewAuthor{Login: "octo"}, CreatedAt: createdAt,
-			}},
+			Comments: []github.PullRequestReviewComment{rootComment},
 		},
 	))
 
@@ -81,6 +83,7 @@ func TestRepository_ListReviewThreads(t *testing.T) {
 
 	assert.Equal(t, forge.ReviewThreadRange{StartLine: 17, EndLine: 19}, got[1].Range)
 	assert.Equal(t, forge.ReviewThreadSideLeft, got[1].Side)
+	assert.Equal(t, "1111111111111111111111111111111111111111", got[1].CommitHash.String())
 	assert.Equal(t, true, *got[1].Resolved)
 	assert.Equal(t, true, *got[1].Outdated)
 	require.Len(t, got[1].Comments, 1)

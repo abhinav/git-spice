@@ -190,10 +190,11 @@ func TestIntegration(t *testing.T) {
 					check,
 				))
 		},
-		SetCommentsPageSize: SetListChangeCommentsPageSize,
-		ReviewThreads:       true,
-		FileReviewThreads:   true,
-		Reviewers:           []string{"reviewer1", "reviewer2"},
-		Assignees:           []string{"assignee1", "assignee2"},
+		SetCommentsPageSize:    SetListChangeCommentsPageSize,
+		ReviewThreads:          true,
+		FileReviewThreads:      true,
+		ReviewThreadCommitHash: true,
+		Reviewers:              []string{"reviewer1", "reviewer2"},
+		Assignees:              []string{"assignee1", "assignee2"},
 	})
 }

@@ -25,7 +25,7 @@ interactions:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 266.151667ms
+        duration: 268.458916ms
     - id: 1
       request:
         proto: HTTP/1.1
@@ -33,7 +33,7 @@ interactions:
         proto_minor: 1
         content_length: 296
         host: api.github.com
-        body: '{"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"LMnPCots","title":"Testing review threads LMnPCots","body":"Test change for review threads"}}}'
+        body: '{"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"2W7r7FfZ","title":"Testing review threads 2W7r7FfZ","body":"Test change for review threads"}}}'
         headers:
             Content-Type:
                 - application/json
@@ -44,13 +44,14 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABArqXcA","number":183,"url":"https://github.com/test-owner/test-repo/pull/183"}}}}'
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABAtgszQ","number":188,"url":"https://github.com/test-owner/test-repo/pull/188"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.34714325s
+        duration: 933.907958ms
     - id: 2
       request:
         proto: HTTP/1.1
@@ -58,7 +59,7 @@ interactions:
         proto_minor: 1
         content_length: 307
         host: api.github.com
-        body: '{"query":"mutation($input: AddPullRequestReviewThreadInput!){addPullRequestReviewThread(input: $input){thread{id,comments(first: 1){nodes{id,url}}}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABArqXcA","path":"review.go","line":3,"side":"RIGHT","body":"Comment without review disposition."}}}'
+        body: '{"query":"mutation($input: AddPullRequestReviewThreadInput!){addPullRequestReviewThread(input: $input){thread{id,comments(first: 1){nodes{id,url}}}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABAtgszQ","path":"review.go","line":3,"side":"RIGHT","body":"Comment without review disposition."}}}'
         headers:
             Content-Type:
                 - application/json
@@ -69,13 +70,14 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        body: '{"data":{"addPullRequestReviewThread":{"thread":{"id":"PRRT_kwDOMVd0xs6bc9Hl","comments":{"nodes":[{"id":"PRRC_kwDOMVd0xs7kvaHQ","url":"https://github.com/test-owner/test-repo/pull/183#discussion_r3837632976"}]}}}}}'
+        uncompressed: true
+        body: '{"data":{"addPullRequestReviewThread":{"thread":{"id":"PRRT_kwDOMVd0xs6bgUlq","comments":{"nodes":[{"id":"PRRC_kwDOMVd0xs7k0SQD","url":"https://github.com/test-owner/test-repo/pull/188#discussion_r3838911491"}]}}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 678.643125ms
+        duration: 685.60475ms
     - id: 3
       request:
         proto: HTTP/1.1
@@ -83,7 +85,7 @@ interactions:
         proto_minor: 1
         content_length: 303
         host: api.github.com
-        body: '{"query":"query($after: String,$first: Int!,$id: ID!,){node(id: $id){... on PullRequest{latestOpinionatedReviews(first: $first, after: $after){pageInfo{endCursor,hasNextPage},nodes{author{login},state,commit{oid},submittedAt}}}}}","variables":{"after":null,"first":100,"id":"PR_kwDOMVd0xs8AAAABArqXcA"}}'
+        body: '{"query":"query($after: String,$first: Int!,$id: ID!,){node(id: $id){... on PullRequest{latestOpinionatedReviews(first: $first, after: $after){pageInfo{endCursor,hasNextPage},nodes{author{login},state,commit{oid},submittedAt}}}}}","variables":{"after":null,"first":100,"id":"PR_kwDOMVd0xs8AAAABAtgszQ"}}'
         headers:
             Content-Type:
                 - application/json
@@ -101,4 +103,30 @@ interactions:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 255.603333ms
+        duration: 255.146041ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 188
+        host: api.github.com
+        body: '{"query":"mutation($input:UpdatePullRequestInput!){updatePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs8AAAABAtgszQ","state":"CLOSED"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"updatePullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABAtgszQ"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 1.1733315s

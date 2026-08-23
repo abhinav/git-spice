@@ -28,6 +28,12 @@ type PullRequestReviewComment struct {
 	Body string `json:"body"`
 	// Author identifies the comment author.
 	Author ReviewAuthor `json:"author"`
+
+	// OriginalCommit identifies the original reviewed change head.
+	OriginalCommit struct {
+		OID string `json:"oid"`
+	} `json:"originalCommit"`
+
 	// CreatedAt is when GitHub created the comment.
 	CreatedAt time.Time `json:"createdAt"`
 }
@@ -467,6 +473,7 @@ func (c *Gateway) pullRequestReviewThreadListPage(ctx context.Context, id ID, fi
 									url,
 									body,
 									author{login},
+									originalCommit{oid},
 									createdAt
 								}
 							}

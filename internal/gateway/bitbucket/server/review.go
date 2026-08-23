@@ -273,6 +273,7 @@ func reviewThreadFromServerComment(
 		thread := &bitbucket.ReviewThread{
 			RootCommentID: comment.ID,
 			Path:          reviewPath(anchor.Path),
+			CommitHash:    git.Hash(anchor.ToHash),
 			Resolved:      comment.ThreadResolved,
 		}
 		appendServerReviewComment(&thread.Comments, comment)
@@ -306,6 +307,7 @@ func reviewThreadFromServerComment(
 	thread := &bitbucket.ReviewThread{
 		RootCommentID: comment.ID,
 		Path:          reviewPath(anchor.Path),
+		CommitHash:    git.Hash(anchor.ToHash),
 		Range: forge.ReviewThreadRange{
 			StartLine: start,
 			EndLine:   anchor.Line,

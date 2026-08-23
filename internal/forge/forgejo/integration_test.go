@@ -148,10 +148,11 @@ func TestIntegration(t *testing.T) {
 			)
 			require.NoError(t, err)
 		},
-		Reviewers:           []string{cfg.Reviewer},
-		Assignees:           []string{cfg.Assignee},
-		SetCommentsPageSize: forgejo.SetChangeCommentsPageSize,
-		ReviewThreads:       true,
+		Reviewers:              []string{cfg.Reviewer},
+		Assignees:              []string{cfg.Assignee},
+		SetCommentsPageSize:    forgejo.SetChangeCommentsPageSize,
+		ReviewThreads:          true,
+		ReviewThreadCommitHash: true,
 	})
 }
 

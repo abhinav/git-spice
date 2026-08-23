@@ -840,6 +840,9 @@ type DiscussionPosition struct {
 	// PositionType determines which coordinates identify the location.
 	PositionType string `json:"position_type"`
 
+	// HeadSHA is the change head revision targeted by the position.
+	HeadSHA string `json:"head_sha"`
+
 	NewPath   string     `json:"new_path"`
 	OldPath   string     `json:"old_path"`
 	OldLine   int64      `json:"old_line"`

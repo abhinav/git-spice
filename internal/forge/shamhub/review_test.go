@@ -51,6 +51,7 @@ func TestForgeRepository_SubmitReview_invalidEnums(t *testing.T) {
 func TestForgeRepository_SubmitReview_fileReviewThread(t *testing.T) {
 	sh, repo := newMergeabilityTestRepository(t)
 	seedMergeabilityChange(sh)
+	sh.changes[0].HeadHash = "1111111111111111111111111111111111111111"
 
 	var (
 		result forge.SubmitReviewResult
@@ -146,7 +147,8 @@ func TestShamHub_FeedbackSubmissionStorage(t *testing.T) {
 	sh := &ShamHub{
 		changes: []shamChange{
 			{
-				Number: 1,
+				Number:   1,
+				HeadHash: "1111111111111111111111111111111111111111",
 				Base: &shamBranch{
 					Owner: "alice",
 					Repo:  "example",
@@ -187,6 +189,9 @@ func TestShamHub_FeedbackSubmissionStorage(t *testing.T) {
 	assert.Equal(t, 3, result.Comments[1].CommentID)
 	require.Len(t, sh.feedbackSubmissions, 1)
 	assert.Equal(t, []int{1, 2, 3}, sh.feedbackSubmissions[0].CommentIDs)
+	assert.Equal(t, "1111111111111111111111111111111111111111", sh.comments[1].CommitHash.String())
+
+	sh.changes[0].HeadHash = "2222222222222222222222222222222222222222"
 
 	reply, err := sh.handleSubmitReview(ctx, &submitReviewRequest{
 		Owner:       "alice",
@@ -204,6 +209,7 @@ func TestShamHub_FeedbackSubmissionStorage(t *testing.T) {
 	require.Len(t, reply.Comments, 1)
 	assert.Equal(t, "thread-2", reply.Comments[0].ThreadID)
 	assert.Equal(t, 4, reply.Comments[0].CommentID)
+	assert.Equal(t, "1111111111111111111111111111111111111111", sh.comments[3].CommitHash.String())
 
 	threads, err := sh.handleListReviewThreads(t.Context(), &listReviewThreadsRequest{
 		Owner:  "alice",
@@ -221,6 +227,7 @@ func TestShamHub_FeedbackSubmissionStorage(t *testing.T) {
 	assert.Equal(t, int(forge.ReviewThreadSideLeft), threads.Items[1].Side)
 	assert.Empty(t, threads.Items[2].Path)
 	assert.Equal(t, "thread-2", threads.Items[2].ThreadID)
+	assert.Equal(t, "1111111111111111111111111111111111111111", threads.Items[2].CommitHash)
 
 	reviews, err := sh.handleListReviewerStates(t.Context(), &listReviewerStatesRequest{
 		Owner:  "alice",
@@ -332,6 +339,7 @@ func TestShamHub_ReviewerStatesIgnoreCommentSubmissions(t *testing.T) {
 func TestShamHub_ReviewCommentDomain(t *testing.T) {
 	sh, repo := newMergeabilityTestRepository(t)
 	seedMergeabilityChange(sh)
+	sh.changes[0].HeadHash = "1111111111111111111111111111111111111111"
 
 	result, err := repo.SubmitReview(t.Context(), ChangeID(1), forge.SubmitReviewRequest{
 		Body: "Overall review.",
