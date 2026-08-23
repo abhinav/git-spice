@@ -186,7 +186,9 @@ func (f *Forge) OpenRepository(
 	if err != nil {
 		return nil, err
 	}
-	return newRepository(f, f.logger(), gateway), nil
+	return withReviewRepository(
+		ctx, newRepository(f, f.logger(), gateway),
+	)
 }
 
 // bitbucketProduct fixes the product-specific repository behavior

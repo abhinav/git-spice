@@ -10,12 +10,23 @@ import (
 	"go.abhg.dev/gs/internal/git"
 )
 
-func cloudGW(repo *Repository) *testCloudGateway {
-	return repo.gw.(*testCloudGateway)
+func baseRepository(repo forge.Repository) *Repository {
+	switch repo := repo.(type) {
+	case *Repository:
+		return repo
+	case *reviewRepository:
+		return repo.Repository
+	default:
+		panic(fmt.Sprintf("unexpected Bitbucket repository %T", repo))
+	}
+}
+
+func cloudGW(repo forge.Repository) *testCloudGateway {
+	return baseRepository(repo).gw.(*testCloudGateway)
 }
 
 func prActionPath(
-	repo *Repository, prID int64, action string,
+	repo forge.Repository, prID int64, action string,
 ) string {
 	gw := cloudGW(repo)
 	return fmt.Sprintf(
@@ -26,10 +37,11 @@ func prActionPath(
 
 // MergeChange merges a pull request for integration tests.
 func MergeChange(
-	ctx context.Context, repo *Repository, id *PR,
+	ctx context.Context, repo forge.Repository, id *PR,
 ) error {
+	base := baseRepository(repo)
 	if err := approvePR(ctx, repo, id); err != nil {
-		repo.log.Debug(
+		base.log.Debug(
 			"Approval failed (may not be required)",
 			"err", err,
 		)
@@ -39,14 +51,14 @@ func MergeChange(
 	if err := doTestAction(ctx, repo, path); err != nil {
 		return fmt.Errorf("merge PR: %w", err)
 	}
-	repo.log.Debug("Merged pull request", "pr", id.Number)
+	base.log.Debug("Merged pull request", "pr", id.Number)
 	return nil
 }
 
 // SetChangeChecksState sets a synthetic build status for integration tests.
 func SetChangeChecksState(
 	ctx context.Context,
-	repo *Repository,
+	repo forge.Repository,
 	headHash git.Hash,
 	state forge.ChangeCheckState,
 ) error {
@@ -82,7 +94,7 @@ func bitbucketStatusState(state forge.ChangeCheckState) string {
 }
 
 func approvePR(
-	ctx context.Context, repo *Repository, id *PR,
+	ctx context.Context, repo forge.Repository, id *PR,
 ) error {
 	path := prActionPath(repo, id.Number, "approve")
 	if err := doTestAction(ctx, repo, path); err != nil {
@@ -93,13 +105,13 @@ func approvePR(
 
 // CloseChange declines a pull request for integration tests.
 func CloseChange(
-	ctx context.Context, repo *Repository, id *PR,
+	ctx context.Context, repo forge.Repository, id *PR,
 ) error {
 	path := prActionPath(repo, id.Number, "decline")
 	if err := doTestAction(ctx, repo, path); err != nil {
 		return fmt.Errorf("decline PR: %w", err)
 	}
-	repo.log.Debug(
+	baseRepository(repo).log.Debug(
 		"Declined pull request", "pr", id.Number,
 	)
 	return nil
@@ -107,7 +119,7 @@ func CloseChange(
 
 func doTestAction(
 	ctx context.Context,
-	repo *Repository,
+	repo forge.Repository,
 	path string,
 ) error {
 	gw := cloudGW(repo)

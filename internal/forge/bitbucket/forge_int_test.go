@@ -1,8 +1,10 @@
 package bitbucket
 
 import (
+	"context"
 	"net/http"
 
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/bitbucket/cloud"
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -25,7 +27,7 @@ func NewRepositoryForTest(
 	log *silog.Logger,
 	httpClient *http.Client,
 	token *AuthenticationToken,
-) *Repository {
+) forge.Repository {
 	var ctok *cloud.Token
 	if token != nil {
 		ctok = &cloud.Token{AccessToken: token.AccessToken}
@@ -50,7 +52,7 @@ func NewRepositoryForTest(
 		panic(err)
 	}
 
-	return newRepository(forge, log, &testCloudGateway{
+	repository, err := withReviewRepository(context.Background(), newRepository(forge, log, &testCloudGateway{
 		Gateway:   gw,
 		client:    client,
 		token:     token,
@@ -58,5 +60,9 @@ func NewRepositoryForTest(
 		apiURL:    forge.APIURL(),
 		workspace: workspace,
 		repo:      repo,
-	})
+	}))
+	if err != nil {
+		panic(err)
+	}
+	return repository
 }

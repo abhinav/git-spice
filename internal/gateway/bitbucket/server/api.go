@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"iter"
@@ -54,7 +55,14 @@ type Author struct {
 
 // Reviewer is a reviewer entry on a pull request.
 type Reviewer struct {
+	// User identifies the participant.
 	User User `json:"user"`
+
+	// Status is UNAPPROVED, NEEDS_WORK, or APPROVED.
+	Status string `json:"status"`
+
+	// LastReviewedCommit is empty until the reviewer acts on a revision.
+	LastReviewedCommit string `json:"lastReviewedCommit"`
 }
 
 // User is a Bitbucket Data Center user. Name is the username used to address
@@ -342,6 +350,84 @@ func (c *Client) PullRequestCanMerge(
 	return &response, resp, nil
 }
 
+// Diff is the structured diff returned for one pull request path.
+type Diff struct {
+	// Hunks contains the line segments used for review-anchor classification.
+	Hunks []DiffHunk `json:"hunks"`
+
+	// Truncated reports that the server omitted part of the diff.
+	Truncated bool `json:"truncated"`
+}
+
+// DiffHunk groups contiguous diff segments.
+type DiffHunk struct {
+	// Segments groups lines by their ADDED, REMOVED, or CONTEXT type.
+	Segments []DiffSegment `json:"segments"`
+
+	// Truncated reports that the server omitted part of this hunk.
+	Truncated bool `json:"truncated"`
+}
+
+// DiffSegment classifies its lines as ADDED, REMOVED, or CONTEXT.
+type DiffSegment struct {
+	// Type is ADDED, REMOVED, or CONTEXT.
+	Type string `json:"type"`
+
+	// Lines carries side-specific source and destination coordinates.
+	Lines []DiffLine `json:"lines"`
+
+	// Truncated reports that the server omitted part of this segment.
+	Truncated bool `json:"truncated"`
+}
+
+// DiffLine reports the source and destination coordinates for one line.
+type DiffLine struct {
+	// Source is the preimage coordinate; it is zero for an added line.
+	Source int `json:"source"`
+
+	// Destination is the postimage coordinate; it is zero for a removed line.
+	Destination int `json:"destination"`
+
+	// Truncated reports that the server omitted line content.
+	Truncated bool `json:"truncated"`
+}
+
+// PullRequestDiff fetches the structured diff for path at the exact revision
+// pair used by a review anchor.
+func (c *Client) PullRequestDiff(
+	ctx context.Context,
+	projectKey string,
+	slug string,
+	prID int64,
+	path string,
+	fromHash string,
+	toHash string,
+) (*Diff, *Response, error) {
+	query := url.Values{
+		"diffType":     []string{"RANGE"},
+		"sinceId":      []string{fromHash},
+		"untilId":      []string{toHash},
+		"withComments": []string{"false"},
+	}
+	var response Diff
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf(
+			"/projects/%s/repos/%s/pull-requests/%d/diff/%s",
+			url.PathEscape(projectKey),
+			url.PathEscape(slug),
+			prID,
+			escapePath(path),
+		),
+		query,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
 // CurrentUser identifies the authenticated user. Data Center has no "/user"
 // endpoint, so the identity comes from the X-AUSERNAME response header.
 type CurrentUser struct {
@@ -534,8 +620,15 @@ type Comment struct {
 	// Version is the optimistic-locking version, required on update and delete.
 	Version int `json:"version"`
 
-	Text   string `json:"text"`
-	Author User   `json:"author"`
+	Text        string `json:"text"`
+	Author      User   `json:"author"`
+	CreatedDate int64  `json:"createdDate"`
+
+	// Parent is set on a reply. Anchor is set on an inline root. Comments holds
+	// nested replies when the root comes from the comment-listing endpoint.
+	Parent   *CommentRef    `json:"parent"`
+	Anchor   *CommentAnchor `json:"anchor"`
+	Comments []Comment      `json:"comments"`
 
 	// Severity is "NORMAL" or "BLOCKER" (a task; Data Center folds tasks
 	// into comments as blocker-severity comments).
@@ -548,6 +641,99 @@ type Comment struct {
 	// ThreadResolved reports whether the thread was resolved via the "Resolve"
 	// action, independent of task state.
 	ThreadResolved bool `json:"threadResolved"`
+}
+
+// CommentRef identifies a parent comment when creating or decoding a reply.
+type CommentRef struct {
+	// ID is the referenced parent comment ID.
+	ID int64 `json:"id"`
+}
+
+// CommentAnchor locates a pull request comment on one side of a diff.
+type CommentAnchor struct {
+	// DiffType and revision hashes identify the exact diff used by the anchor.
+	DiffType string `json:"diffType"`
+	FileType string `json:"fileType"`
+	FromHash string `json:"fromHash"`
+
+	// Line and LineType identify the range endpoint; MultilineMarker identifies
+	// its start when the anchor spans multiple lines.
+	Line            int              `json:"line"`
+	LineType        string           `json:"lineType"`
+	MultilineMarker *MultilineMarker `json:"multilineMarker"`
+
+	// Path and SrcPath are returned as structured objects, normalized by RestPath.
+	Path    RestPath `json:"path"`
+	SrcPath RestPath `json:"srcPath"`
+	ToHash  string   `json:"toHash"`
+}
+
+// RestPath is the structured path returned in a comment anchor.
+type RestPath struct {
+	// Components is the complete repository-relative path when provided.
+	Components []string `json:"components"`
+
+	// Name and Parent are the split form used by some Data Center versions.
+	Name   string `json:"name"`
+	Parent string `json:"parent"`
+}
+
+// UnmarshalJSON accepts both path encodings returned by supported Data Center
+// versions: a plain slash-separated string or the newer structured object.
+func (p *RestPath) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := json.Unmarshal(data, &text); err == nil {
+		p.Components = strings.Split(text, "/")
+		return nil
+	}
+
+	type plainRestPath RestPath
+	var decoded plainRestPath
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*p = RestPath(decoded)
+	return nil
+}
+
+// MultilineMarker identifies the first line of a multiline comment anchor.
+type MultilineMarker struct {
+	// StartLine is the first line in the inclusive range.
+	StartLine int `json:"startLine"`
+
+	// StartLineType is ADDED, REMOVED, or CONTEXT at StartLine.
+	StartLineType string `json:"startLineType"`
+}
+
+// ReviewCommentCreateRequest creates a pending inline comment or reply.
+type ReviewCommentCreateRequest struct {
+	// Text and State create an unpublished PENDING comment.
+	Text  string `json:"text"`
+	State string `json:"state"`
+
+	// Parent creates a reply; Anchor creates a new inline thread. They are
+	// mutually exclusive.
+	Parent *CommentRef          `json:"parent,omitzero"`
+	Anchor *CommentAnchorCreate `json:"anchor,omitzero"`
+}
+
+// CommentAnchorCreate is the string-path representation accepted on create.
+type CommentAnchorCreate struct {
+	// DiffType, FromHash, and ToHash identify the exact revision range.
+	DiffType string `json:"diffType"`
+	FileType string `json:"fileType,omitzero"`
+	FromHash string `json:"fromHash"`
+
+	// LineType and MultilineMarker are resolved from the structured diff before
+	// the pending comment mutation.
+	Line            int              `json:"line,omitzero"`
+	LineType        string           `json:"lineType,omitzero"`
+	MultilineMarker *MultilineMarker `json:"multilineMarker,omitzero"`
+
+	// Data Center accepts plain repository-relative paths on create.
+	Path    string `json:"path"`
+	SrcPath string `json:"srcPath,omitzero"`
+	ToHash  string `json:"toHash"`
 }
 
 // commentText is the request body shared by comment create and update.
@@ -582,6 +768,157 @@ func (c *Client) CommentCreate(
 		return nil, resp, err
 	}
 	return &response, resp, nil
+}
+
+// ReviewCommentCreate adds a pending review comment or reply.
+func (c *Client) ReviewCommentCreate(
+	ctx context.Context,
+	projectKey string,
+	slug string,
+	prID int64,
+	req ReviewCommentCreateRequest,
+) (*Comment, *Response, error) {
+	var response Comment
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf(
+			"/projects/%s/repos/%s/pull-requests/%d/comments",
+			url.PathEscape(projectKey),
+			url.PathEscape(slug),
+			prID,
+		),
+		nil,
+		req,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// CommentGet fetches one pull request comment with its current version.
+func (c *Client) CommentGet(
+	ctx context.Context,
+	projectKey string,
+	slug string,
+	prID int64,
+	commentID int64,
+) (*Comment, *Response, error) {
+	var response Comment
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf(
+			"/projects/%s/repos/%s/pull-requests/%d/comments/%d",
+			url.PathEscape(projectKey),
+			url.PathEscape(slug),
+			prID,
+			commentID,
+		),
+		nil,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// CommentList iterates pull request comments, including inline anchors and
+// nested replies.
+func (c *Client) CommentList(
+	ctx context.Context,
+	projectKey string,
+	slug string,
+	prID int64,
+) iter.Seq2[Comment, error] {
+	return c.getPaged[Comment](
+		ctx,
+		fmt.Sprintf(
+			"/projects/%s/repos/%s/pull-requests/%d/comments",
+			url.PathEscape(projectKey),
+			url.PathEscape(slug),
+			prID,
+		),
+		nil,
+	)
+}
+
+// CommentReviewUpdateRequest updates comment text or thread resolution under
+// the comment's optimistic-locking version.
+type CommentReviewUpdateRequest struct {
+	// Text is preserved while changing resolution, or replaced while editing.
+	Text string `json:"text"`
+
+	// Version is the live optimistic-locking version fetched from Data Center.
+	Version int `json:"version"`
+
+	// ThreadResolved is nil for text-only updates.
+	ThreadResolved *bool `json:"threadResolved,omitzero"`
+}
+
+// CommentReviewUpdate updates review-comment fields.
+func (c *Client) CommentReviewUpdate(
+	ctx context.Context,
+	projectKey string,
+	slug string,
+	prID int64,
+	commentID int64,
+	req CommentReviewUpdateRequest,
+) (*Comment, *Response, error) {
+	var response Comment
+	resp, err := c.put(
+		ctx,
+		fmt.Sprintf(
+			"/projects/%s/repos/%s/pull-requests/%d/comments/%d",
+			url.PathEscape(projectKey),
+			url.PathEscape(slug),
+			prID,
+			commentID,
+		),
+		nil,
+		req,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// PullRequestFinishReviewRequest publishes the current user's pending review.
+type PullRequestFinishReviewRequest struct {
+	// CommentText is the optional top-level review summary.
+	CommentText string `json:"commentText,omitzero"`
+
+	// ParticipantStatus is approved or needs_work when the review includes a
+	// disposition. These completion-endpoint values differ from the uppercase
+	// participant resource statuses. Empty leaves the disposition unchanged.
+	ParticipantStatus string `json:"participantStatus,omitzero"`
+}
+
+// PullRequestFinishReview atomically publishes pending comments, an optional
+// summary, and an optional participant disposition.
+func (c *Client) PullRequestFinishReview(
+	ctx context.Context,
+	projectKey string,
+	slug string,
+	prID int64,
+	version int,
+	req PullRequestFinishReviewRequest,
+) (*Response, error) {
+	return c.put(
+		ctx,
+		fmt.Sprintf(
+			"/projects/%s/repos/%s/pull-requests/%d/review",
+			url.PathEscape(projectKey),
+			url.PathEscape(slug),
+			prID,
+		),
+		url.Values{"version": []string{strconv.Itoa(version)}},
+		req,
+		nil,
+	)
 }
 
 // CommentUpdate edits the text of a pull request comment. A stale version
