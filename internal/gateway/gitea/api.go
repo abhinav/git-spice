@@ -154,6 +154,30 @@ func (c *Client) PullReviewList(
 	return response, resp, nil
 }
 
+// PullReviewCreate creates a review for a pull request.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/issue/repoCreatePullReview
+func (c *Client) PullReviewCreate(
+	ctx context.Context,
+	owner, repo string,
+	index int64,
+	opt *CreatePullReviewOptions,
+) (*PullReview, *Response, error) {
+	var response PullReview
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf("repos/%s/%s/pulls/%d/reviews", owner, repo, index),
+		nil,
+		opt,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
 // PullReviewCommentList lists comments for a pull request review.
 //
 // Gitea API:
@@ -524,12 +548,42 @@ type PullRequest struct {
 	UpdatedAt          time.Time `json:"updated_at"`
 }
 
+// ReviewState identifies the disposition of a Gitea pull request review.
+type ReviewState string
+
+const (
+	// ReviewStateApproved approves the pull request.
+	ReviewStateApproved ReviewState = "APPROVED"
+
+	// ReviewStatePending identifies a review that has not been submitted.
+	ReviewStatePending ReviewState = "PENDING"
+
+	// ReviewStateComment submits review comments without a disposition.
+	ReviewStateComment ReviewState = "COMMENT"
+
+	// ReviewStateRequestChanges requests changes to the pull request.
+	ReviewStateRequestChanges ReviewState = "REQUEST_CHANGES"
+
+	// ReviewStateRequestReview requests a review from a user.
+	ReviewStateRequestReview ReviewState = "REQUEST_REVIEW"
+)
+
 // PullReview matches the subset of pull review fields the forge uses.
 //
 // Gitea API:
 // https://gitea.com/api/swagger#/issue/repoGetPullReview
 type PullReview struct {
-	ID int64 `json:"id"`
+	ID                int64       `json:"id"`
+	Reviewer          *User       `json:"user"`
+	State             ReviewState `json:"state"`
+	Body              string      `json:"body"`
+	CommitID          string      `json:"commit_id"`
+	Stale             bool        `json:"stale"`
+	Official          bool        `json:"official"`
+	Dismissed         bool        `json:"dismissed"`
+	CodeCommentsCount int         `json:"comments_count"`
+	SubmittedAt       time.Time   `json:"submitted_at"`
+	UpdatedAt         time.Time   `json:"updated_at"`
 }
 
 // PullReviewComment matches the subset of pull review comment fields
@@ -538,7 +592,19 @@ type PullReview struct {
 // Gitea API:
 // https://gitea.com/api/swagger#/issue/repoGetPullReviewComments
 type PullReviewComment struct {
-	ID int64 `json:"id"`
+	ID               int64     `json:"id"`
+	Body             string    `json:"body"`
+	User             *User     `json:"user"`
+	Resolver         *User     `json:"resolver"`
+	ReviewID         int64     `json:"pull_request_review_id"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+	Path             string    `json:"path"`
+	CommitID         string    `json:"commit_id"`
+	OriginalCommitID string    `json:"original_commit_id"`
+	DiffHunk         string    `json:"diff_hunk"`
+	Position         int64     `json:"position"`
+	OriginalPosition int64     `json:"original_position"`
 }
 
 // Label matches the subset of label fields the forge uses.
@@ -688,6 +754,25 @@ func (o *ListPullRequestsOptions) encodeQuery() url.Values {
 // https://gitea.com/api/swagger#/issue/repoListPullReviews
 type ListPullReviewsOptions struct {
 	ListOptions
+}
+
+// CreatePullReviewOptions configures pull request review creation.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/issue/repoCreatePullReview
+type CreatePullReviewOptions struct {
+	Event    ReviewState                      `json:"event"`
+	Body     string                           `json:"body,omitzero"`
+	CommitID string                           `json:"commit_id,omitzero"`
+	Comments []CreatePullReviewCommentOptions `json:"comments,omitempty"`
+}
+
+// CreatePullReviewCommentOptions describes one comment in a new review.
+type CreatePullReviewCommentOptions struct {
+	Path        string `json:"path"`
+	Body        string `json:"body"`
+	OldPosition int64  `json:"old_position,omitzero"`
+	NewPosition int64  `json:"new_position,omitzero"`
 }
 
 func (o *ListPullReviewsOptions) encodeQuery() url.Values {

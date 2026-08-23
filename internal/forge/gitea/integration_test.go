@@ -141,6 +141,7 @@ func TestIntegration(t *testing.T) {
 		PushRemoteURL: pushRemoteURL,
 		Forge:         giteaForge,
 		Sanitizers:    sanitizers,
+		ReviewThreads: true,
 
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			gc := newTestGiteaClient(t, cfg, httpClient)
