@@ -41,11 +41,12 @@ type ShamHub struct {
 	keepGitRoot bool
 	adminToken  string
 
-	mu       sync.RWMutex
-	changes  []shamChange  // all changes
-	users    []shamUser    // all users
-	comments []shamComment // all comments
-	repos    []shamRepo    // all repositories
+	mu                  sync.RWMutex
+	changes             []shamChange             // all changes
+	users               []shamUser               // all users
+	comments            []shamComment            // all comments
+	feedbackSubmissions []shamFeedbackSubmission // all feedback submissions
+	repos               []shamRepo               // all repositories
 
 	tokens             map[string]string // token -> username
 	defaultMergeMethod MergeMethod       // used when API merge requests omit a method

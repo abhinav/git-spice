@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/xec"
 	"gopkg.in/yaml.v3"
 )
@@ -78,6 +79,8 @@ type shamhubCLI struct {
 func (c *shamhubCLI) run(args []string) error {
 	cmd, args := args[0], args[1:]
 	switch cmd {
+	case "review":
+		return c.review(args)
 	case "comment":
 		return c.comment(args)
 	case "new":
@@ -104,6 +107,252 @@ func (c *shamhubCLI) run(args []string) error {
 		return c.dump(args)
 	default:
 		return fmt.Errorf("unknown command: %s", cmd)
+	}
+}
+
+// Review commands seed feedback submissions and review threads for tests.
+func (c *shamhubCLI) review(args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: shamhub review <submit|comment> [args ...]")
+	}
+
+	switch args[0] {
+	case "submit":
+		return c.submitReview(args[1:])
+	case "comment":
+		return c.reviewComment(args[1:])
+	default:
+		return fmt.Errorf("unknown shamhub review command: %s", args[0])
+	}
+}
+
+func (c *shamhubCLI) submitReview(args []string) error {
+	flags := flag.NewFlagSet("shamhub review submit", flag.ContinueOnError)
+	flags.SetOutput(c.stderr)
+	reviewer := flags.String("reviewer", "reviewer", "reviewer username")
+	disposition := flags.String("disposition", "comment", "review disposition")
+	body := flags.String("body", "", "review body")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	args = flags.Args()
+	if len(args) != 2 {
+		return errors.New(
+			"usage: shamhub review submit " +
+				"[--reviewer <username>] " +
+				"[--disposition comment|approve|request-changes] " +
+				"[--body <body>] <owner/repo> <change>",
+		)
+	}
+
+	owner, repo, err := parseOwnerRepo(args[0])
+	if err != nil {
+		return err
+	}
+	change, err := strconv.Atoi(args[1])
+	if err != nil {
+		return fmt.Errorf("invalid change number %q: %w", args[1], err)
+	}
+
+	time, err := c.committerTime()
+	if err != nil {
+		return err
+	}
+	dispositionValue, err := parseReviewDisposition(*disposition)
+	if err != nil {
+		return err
+	}
+	return c.client.Post(c.ctx, "/_shamhub/admin/reviews", adminSubmitFeedbackBody{
+		Owner:       owner,
+		Repo:        repo,
+		Change:      change,
+		Submitter:   *reviewer,
+		Disposition: dispositionValue,
+		Body:        *body,
+		Time:        time,
+	}, &adminSubmitFeedbackResponse{})
+}
+
+func parseReviewDisposition(name string) (int, error) {
+	switch name {
+	case "comment":
+		return int(forge.ReviewDispositionNone), nil
+	case "approve":
+		return int(forge.ReviewDispositionApprove), nil
+	case "request-changes":
+		return int(forge.ReviewDispositionRequestChanges), nil
+	default:
+		return 0, fmt.Errorf("invalid review disposition %q", name)
+	}
+}
+
+func (c *shamhubCLI) reviewComment(args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: shamhub review comment <post|reply> [args ...]")
+	}
+
+	switch args[0] {
+	case "post":
+		return c.postReviewComment(args[1:])
+	case "reply":
+		return c.replyReviewComment(args[1:])
+	default:
+		return fmt.Errorf("unknown shamhub review comment command: %s", args[0])
+	}
+}
+
+func (c *shamhubCLI) postReviewComment(args []string) error {
+	flags := flag.NewFlagSet("shamhub review comment post", flag.ContinueOnError)
+	flags.SetOutput(c.stderr)
+	id := flags.Int("id", 0, "explicit comment ID")
+	author := flags.String("author", "reviewer", "comment author")
+	path := flags.String("path", "", "file path")
+	rangeValue := flags.String("range", "", "inclusive line range")
+	side := flags.String("side", "", "diff side")
+	resolved := flags.Bool("resolved", false, "mark thread resolved")
+	outdated := flags.Bool("outdated", false, "mark thread outdated")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	args = flags.Args()
+	if len(args) != 3 {
+		return errors.New(
+			"usage: shamhub review comment post " +
+				"[--id <id>] [--author <username>] --path <path> " +
+				"[--range <start[:end]>] [--side left|right] [--resolved] " +
+				"[--outdated] <owner/repo> <change> <body>",
+		)
+	}
+
+	var start, end, sideValue int
+	if *rangeValue == "" {
+		if *side != "" {
+			return errors.New("--side requires --range")
+		}
+	} else {
+		var err error
+		start, end, err = parseReviewRange(*rangeValue)
+		if err != nil {
+			return err
+		}
+		sideName := *side
+		if sideName == "" {
+			sideName = "right"
+		}
+		sideValue, err = parseReviewSide(sideName)
+		if err != nil {
+			return err
+		}
+	}
+	owner, repo, err := parseOwnerRepo(args[0])
+	if err != nil {
+		return err
+	}
+	change, err := strconv.Atoi(args[1])
+	if err != nil {
+		return fmt.Errorf("invalid change number %q: %w", args[1], err)
+	}
+
+	time, err := c.committerTime()
+	if err != nil {
+		return err
+	}
+	var response adminPostReviewCommentResponse
+	if err := c.client.Post(c.ctx, "/_shamhub/admin/review-comments", adminPostReviewCommentBody{
+		Owner:      owner,
+		Repo:       repo,
+		Change:     change,
+		ID:         *id,
+		Author:     *author,
+		Path:       *path,
+		RangeStart: start,
+		RangeEnd:   end,
+		Side:       sideValue,
+		Body:       args[2],
+		Resolved:   *resolved,
+		Outdated:   *outdated,
+		Time:       time,
+	}, &response); err != nil {
+		return err
+	}
+	fmt.Fprintln(c.stdout, response.ID)
+	return nil
+}
+
+func (c *shamhubCLI) replyReviewComment(args []string) error {
+	flags := flag.NewFlagSet("shamhub review comment reply", flag.ContinueOnError)
+	flags.SetOutput(c.stderr)
+	id := flags.Int("id", 0, "explicit comment ID")
+	author := flags.String("author", "reviewer", "comment author")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	args = flags.Args()
+	if len(args) != 4 {
+		return errors.New(
+			"usage: shamhub review comment reply " +
+				"[--id <id>] [--author <username>] " +
+				"<owner/repo> <change> <thread-id> <body>",
+		)
+	}
+
+	owner, repo, err := parseOwnerRepo(args[0])
+	if err != nil {
+		return err
+	}
+	change, err := strconv.Atoi(args[1])
+	if err != nil {
+		return fmt.Errorf("invalid change number %q: %w", args[1], err)
+	}
+
+	time, err := c.committerTime()
+	if err != nil {
+		return err
+	}
+	var response adminPostReviewCommentResponse
+	if err := c.client.Post(c.ctx, "/_shamhub/admin/review-comments", adminPostReviewCommentBody{
+		Owner:    owner,
+		Repo:     repo,
+		Change:   change,
+		ID:       *id,
+		Author:   *author,
+		ThreadID: args[2],
+		Body:     args[3],
+		Time:     time,
+	}, &response); err != nil {
+		return err
+	}
+	fmt.Fprintln(c.stdout, response.ID)
+	return nil
+}
+
+func parseReviewRange(value string) (start, end int, _ error) {
+	startText, endText, hasEnd := strings.Cut(value, ":")
+	start, err := strconv.Atoi(startText)
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid review range %q: %w", value, err)
+	}
+	end = start
+	if hasEnd {
+		end, err = strconv.Atoi(endText)
+		if err != nil {
+			return 0, 0, fmt.Errorf("invalid review range %q: %w", value, err)
+		}
+	}
+	if err := validateReviewRange(forge.ReviewThreadRange{StartLine: start, EndLine: end}); err != nil {
+		return 0, 0, fmt.Errorf("invalid review range %q: %w", value, err)
+	}
+	return start, end, nil
+}
+
+func parseReviewSide(name string) (int, error) {
+	switch name {
+	case "left":
+		return int(forge.ReviewThreadSideLeft), nil
+	case "right":
+		return int(forge.ReviewThreadSideRight), nil
+	default:
+		return 0, fmt.Errorf("invalid review side %q", name)
 	}
 }
 
@@ -371,12 +620,8 @@ func (c *shamhubCLI) merge(args []string) error {
 		DeleteBranch: *prune,
 		Squash:       *squash,
 	}
-	if at := c.getenv("GIT_COMMITTER_DATE"); at != "" {
-		t, err := time.Parse(time.RFC3339, at)
-		if err != nil {
-			return fmt.Errorf("invalid GIT_COMMITTER_DATE: %w", err)
-		}
-		req.Time = t
+	if req.Time, err = c.committerTime(); err != nil {
+		return err
 	}
 	req.CommitterName = c.getenv("GIT_COMMITTER_NAME")
 	req.CommitterEmail = c.getenv("GIT_COMMITTER_EMAIL")
@@ -477,6 +722,27 @@ func (c *shamhubCLI) dump(args []string) error {
 		enc.SetIndent(2)
 		return enc.Encode(comments)
 
+	case "reviews":
+		u := "/_shamhub/admin/dump/reviews"
+		if len(args) > 1 {
+			q := make(url.Values)
+			for _, change := range args[1:] {
+				if _, err := strconv.Atoi(change); err != nil {
+					return fmt.Errorf("invalid change number %q: %w", change, err)
+				}
+				q.Add("change", change)
+			}
+			u += "?" + q.Encode()
+		}
+
+		var res adminDumpFeedbackResponse
+		if err := c.client.Get(c.ctx, u, &res); err != nil {
+			return err
+		}
+		enc := yaml.NewEncoder(c.stdout)
+		enc.SetIndent(2)
+		return enc.Encode(res)
+
 	case "change":
 		if len(args) != 2 {
 			return errors.New("usage: shamhub dump change <N>")
@@ -526,6 +792,18 @@ func adminChangePath(owner string, repo string, number int, action string) strin
 		number,
 		action,
 	)
+}
+
+func (c *shamhubCLI) committerTime() (time.Time, error) {
+	at := c.getenv("GIT_COMMITTER_DATE")
+	if at == "" {
+		return time.Time{}, nil
+	}
+	t, err := time.Parse(time.RFC3339, at)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid GIT_COMMITTER_DATE: %w", err)
+	}
+	return t, nil
 }
 
 // runGit invokes git for commands that intentionally mirror repository setup.

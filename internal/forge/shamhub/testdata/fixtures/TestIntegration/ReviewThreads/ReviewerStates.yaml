@@ -1,0 +1,89 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 117
+        host: 127.0.0.1:56373
+        body: '{"subject":"Testing review threads SHtfZWwt","body":"Test change for review threads","base":"main","head":"SHtfZWwt"}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 81
+        body: |-
+            {
+              "number": 26,
+              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/26"
+            }
+        headers:
+            Content-Length:
+                - "81"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 11.0495ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 101
+        host: 127.0.0.1:56373
+        body: '{"change":26,"comments":[{"path":"review.go","line":3,"body":"Comment without review disposition."}]}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/reviews
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 88
+        body: |-
+            {
+              "comments": [
+                {
+                  "threadID": "thread-15",
+                  "commentID": 15
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "88"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 1.320875ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        form:
+            change:
+                - "26"
+        url: http://127.0.0.1:56373/abhinav/test-repo/reviews?change=26
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 2
+        body: '{}'
+        headers:
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 632.333µs

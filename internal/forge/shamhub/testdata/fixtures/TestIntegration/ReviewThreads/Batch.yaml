@@ -1,0 +1,119 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 117
+        host: 127.0.0.1:56373
+        body: '{"subject":"Testing review threads rGrBj3Fq","body":"Test change for review threads","base":"main","head":"rGrBj3Fq"}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 81
+        body: |-
+            {
+              "number": 19,
+              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/19"
+            }
+        headers:
+            Content-Length:
+                - "81"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 19.094167ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 165
+        host: 127.0.0.1:56373
+        body: '{"change":19,"comments":[{"path":"review.go","line":3,"body":"First batched review comment."},{"path":"review.go","line":4,"body":"Second batched review comment."}]}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/reviews
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 154
+        body: |-
+            {
+              "comments": [
+                {
+                  "threadID": "thread-13",
+                  "commentID": 13
+                },
+                {
+                  "threadID": "thread-14",
+                  "commentID": 14
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "154"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 487.875µs
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        form:
+            change:
+                - "19"
+        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=19
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 588
+        body: |-
+            {
+              "items": [
+                {
+                  "id": 13,
+                  "threadID": "thread-13",
+                  "path": "review.go",
+                  "line": 3,
+                  "body": "First batched review comment.",
+                  "author": "test-user",
+                  "resolved": false,
+                  "outdated": false,
+                  "createdAt": "2026-08-22T13:40:09.373529-07:00"
+                },
+                {
+                  "id": 14,
+                  "threadID": "thread-14",
+                  "path": "review.go",
+                  "line": 4,
+                  "body": "Second batched review comment.",
+                  "author": "test-user",
+                  "resolved": false,
+                  "outdated": false,
+                  "createdAt": "2026-08-22T13:40:09.373529-07:00"
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "588"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 647.875µs

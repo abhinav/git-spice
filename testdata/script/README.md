@@ -265,6 +265,50 @@ shamhub comment delete <id>
 
 Deletes a comment by ID.
 
+#### shamhub review submit
+
+```
+shamhub review submit \
+  [--reviewer <username>] \
+  [--disposition comment|approve|request-changes] \
+  [--body <body>] \
+  <owner/repo> <change>
+```
+
+Records a feedback submission on the change.
+The `--reviewer` flag identifies the submitter and defaults to `reviewer`.
+The default disposition is `comment`, which does not establish reviewer state.
+Only `approve` and `request-changes` establish reviewer state.
+
+#### shamhub review comment post
+
+```
+shamhub review comment post \
+  [--id <id>] [--author <username>] \
+  --path <path> [--range <start[:end]>] \
+  [--side left|right] [--resolved] [--outdated] \
+  <owner/repo> <change> <body>
+```
+
+Posts the root comment of a review thread and prints its comment ID.
+Omit `--range` to post a file-level thread.
+Use `--id` to assign a deterministic ID; use `thread-<comment-id>` as the
+`<thread-id>` when creating replies.
+The default author is `reviewer`.
+For line-level threads, the default side is `right`.
+
+#### shamhub review comment reply
+
+```
+shamhub review comment reply \
+  [--id <id>] [--author <username>] \
+  <owner/repo> <change> <thread-id> <body>
+```
+
+Posts a reply to the existing review thread identified by `<thread-id>` and
+prints its comment ID.
+The default author is `reviewer`.
+
 #### shamhub dump
 
 ```
@@ -272,12 +316,17 @@ shamhub dump changes
 shamhub dump change <num>
 shamhub dump comments
 shamhub dump comments [num] ...
+shamhub dump reviews [<change>...]
 ```
 
 Dumps information about all changes, a single change,
 all comments, or comments for specific changes, respectively.
 Verify JSON dumps with `cmpenvJSON` and a golden file,
 not substring matching.
+
+`shamhub dump reviews` writes stable YAML intended for golden-file assertions.
+It preserves feedback-submission grouping and the created comment IDs for each
+submission, separately from effective reviewer state and review-thread state.
 
 #### shamhub register
 
