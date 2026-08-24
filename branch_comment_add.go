@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"go.abhg.dev/gs/internal/diffmap"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/reviewdiff"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -123,33 +123,28 @@ func (cmd *branchCommentAddCmd) Run(
 			return err
 		}
 	} else {
-		// New comments are entered in working-tree coordinates. Translate the
-		// location to the reviewed diff before handing it to the forge.
+		// New comments use the selected branch's postimage coordinates. Check
+		// that the requested line belongs to its review diff before submission.
 		diff, err := wt.DiffBranchBytes(ctx, b.Base, branch)
 		if err != nil {
 			return fmt.Errorf("get diff: %w", err)
 		}
 
-		mapper, err := diffmap.New(diff)
+		patch, err := reviewdiff.Parse(diff)
 		if err != nil {
 			return fmt.Errorf("parse diff: %w", err)
 		}
-
-		path, diffLine, side, err := mapper.Map(file, line)
-		if err != nil {
+		if !patch.ContainsLine(file, line) {
 			return fmt.Errorf(
-				"map %s:%d to diff: %w",
-				file, line, err,
+				"review diff does not contain %s:%d",
+				file,
+				line,
 			)
 		}
 
-		reviewSide, err := reviewThreadSide(side)
-		if err != nil {
-			return err
-		}
-		req.Path = path
-		req.Range = forge.ReviewThreadLine(diffLine)
-		req.Side = reviewSide
+		req.Path = file
+		req.Range = forge.ReviewThreadLine(line)
+		req.Side = forge.ReviewThreadSideRight
 	}
 
 	result, err := reviewRepo.SubmitReview(
