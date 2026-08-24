@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"go.abhg.dev/gs/internal/diffmap"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/reviewdiff"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -90,13 +90,14 @@ func (cmd *branchCommentSubmitStagedCmd) Run(
 		)
 	}
 
-	// Build diff map for coordinate translation.
+	// Staged roots use the selected branch's postimage coordinates. Parse the
+	// review diff once so every root can be checked before anything is sent.
 	diff, err := wt.DiffBranchBytes(ctx, b.Base, branch)
 	if err != nil {
 		return fmt.Errorf("get diff: %w", err)
 	}
 
-	mapper, err := diffmap.New(diff)
+	patch, err := reviewdiff.Parse(diff)
 	if err != nil {
 		return fmt.Errorf("parse diff: %w", err)
 	}
@@ -115,11 +116,9 @@ func (cmd *branchCommentSubmitStagedCmd) Run(
 		break
 	}
 
-	// Map staged comments to forge requests.
 	var comments []forge.SubmitReviewCommentRequest
 	for _, sc := range staged.Comments {
 		if sc.ThreadID != "" {
-			// Thread reply: no coordinate mapping needed.
 			threadID, err := reviewThreadID(threadIDs, sc.ThreadID)
 			if err != nil {
 				return fmt.Errorf("sc-%d: %w", sc.ID, err)
@@ -133,26 +132,20 @@ func (cmd *branchCommentSubmitStagedCmd) Run(
 			continue
 		}
 
-		path, diffLine, side, err := mapper.Map(
-			sc.File, sc.Line,
-		)
-		if err != nil {
+		if !patch.ContainsLine(sc.File, sc.Line) {
 			return fmt.Errorf(
-				"sc-%d: map %s:%d to diff: %w",
-				sc.ID, sc.File, sc.Line, err,
+				"sc-%d: review diff does not contain %s:%d",
+				sc.ID,
+				sc.File,
+				sc.Line,
 			)
-		}
-
-		reviewSide, err := reviewThreadSide(side)
-		if err != nil {
-			return fmt.Errorf("sc-%d: %w", sc.ID, err)
 		}
 		comments = append(comments,
 			forge.SubmitReviewCommentRequest{
-				Path:  path,
-				Range: forge.ReviewThreadLine(diffLine),
+				Path:  sc.File,
+				Range: forge.ReviewThreadLine(sc.Line),
 				Body:  sc.Body,
-				Side:  reviewSide,
+				Side:  forge.ReviewThreadSideRight,
 			},
 		)
 	}
