@@ -2,13 +2,14 @@ package azuredevops
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
+	"golang.org/x/sync/errgroup"
 )
 
 var _changeTemplateDirs = []string{
@@ -49,31 +50,62 @@ func (f *Forge) ChangeTemplatePaths() []string {
 }
 
 // ListChangeTemplates returns PR templates defined in the repository.
+//
+// Candidate paths are checked concurrently since Azure DevOps'
+// REST API requires a separate request per candidate path.
 func (r *Repository) ListChangeTemplates(
 	ctx context.Context,
 ) ([]*forge.ChangeTemplate, error) {
-	var templates []*forge.ChangeTemplate
+	var (
+		mu        sync.Mutex
+		templates []*forge.ChangeTemplate
+	)
+	add := func(ts ...*forge.ChangeTemplate) {
+		mu.Lock()
+		defer mu.Unlock()
+		templates = append(templates, ts...)
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
 	for _, filePath := range _changeTemplateFiles {
-		template, err := r.getChangeTemplateFile(ctx, filePath)
-		if err != nil {
-			if isAzureStatus(err, http.StatusNotFound) {
-				continue
+		g.Go(func() error {
+			template, err := r.getChangeTemplateFile(ctx, filePath)
+			if err != nil {
+				if isAzureStatus(err, http.StatusNotFound) {
+					return nil
+				}
+				// A single candidate path failing (e.g. a
+				// timeout) should not discard templates
+				// already found via other candidate paths.
+				r.log.Warn("could not check for change template",
+					"path", filePath, "error", err)
+				return nil
 			}
-			return nil, fmt.Errorf("get template %q: %w", filePath, err)
-		}
-		templates = append(templates, template)
+			add(template)
+			return nil
+		})
 	}
 
 	for _, dir := range _changeTemplateDirs {
-		dirTemplates, err := r.listChangeTemplateDir(ctx, dir)
-		if err != nil {
-			if isAzureStatus(err, http.StatusNotFound) {
-				continue
+		g.Go(func() error {
+			dirTemplates, err := r.listChangeTemplateDir(ctx, dir)
+			if err != nil {
+				if isAzureStatus(err, http.StatusNotFound) {
+					return nil
+				}
+				r.log.Warn("could not list change templates",
+					"dir", dir, "error", err)
+				return nil
 			}
-			return nil, fmt.Errorf("list templates in %q: %w", dir, err)
-		}
-		templates = append(templates, dirTemplates...)
+			add(dirTemplates...)
+			return nil
+		})
 	}
+
+	// Errors from individual candidates are already handled above,
+	// so g.Wait can only fail on unexpected panics being recovered
+	// by errgroup, which never happens here.
+	_ = g.Wait()
 	return templates, nil
 }
 
@@ -103,7 +135,12 @@ func (r *Repository) listChangeTemplateDir(
 
 		template, err := r.getChangeTemplateFile(ctx, *item.Path)
 		if err != nil {
-			return nil, fmt.Errorf("get template file %q: %w", *item.Path, err)
+			if isAzureStatus(err, http.StatusNotFound) {
+				continue
+			}
+			r.log.Warn("could not fetch change template",
+				"path", *item.Path, "error", err)
+			continue
 		}
 		templates = append(templates, template)
 	}

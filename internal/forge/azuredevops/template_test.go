@@ -85,6 +85,45 @@ func TestRepository_ListChangeTemplates(t *testing.T) {
 	}, templates)
 }
 
+// Regression test for a bug where a template found early
+// (e.g. ".azuredevops/pull_request_template.md") was discarded
+// if a later candidate path failed with a non-404 error
+// (e.g. a timeout while listing other candidate paths).
+func TestRepository_ListChangeTemplates_partialFailure(t *testing.T) {
+	templateContent := "Template body\n"
+	stub := &stubGitClient{
+		getItem: func(
+			_ context.Context,
+			args git.GetItemArgs,
+		) (*git.GitItem, error) {
+			switch *args.Path {
+			case ".azuredevops/pull_request_template.md":
+				return &git.GitItem{Content: &templateContent}, nil
+			case "docs/pull_request_template.md":
+				return nil, context.DeadlineExceeded
+			default:
+				statusCode := 404
+				return nil, azdo.WrappedError{StatusCode: &statusCode}
+			}
+		},
+		getItems: func(
+			_ context.Context,
+			_ git.GetItemsArgs,
+		) (*[]git.GitItem, error) {
+			statusCode := 404
+			return nil, azdo.WrappedError{StatusCode: &statusCode}
+		},
+	}
+
+	repo := newTestRepository(stub)
+
+	templates, err := repo.ListChangeTemplates(t.Context())
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []*forge.ChangeTemplate{
+		{Filename: "pull_request_template.md", Body: templateContent},
+	}, templates)
+}
+
 func hasAnySuffix(s string, suffixes ...string) bool {
 	for _, suffix := range suffixes {
 		if strings.HasSuffix(s, suffix) {
