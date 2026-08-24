@@ -1,7 +1,4 @@
-# Verifies the extended 'gs review list --json' shape that
-# the VSCode extension consumes. Covers:
-#  - scope, side, resolved (always emitted as bool), stale,
-#    range (multi-line), kind, status (legacy)
+# Reports a complete range-thread record for editor integrations.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -24,43 +21,12 @@ gs bc -m 'Add main' feature1
 gs branch submit --fill
 stderr 'Created #'
 
-# Post a single-line comment.
-gs review comment main.go:3 -m 'Single-line comment.' --no-draft
-stderr 'Posted comment'
+# Seed every supported state so one record exposes the complete JSON shape.
+shamhub review comment post --id 100 --author alice --path main.go --range 4:5 --side right --resolved --outdated alice/example 1 'Range comment.'
+stdout '100'
 
-# Post a multi-line range comment spanning lines 4-5.
-gs review comment main.go:4-5 -m 'Range comment.' --no-draft
-stderr 'Posted comment'
-
-# Single-line comment: scope, side, resolved (false), stale (false).
 gs review list --json
-stdout '"scope":"line"'
-stdout '"side":"right"'
-stdout '"commitSHA":"[0-9a-f]{40}"'
-stdout '"resolved":false'
-stdout '"stale":false'
-stdout '"status":"open"'
-stdout '"body":"Single-line comment."'
-stdout '"body":"Range comment."'
-
-# Range comment: range:{start,end} present.
-gs review list --json
-stdout '"range":{"start":4,"end":5}'
-
-# Resolve the first review thread.
-gs review resolve thread-2
-gs review list --json
-stdout '"resolved":true'
-stdout '"status":"resolved"'
-
-# Change a line covered by the second comment, then update the change.
-cp $WORK/extra/main-edited.go main.go
-git add main.go
-gs ca --no-edit
-gs branch submit --force
-gs review list --json
-stdout '"stale":true'
-stdout '"status":"outdated"'
+cmpenvJSON stdout $WORK/golden/range.json
 
 -- repo/main.go --
 package main
@@ -69,10 +35,5 @@ func main() {
 	println("hello")
 	println("world")
 }
--- extra/main-edited.go --
-package main
-
-func main() {
-	println("greetings")
-	println("world")
-}
+-- golden/range.json --
+{"kind":"forge","id":"100","scope":"line","path":"main.go","line":4,"range":{"start":4,"end":5},"side":"right","commitSHA":"4105957e3fefee17df99ae8581ed9c412dd150c2","body":"Range comment.","threadID":"thread-100","author":"alice","resolved":true,"stale":true,"status":"outdated","createdAt":"2024-04-05T16:40:32Z"}

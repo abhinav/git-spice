@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -315,7 +316,7 @@ func (cmd *reviewListCmd) writeJSON(
 func stagedToJSON(c *state.StagedComment) jsonComment {
 	comment := jsonComment{
 		Kind:     "draft",
-		ID:       fmt.Sprintf("%d", c.ID),
+		ID:       strconv.Itoa(c.ID),
 		Body:     c.Body,
 		ThreadID: c.ThreadID,
 	}
