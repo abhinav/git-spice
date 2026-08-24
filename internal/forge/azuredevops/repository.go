@@ -18,6 +18,9 @@ type Repository struct {
 
 	// Cached repository info from API.
 	repoInfo *git.GitRepository
+
+	// reviewerIDs maps reviewer names to Azure DevOps identity IDs.
+	reviewerIDs map[string]string
 }
 
 var _ forge.Repository = (*Repository)(nil)

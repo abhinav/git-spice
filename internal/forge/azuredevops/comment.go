@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"net/http"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
@@ -70,7 +71,24 @@ func (r *Repository) UpdateChangeComment(
 ) error {
 	comment := mustPRComment(id)
 
-	_, err := r.client.gitClient.UpdateComment(ctx, git.UpdateCommentArgs{
+	existing, err := r.client.gitClient.GetComment(ctx, git.GetCommentArgs{
+		Project:       strPtr(r.project()),
+		RepositoryId:  strPtr(r.repositoryID()),
+		PullRequestId: &comment.PRID,
+		ThreadId:      &comment.ThreadID,
+		CommentId:     &comment.CommentID,
+	})
+	if err != nil {
+		if isAzureStatus(err, http.StatusNotFound) {
+			return fmt.Errorf("get comment: %w", forge.ErrNotFound)
+		}
+		return fmt.Errorf("get comment: %w", err)
+	}
+	if existing.IsDeleted != nil && *existing.IsDeleted {
+		return fmt.Errorf("get comment: %w", forge.ErrNotFound)
+	}
+
+	_, err = r.client.gitClient.UpdateComment(ctx, git.UpdateCommentArgs{
 		Project:       strPtr(r.project()),
 		RepositoryId:  strPtr(r.repositoryID()),
 		PullRequestId: &comment.PRID,
@@ -81,6 +99,9 @@ func (r *Repository) UpdateChangeComment(
 		},
 	})
 	if err != nil {
+		if isAzureStatus(err, http.StatusNotFound) {
+			return fmt.Errorf("update comment: %w", forge.ErrNotFound)
+		}
 		return fmt.Errorf("update comment: %w", err)
 	}
 
@@ -139,7 +160,8 @@ func (r *Repository) ListChangeComments(
 		}
 
 		for _, thread := range *threads {
-			if thread.Comments == nil {
+			if thread.Comments == nil ||
+				(thread.IsDeleted != nil && *thread.IsDeleted) {
 				continue
 			}
 
@@ -149,6 +171,10 @@ func (r *Repository) ListChangeComments(
 			}
 
 			for _, comment := range *thread.Comments {
+				if comment.IsDeleted != nil && *comment.IsDeleted {
+					continue
+				}
+
 				body := ""
 				if comment.Content != nil {
 					body = *comment.Content

@@ -4,11 +4,11 @@ title: Limitations
 description: >-
   Usage constraints and limitations when using git-spice
   to interact with GitHub, GitLab, Bitbucket Cloud,
-  Bitbucket Data Center / Server, Gitea, or Forgejo.
+  Bitbucket Data Center / Server, Gitea, Forgejo, or Azure DevOps.
 ---
 
 Usage of git-spice with GitHub, GitLab, Bitbucket Cloud,
-Bitbucket Data Center / Server, Gitea, and Forgejo
+Bitbucket Data Center / Server, Gitea, Forgejo, and Azure DevOps
 runs into limitations of what is possible on those platforms,
 and how they handle Git commits.
 Some limitations imposed on git-spice are listed below.
@@ -172,6 +172,20 @@ compared to GitHub and GitLab:
   tasks left as replies within a comment thread are not counted.
 
 These are platform limitations, not git-spice limitations.
+
+## Azure DevOps limitations
+
+<!-- gs:version unreleased -->
+
+Azure DevOps support has some limitations
+compared to GitHub and GitLab:
+
+- **No PR assignees**: Azure DevOps pull requests have reviewers,
+  including required and optional reviewers,
+  but they do not have a separate assignee field.
+  The `--assign` flag is ignored.
+
+This is a platform limitation, not a git-spice limitation.
 
 ## Base branch change may dismiss approvals
 

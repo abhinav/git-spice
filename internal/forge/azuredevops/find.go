@@ -56,7 +56,7 @@ func (r *Repository) FindChangesByBranch(
 
 	items := make([]*forge.FindChangeItem, 0, len(*prs))
 	for _, pr := range *prs {
-		item, err := r.prToFindChangeItem(&pr)
+		item, err := r.prToFindChangeItem(ctx, &pr)
 		if err != nil {
 			r.log.Warn("Failed to convert PR", "err", err)
 			continue
@@ -83,10 +83,11 @@ func (r *Repository) FindChangeByID(
 		return nil, fmt.Errorf("get pull request: %w", err)
 	}
 
-	return r.prToFindChangeItem(pr)
+	return r.prToFindChangeItem(ctx, pr)
 }
 
 func (r *Repository) prToFindChangeItem(
+	ctx context.Context,
 	pr *git.GitPullRequest,
 ) (*forge.FindChangeItem, error) {
 	if pr == nil {
@@ -123,15 +124,26 @@ func (r *Repository) prToFindChangeItem(
 		isDraft = *pr.IsDraft
 	}
 
+	labels, err := r.prLabels(ctx, prID, pr.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("get labels: %w", err)
+	}
+
+	reviewers, err := r.prReviewers(ctx, prID, pr.Reviewers)
+	if err != nil {
+		return nil, fmt.Errorf("get reviewers: %w", err)
+	}
+
 	return &forge.FindChangeItem{
-		ID:       &PR{Number: prID},
-		URL:      r.repoID.ChangeURL(&PR{Number: prID}),
-		State:    state,
-		Subject:  subject,
-		HeadHash: headHash,
-		BaseName: baseName,
-		Draft:    isDraft,
-		// Labels, Reviewers, Assignees deferred to post-MVP.
+		ID:        &PR{Number: prID},
+		URL:       r.repoID.ChangeURL(&PR{Number: prID}),
+		State:     state,
+		Subject:   subject,
+		HeadHash:  headHash,
+		BaseName:  baseName,
+		Draft:     isDraft,
+		Labels:    labels,
+		Reviewers: reviewers,
 	}, nil
 }
 

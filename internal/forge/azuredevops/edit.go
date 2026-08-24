@@ -33,25 +33,35 @@ func (r *Repository) EditChange(
 		hasUpdate = true
 	}
 
-	if !hasUpdate {
-		// Nothing to update.
-		return nil
+	r.warnUnsupportedEditAssignees(opts)
+
+	if hasUpdate {
+		_, err := r.client.gitClient.UpdatePullRequest(ctx, git.UpdatePullRequestArgs{
+			Project:                strPtr(r.project()),
+			RepositoryId:           strPtr(r.repositoryID()),
+			PullRequestId:          &prID,
+			GitPullRequestToUpdate: update,
+		})
+		if err != nil {
+			return fmt.Errorf("update pull request: %w", err)
+		}
+
+		r.log.Debug("Updated pull request", "pr", prID)
 	}
 
-	_, err := r.client.gitClient.UpdatePullRequest(ctx, git.UpdatePullRequestArgs{
-		Project:                strPtr(r.project()),
-		RepositoryId:           strPtr(r.repositoryID()),
-		PullRequestId:          &prID,
-		GitPullRequestToUpdate: update,
-	})
-	if err != nil {
-		return fmt.Errorf("update pull request: %w", err)
+	if err := r.addLabelsToPullRequest(ctx, prID, opts.AddLabels); err != nil {
+		return fmt.Errorf("add labels to pull request: %w", err)
 	}
 
-	r.log.Debug("Updated pull request", "pr", prID)
-
-	// Note: Labels, reviewers, and assignees are deferred to post-MVP.
-	// They require separate API calls to the labels/reviewers endpoints.
+	if err := r.addReviewersToPullRequest(ctx, prID, opts.AddReviewers); err != nil {
+		return fmt.Errorf("add reviewers to pull request: %w", err)
+	}
 
 	return nil
+}
+
+func (r *Repository) warnUnsupportedEditAssignees(opts forge.EditChangeOptions) {
+	if len(opts.AddAssignees) > 0 {
+		r.log.Warn(_unsupportedAssigneesWarning)
+	}
 }
