@@ -20,6 +20,7 @@ import (
 	"go.abhg.dev/gs/internal/cli/experiment"
 	"go.abhg.dev/gs/internal/cli/shorthand"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/azuredevops"
 	"go.abhg.dev/gs/internal/forge/bitbucket"
 	"go.abhg.dev/gs/internal/forge/forgejo"
 	"go.abhg.dev/gs/internal/forge/gitea"
@@ -125,6 +126,7 @@ func main() {
 
 	// Register supported forges.
 	var forges forge.Registry
+	forges.Register(&azuredevops.Definition{Log: logger})
 	forges.Register(&bitbucket.Definition{Log: logger})
 	forges.Register(&forgejo.Definition{Log: logger})
 	forges.Register(&gitea.Definition{Log: logger})

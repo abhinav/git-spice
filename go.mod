@@ -17,6 +17,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/hexops/autogold/v2 v2.3.1
 	github.com/mattn/go-isatty v0.0.22
+	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/sahilm/fuzzy v0.1.2
 	github.com/stretchr/testify v1.11.1
@@ -53,6 +54,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/google/uuid v1.1.1 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/hexops/valast v1.5.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
