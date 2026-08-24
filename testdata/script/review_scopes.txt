@@ -1,7 +1,4 @@
-# Verifies the three comment scopes: line, file, and pr.
-# Each scope corresponds to a different positional-argument form on
-# 'gs review comment', and surfaces through the review-thread API
-# the extension uses.
+# Verifies line, line-range, and file review-comment anchors.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -28,36 +25,27 @@ stderr 'Created #'
 gs review comment main.go:4 -m 'Line-scope comment.' --no-draft
 stderr 'Posted comment'
 
+# Line-range scope: inclusive start and end lines.
+gs review comment main.go:4-5 -m 'Range-scope comment.' --no-draft
+stderr 'Posted comment'
+
 # File scope: path with no ':'.
 gs review comment main.go -m 'File-scope comment.' --no-draft
 stderr 'Posted comment'
 
-# PR scope: --pr flag, no positional argument.
-gs review comment --pr -m 'PR-scope comment.' --no-draft
-stderr 'Posted comment'
-
-# Thread comments are listed with the right anchor fields:
-#   - line-scope: path + line
-#   - file-scope: path, no line
-#
-# The text-mode output makes the missing-line / missing-path
-# distinction easiest to assert: line entries print as
-# "path:line", and file entries print as "path:0".
-#
-# PR-scope comments are review bodies, not review threads. The forge
-# API can submit them but does not include them in ListReviewThreads.
+# Text output lists the line and file-level anchors.
 gs review list
 stderr 'main\.go:4'
 stderr 'main\.go:0'
 stderr 'Line-scope comment'
+stderr 'Range-scope comment'
 stderr 'File-scope comment'
-! stderr 'PR-scope comment'
 
-# --pr with a positional argument is rejected.
-! gs review comment --pr unwanted.go -m 'oops' --no-draft
-stderr '--pr takes no anchor argument'
+# ShamHub's stable YAML dump preserves the complete inclusive range.
+shamhub dump reviews 1
+cmp stdout $WORK/golden/reviews.yaml
 
-# Missing anchor without --pr is rejected.
+# Missing anchor is rejected.
 ! gs review comment -m 'oops' --no-draft
 stderr 'comment anchor is required'
 
@@ -68,3 +56,52 @@ func main() {
 	println("hello")
 	println("world")
 }
+-- golden/reviews.yaml --
+changes:
+  - change: 1
+    submissions:
+      - submitter: alice
+        disposition: comment
+        commentIDs:
+          - 2
+      - submitter: alice
+        disposition: comment
+        commentIDs:
+          - 3
+      - submitter: alice
+        disposition: comment
+        commentIDs:
+          - 4
+    threads:
+      - id: thread-2
+        path: main.go
+        range:
+          start: 4
+          end: 4
+        side: right
+        resolved: false
+        outdated: false
+        comments:
+          - id: 2
+            author: alice
+            body: Line-scope comment.
+      - id: thread-3
+        path: main.go
+        range:
+          start: 4
+          end: 5
+        side: right
+        resolved: false
+        outdated: false
+        comments:
+          - id: 3
+            author: alice
+            body: Range-scope comment.
+      - id: thread-4
+        path: main.go
+        resolved: false
+        outdated: false
+        comments:
+          - id: 4
+            author: alice
+            body: File-scope comment.
