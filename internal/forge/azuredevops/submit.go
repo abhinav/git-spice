@@ -25,8 +25,8 @@ func (r *Repository) SubmitChange(
 	targetRef := "refs/heads/" + req.Base
 
 	createArgs := git.CreatePullRequestArgs{
-		Project:      strPtr(r.project()),
-		RepositoryId: strPtr(r.repositoryID()),
+		Project:      new(r.project()),
+		RepositoryId: new(r.repositoryID()),
 		GitPullRequestToCreate: &git.GitPullRequest{
 			Title:         &req.Subject,
 			Description:   &req.Body,
@@ -81,8 +81,8 @@ func (r *Repository) refExists(ctx context.Context, branch string) (bool, error)
 	filter := "heads/" + strings.TrimPrefix(branch, "refs/heads/")
 	top := 10
 	refs, err := r.client.gitClient.GetRefs(ctx, git.GetRefsArgs{
-		Project:      strPtr(r.project()),
-		RepositoryId: strPtr(r.repositoryID()),
+		Project:      new(r.project()),
+		RepositoryId: new(r.repositoryID()),
 		Filter:       &filter,
 		Top:          &top,
 	})
@@ -97,8 +97,4 @@ func (r *Repository) refExists(ctx context.Context, branch string) (bool, error)
 		}
 	}
 	return false, nil
-}
-
-func strPtr(s string) *string {
-	return &s
 }

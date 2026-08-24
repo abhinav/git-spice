@@ -2,6 +2,7 @@ package azuredevops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
@@ -22,14 +23,14 @@ func (r *Repository) FindChangesByBranch(
 	var status *git.PullRequestStatus
 	switch opts.State {
 	case forge.ChangeOpen:
-		status = statusPtr(git.PullRequestStatusValues.Active)
+		status = new(git.PullRequestStatusValues.Active)
 	case forge.ChangeMerged:
-		status = statusPtr(git.PullRequestStatusValues.Completed)
+		status = new(git.PullRequestStatusValues.Completed)
 	case forge.ChangeClosed:
-		status = statusPtr(git.PullRequestStatusValues.Abandoned)
+		status = new(git.PullRequestStatusValues.Abandoned)
 	default:
 		// All states.
-		status = statusPtr(git.PullRequestStatusValues.All)
+		status = new(git.PullRequestStatusValues.All)
 	}
 
 	limit := opts.Limit
@@ -38,8 +39,8 @@ func (r *Repository) FindChangesByBranch(
 	}
 
 	prs, err := r.client.gitClient.GetPullRequests(ctx, git.GetPullRequestsArgs{
-		Project:      strPtr(r.project()),
-		RepositoryId: strPtr(r.repositoryID()),
+		Project:      new(r.project()),
+		RepositoryId: new(r.repositoryID()),
 		SearchCriteria: &git.GitPullRequestSearchCriteria{
 			SourceRefName: &sourceRef,
 			Status:        status,
@@ -75,8 +76,8 @@ func (r *Repository) FindChangeByID(
 	prID := mustPR(id).Number
 
 	pr, err := r.client.gitClient.GetPullRequest(ctx, git.GetPullRequestArgs{
-		Project:       strPtr(r.project()),
-		RepositoryId:  strPtr(r.repositoryID()),
+		Project:       new(r.project()),
+		RepositoryId:  new(r.repositoryID()),
 		PullRequestId: &prID,
 	})
 	if err != nil {
@@ -91,7 +92,7 @@ func (r *Repository) prToFindChangeItem(
 	pr *git.GitPullRequest,
 ) (*forge.FindChangeItem, error) {
 	if pr == nil {
-		return nil, fmt.Errorf("nil pull request")
+		return nil, errors.New("nil pull request")
 	}
 
 	prID := 0
@@ -153,8 +154,4 @@ func trimRefPrefix(ref string) string {
 		return ref[len(prefix):]
 	}
 	return ref
-}
-
-func statusPtr(s git.PullRequestStatus) *git.PullRequestStatus {
-	return &s
 }

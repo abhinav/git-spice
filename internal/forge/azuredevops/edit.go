@@ -37,8 +37,8 @@ func (r *Repository) EditChange(
 
 	if hasUpdate {
 		_, err := r.client.gitClient.UpdatePullRequest(ctx, git.UpdatePullRequestArgs{
-			Project:                strPtr(r.project()),
-			RepositoryId:           strPtr(r.repositoryID()),
+			Project:                new(r.project()),
+			RepositoryId:           new(r.repositoryID()),
 			PullRequestId:          &prID,
 			GitPullRequestToUpdate: update,
 		})

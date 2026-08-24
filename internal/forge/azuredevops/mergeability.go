@@ -16,8 +16,8 @@ func (r *Repository) ChangeMergeability(
 	prID := mustPR(id).Number
 
 	pr, err := r.client.gitClient.GetPullRequest(ctx, git.GetPullRequestArgs{
-		Project:       strPtr(r.project()),
-		RepositoryId:  strPtr(r.repositoryID()),
+		Project:       new(r.project()),
+		RepositoryId:  new(r.repositoryID()),
 		PullRequestId: &prID,
 	})
 	if err != nil {

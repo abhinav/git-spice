@@ -31,8 +31,8 @@ func (r *Repository) commentCounts(
 	prID int,
 ) (*forge.CommentCounts, error) {
 	threads, err := r.client.gitClient.GetThreads(ctx, git.GetThreadsArgs{
-		Project:       strPtr(r.project()),
-		RepositoryId:  strPtr(r.repositoryID()),
+		Project:       new(r.project()),
+		RepositoryId:  new(r.repositoryID()),
 		PullRequestId: &prID,
 	})
 	if err != nil {

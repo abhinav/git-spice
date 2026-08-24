@@ -190,7 +190,7 @@ var _authenticationMethods = []struct {
 	{
 		Title:       "Azure CLI",
 		Description: azDesc,
-		Build: func(a authenticatorOptions) authenticator {
+		Build: func(authenticatorOptions) authenticator {
 			// Offer this option only if the user has Azure CLI installed.
 			azExe, err := _execLookPath("az")
 			if err != nil {
@@ -320,8 +320,7 @@ func (a *CLIAuthenticator) Authenticate(
 	// First check if the user is logged in.
 	cmd := xec.Command(ctx, nil, a.AZ, "account", "show").WithExecer(a.execer)
 	if err := cmd.Run(); err != nil {
-		var exitErr *xec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*xec.ExitError](err); ok {
 			return nil, errors.Join(
 				errors.New("az is not authenticated"),
 				fmt.Errorf("stderr: %s", exitErr.Stderr),
@@ -360,8 +359,7 @@ func getAzureCLIToken(
 	).WithExecer(execer).WithStdout(&stdout)
 
 	if err := tokenCmd.Run(); err != nil {
-		var exitErr *xec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*xec.ExitError](err); ok {
 			return "", errors.Join(
 				errors.New("failed to get Azure DevOps access token"),
 				fmt.Errorf("stderr: %s", exitErr.Stderr),

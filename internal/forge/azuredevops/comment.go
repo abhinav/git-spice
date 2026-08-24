@@ -25,8 +25,8 @@ func (r *Repository) PostChangeComment(
 	commentType := git.CommentTypeValues.Text
 	threadStatus := git.CommentThreadStatusValues.Closed
 	thread, err := r.client.gitClient.CreateThread(ctx, git.CreateThreadArgs{
-		Project:       strPtr(r.project()),
-		RepositoryId:  strPtr(r.repositoryID()),
+		Project:       new(r.project()),
+		RepositoryId:  new(r.repositoryID()),
 		PullRequestId: &prID,
 		CommentThread: &git.GitPullRequestCommentThread{
 			Status: &threadStatus,
@@ -72,8 +72,8 @@ func (r *Repository) UpdateChangeComment(
 	comment := mustPRComment(id)
 
 	existing, err := r.client.gitClient.GetComment(ctx, git.GetCommentArgs{
-		Project:       strPtr(r.project()),
-		RepositoryId:  strPtr(r.repositoryID()),
+		Project:       new(r.project()),
+		RepositoryId:  new(r.repositoryID()),
 		PullRequestId: &comment.PRID,
 		ThreadId:      &comment.ThreadID,
 		CommentId:     &comment.CommentID,
@@ -89,8 +89,8 @@ func (r *Repository) UpdateChangeComment(
 	}
 
 	_, err = r.client.gitClient.UpdateComment(ctx, git.UpdateCommentArgs{
-		Project:       strPtr(r.project()),
-		RepositoryId:  strPtr(r.repositoryID()),
+		Project:       new(r.project()),
+		RepositoryId:  new(r.repositoryID()),
 		PullRequestId: &comment.PRID,
 		ThreadId:      &comment.ThreadID,
 		CommentId:     &comment.CommentID,
@@ -120,8 +120,8 @@ func (r *Repository) DeleteChangeComment(
 	comment := mustPRComment(id)
 
 	if err := r.client.gitClient.DeleteComment(ctx, git.DeleteCommentArgs{
-		Project:       strPtr(r.project()),
-		RepositoryId:  strPtr(r.repositoryID()),
+		Project:       new(r.project()),
+		RepositoryId:  new(r.repositoryID()),
 		PullRequestId: &comment.PRID,
 		ThreadId:      &comment.ThreadID,
 		CommentId:     &comment.CommentID,
@@ -146,8 +146,8 @@ func (r *Repository) ListChangeComments(
 		prID := mustPR(id).Number
 
 		threads, err := r.client.gitClient.GetThreads(ctx, git.GetThreadsArgs{
-			Project:       strPtr(r.project()),
-			RepositoryId:  strPtr(r.repositoryID()),
+			Project:       new(r.project()),
+			RepositoryId:  new(r.repositoryID()),
 			PullRequestId: &prID,
 		})
 		if err != nil {

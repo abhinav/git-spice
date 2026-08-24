@@ -83,8 +83,8 @@ func (r *Repository) listChangeTemplateDir(
 ) ([]*forge.ChangeTemplate, error) {
 	recursionLevel := git.VersionControlRecursionTypeValues.OneLevel
 	items, err := r.client.gitClient.GetItems(ctx, git.GetItemsArgs{
-		Project:        strPtr(r.project()),
-		RepositoryId:   strPtr(r.repositoryID()),
+		Project:        new(r.project()),
+		RepositoryId:   new(r.repositoryID()),
 		ScopePath:      &dir,
 		RecursionLevel: &recursionLevel,
 	})
@@ -116,8 +116,8 @@ func (r *Repository) getChangeTemplateFile(
 ) (*forge.ChangeTemplate, error) {
 	includeContent := true
 	item, err := r.client.gitClient.GetItem(ctx, git.GetItemArgs{
-		Project:        strPtr(r.project()),
-		RepositoryId:   strPtr(r.repositoryID()),
+		Project:        new(r.project()),
+		RepositoryId:   new(r.repositoryID()),
 		Path:           &filePath,
 		IncludeContent: &includeContent,
 	})

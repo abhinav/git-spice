@@ -49,10 +49,10 @@ func TestRepository_ListChangeTemplates(t *testing.T) {
 			isFolder := true
 			isFile := false
 			return &[]git.GitItem{
-				{Path: strPtr("/.azuredevops/pull_request_template"), IsFolder: &isFolder},
-				{Path: strPtr("/.azuredevops/pull_request_template/empty.md"), IsFolder: &isFile},
-				{Path: strPtr("/.azuredevops/pull_request_template/non-empty.md"), IsFolder: &isFile},
-				{Path: strPtr("/.azuredevops/pull_request_template/branches"), IsFolder: &isFolder},
+				{Path: new("/.azuredevops/pull_request_template"), IsFolder: &isFolder},
+				{Path: new("/.azuredevops/pull_request_template/empty.md"), IsFolder: &isFile},
+				{Path: new("/.azuredevops/pull_request_template/non-empty.md"), IsFolder: &isFile},
+				{Path: new("/.azuredevops/pull_request_template/branches"), IsFolder: &isFolder},
 			}, nil
 		},
 		getItem: func(

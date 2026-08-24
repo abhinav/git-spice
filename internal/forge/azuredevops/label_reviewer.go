@@ -2,6 +2,7 @@ package azuredevops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -19,8 +20,8 @@ func (r *Repository) addLabelsToPullRequest(
 		_, err := r.client.gitClient.CreatePullRequestLabel(
 			ctx,
 			git.CreatePullRequestLabelArgs{
-				Project:       strPtr(r.project()),
-				RepositoryId:  strPtr(r.repositoryID()),
+				Project:       new(r.project()),
+				RepositoryId:  new(r.repositoryID()),
 				PullRequestId: &prID,
 				Label: &core.WebApiCreateTagRequestData{
 					Name: &label,
@@ -57,8 +58,8 @@ func (r *Repository) addReviewerToPullRequest(
 		_, err := r.client.gitClient.CreatePullRequestReviewer(
 			ctx,
 			git.CreatePullRequestReviewerArgs{
-				Project:       strPtr(r.project()),
-				RepositoryId:  strPtr(r.repositoryID()),
+				Project:       new(r.project()),
+				RepositoryId:  new(r.repositoryID()),
 				PullRequestId: &prID,
 				ReviewerId:    &reviewerID,
 				Reviewer: &git.IdentityRefWithVote{
@@ -73,8 +74,8 @@ func (r *Repository) addReviewerToPullRequest(
 	_, err := r.client.gitClient.CreateUnmaterializedPullRequestReviewer(
 		ctx,
 		git.CreateUnmaterializedPullRequestReviewerArgs{
-			Project:       strPtr(r.project()),
-			RepositoryId:  strPtr(r.repositoryID()),
+			Project:       new(r.project()),
+			RepositoryId:  new(r.repositoryID()),
 			PullRequestId: &prID,
 			Reviewer: &git.IdentityRefWithVote{
 				UniqueName: &reviewer,
@@ -102,7 +103,7 @@ func (r *Repository) reviewerID(ctx context.Context, reviewer string) string {
 
 func (r *Repository) resolveReviewerID(ctx context.Context, reviewer string) (string, error) {
 	if r.client.identityClient == nil {
-		return "", fmt.Errorf("identity client unavailable")
+		return "", errors.New("identity client unavailable")
 	}
 
 	for _, searchFilter := range []string{"MailAddress", "General"} {
@@ -138,8 +139,8 @@ func (r *Repository) prLabels(
 	labels, err := r.client.gitClient.GetPullRequestLabels(
 		ctx,
 		git.GetPullRequestLabelsArgs{
-			Project:       strPtr(r.project()),
-			RepositoryId:  strPtr(r.repositoryID()),
+			Project:       new(r.project()),
+			RepositoryId:  new(r.repositoryID()),
 			PullRequestId: &prID,
 		},
 	)
@@ -176,8 +177,8 @@ func (r *Repository) prReviewers(
 	reviewers, err := r.client.gitClient.GetPullRequestReviewers(
 		ctx,
 		git.GetPullRequestReviewersArgs{
-			Project:       strPtr(r.project()),
-			RepositoryId:  strPtr(r.repositoryID()),
+			Project:       new(r.project()),
+			RepositoryId:  new(r.repositoryID()),
 			PullRequestId: &prID,
 		},
 	)

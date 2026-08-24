@@ -148,6 +148,7 @@ func TestIntegration(t *testing.T) {
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
 		RemoteURL:     remoteURL,
 		Forge:         &azureForge,
+		Assignees:     []string{},
 		SkipAssignees: true,
 		// Azure DevOps does not support PR assignees,
 		// so the combined reviewer+assignee scenario cannot be exercised.
@@ -193,8 +194,8 @@ func mergeChange(t *testing.T, repo *Repository, pr *PR) error {
 	pullRequest, err := repo.client.gitClient.GetPullRequest(
 		t.Context(),
 		git.GetPullRequestArgs{
-			Project:       strPtr(repo.project()),
-			RepositoryId:  strPtr(repo.repositoryID()),
+			Project:       new(repo.project()),
+			RepositoryId:  new(repo.repositoryID()),
 			PullRequestId: &pr.Number,
 		},
 	)
@@ -208,8 +209,8 @@ func mergeChange(t *testing.T, repo *Repository, pr *PR) error {
 	_, err = repo.client.gitClient.UpdatePullRequest(
 		t.Context(),
 		git.UpdatePullRequestArgs{
-			Project:       strPtr(repo.project()),
-			RepositoryId:  strPtr(repo.repositoryID()),
+			Project:       new(repo.project()),
+			RepositoryId:  new(repo.repositoryID()),
 			PullRequestId: &pr.Number,
 			GitPullRequestToUpdate: &git.GitPullRequest{
 				Status:                &status,
@@ -229,8 +230,8 @@ func mergeChange(t *testing.T, repo *Repository, pr *PR) error {
 		pullRequest, err := repo.client.gitClient.GetPullRequest(
 			t.Context(),
 			git.GetPullRequestArgs{
-				Project:       strPtr(repo.project()),
-				RepositoryId:  strPtr(repo.repositoryID()),
+				Project:       new(repo.project()),
+				RepositoryId:  new(repo.repositoryID()),
 				PullRequestId: &pr.Number,
 			},
 		)
@@ -253,8 +254,8 @@ func closeChange(t *testing.T, repo *Repository, pr *PR) error {
 	_, err := repo.client.gitClient.UpdatePullRequest(
 		t.Context(),
 		git.UpdatePullRequestArgs{
-			Project:       strPtr(repo.project()),
-			RepositoryId:  strPtr(repo.repositoryID()),
+			Project:       new(repo.project()),
+			RepositoryId:  new(repo.repositoryID()),
 			PullRequestId: &pr.Number,
 			GitPullRequestToUpdate: &git.GitPullRequest{
 				Status: &status,
