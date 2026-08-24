@@ -20,9 +20,8 @@ import (
 )
 
 type reviewCommentCmd struct {
-	Anchor  string `arg:"" optional:"" help:"Comment anchor: file.go, file.go:42, or file.go:42-50. Omit with --pr."`
+	Anchor  string `arg:"" optional:"" help:"Comment anchor: file.go, file.go:42, or file.go:42-50."`
 	Message string `short:"m" placeholder:"MSG" help:"Comment body. Opens editor if not provided."`
-	PR      bool   `name:"pr" help:"Post an unanchored change request comment."`
 	Draft   bool   `negatable:"" default:"true" help:"Save the comment as a local draft instead of posting it."`
 	Branch  string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch to comment on. Defaults to the current branch."`
 }
@@ -36,7 +35,6 @@ func (*reviewCommentCmd) Help() string {
 		  file.go:42       anchored to that line
 		  file.go:42-50    anchored to that line range
 		  file.go          anchored to the file
-		  (empty) + --pr   not anchored to a file
 
 		Comments are saved as local drafts by default.
 		Use --no-draft to post immediately.
@@ -59,7 +57,7 @@ func (cmd *reviewCommentCmd) Run(
 		return err
 	}
 
-	anchor, err := parseReviewCommentAnchor(cmd.Anchor, cmd.PR)
+	anchor, err := parseReviewCommentAnchor(cmd.Anchor)
 	if err != nil {
 		return err
 	}
@@ -69,14 +67,14 @@ func (cmd *reviewCommentCmd) Run(
 	}
 
 	if cmd.Draft {
-		if anchor.PR || anchor.StartLine == 0 || anchor.StartLine != anchor.EndLine {
+		if anchor.Range.IsZero() || anchor.Range.StartLine != anchor.Range.EndLine {
 			return errors.New(
 				"draft comments require a single-line file:line anchor",
 			)
 		}
 		return saveReviewDraft(ctx, log, store, branch, state.StagedComment{
 			File: anchor.Path,
-			Line: anchor.StartLine,
+			Line: anchor.Range.StartLine,
 			Body: body,
 		})
 	}
@@ -87,48 +85,31 @@ func (cmd *reviewCommentCmd) Run(
 	if err != nil {
 		return err
 	}
-	if anchor.PR {
-		if _, err := reviewRepo.SubmitReview(
-			ctx,
-			b.Change.ChangeID(),
-			forge.SubmitReviewRequest{Body: body},
-		); err != nil {
-			return fmt.Errorf("post review comment: %w", err)
-		}
-		log.Infof("Posted comment on %s.", b.Change.ChangeID())
-		return nil
+	diff, err := wt.DiffBranchBytes(ctx, b.Base, branch)
+	if err != nil {
+		return fmt.Errorf("get diff: %w", err)
 	}
-
-	comment := forge.SubmitReviewCommentRequest{
-		Path: anchor.Path,
-		Body: body,
+	patch, err := reviewdiff.Parse(diff)
+	if err != nil {
+		return fmt.Errorf("parse diff: %w", err)
 	}
-	if anchor.StartLine > 0 {
-		diff, err := wt.DiffBranchBytes(ctx, b.Base, branch)
-		if err != nil {
-			return fmt.Errorf("get diff: %w", err)
-		}
-		patch, err := reviewdiff.Parse(diff)
-		if err != nil {
-			return fmt.Errorf("parse diff: %w", err)
-		}
-		if !patch.ContainsLineRange(
+	if anchor.Range.IsZero() && !patch.ContainsFile(anchor.Path) {
+		return fmt.Errorf(
+			"review diff does not contain file %q",
 			anchor.Path,
-			anchor.StartLine,
-			anchor.EndLine,
-		) {
-			return fmt.Errorf(
-				"review diff does not contain %s:%d-%d",
-				anchor.Path,
-				anchor.StartLine,
-				anchor.EndLine,
-			)
-		}
-		comment.Range = forge.ReviewThreadRange{
-			StartLine: anchor.StartLine,
-			EndLine:   anchor.EndLine,
-		}
-		comment.Side = forge.ReviewThreadSideRight
+		)
+	}
+	if !anchor.Range.IsZero() && !patch.ContainsLineRange(
+		anchor.Path,
+		anchor.Range.StartLine,
+		anchor.Range.EndLine,
+	) {
+		return fmt.Errorf(
+			"review diff does not contain %s:%d-%d",
+			anchor.Path,
+			anchor.Range.StartLine,
+			anchor.Range.EndLine,
+		)
 	}
 
 	return postReviewComment(
@@ -136,36 +117,25 @@ func (cmd *reviewCommentCmd) Run(
 		log,
 		reviewRepo,
 		b.Change.ChangeID(),
-		comment,
+		forge.SubmitReviewCommentRequest{
+			Path:  anchor.Path,
+			Range: anchor.Range,
+			Body:  body,
+			Side:  forge.ReviewThreadSideRight,
+		},
 	)
 }
 
-// reviewCommentAnchor is the parsed location accepted by review comment.
-// PR distinguishes an unanchored review body from a file-level thread, whose
-// line range is also zero.
+// reviewCommentAnchor is the parsed file or inclusive line range accepted by
+// review comment. A zero range identifies the whole file.
 type reviewCommentAnchor struct {
-	PR        bool
-	Path      string
-	StartLine int
-	EndLine   int
+	Path  string
+	Range forge.ReviewThreadRange
 }
 
-func parseReviewCommentAnchor(
-	value string,
-	pr bool,
-) (reviewCommentAnchor, error) {
-	if pr {
-		if value != "" {
-			return reviewCommentAnchor{}, fmt.Errorf(
-				"--pr takes no anchor argument, got %q", value,
-			)
-		}
-		return reviewCommentAnchor{PR: true}, nil
-	}
+func parseReviewCommentAnchor(value string) (reviewCommentAnchor, error) {
 	if value == "" {
-		return reviewCommentAnchor{}, errors.New(
-			"comment anchor is required unless --pr is used",
-		)
+		return reviewCommentAnchor{}, errors.New("comment anchor is required")
 	}
 	if !strings.Contains(value, ":") {
 		return reviewCommentAnchor{Path: value}, nil
@@ -176,9 +146,11 @@ func parseReviewCommentAnchor(
 		return reviewCommentAnchor{}, err
 	}
 	return reviewCommentAnchor{
-		Path:      file,
-		StartLine: start,
-		EndLine:   end,
+		Path: file,
+		Range: forge.ReviewThreadRange{
+			StartLine: start,
+			EndLine:   end,
+		},
 	}, nil
 }
 

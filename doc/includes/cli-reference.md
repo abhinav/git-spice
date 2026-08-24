@@ -1482,7 +1482,6 @@ The anchor controls the comment scope:
   file.go:42       anchored to that line
   file.go:42-50    anchored to that line range
   file.go          anchored to the file
-  (empty) + --pr   not anchored to a file
 
 Comments are saved as local drafts by default.
 Use --no-draft to post immediately.
@@ -1491,12 +1490,11 @@ If no message is given with -m, an editor is opened.
 
 **Arguments**
 
-* `anchor`: Comment anchor: file.go, file.go:42, or file.go:42-50. Omit with --pr.
+* `anchor`: Comment anchor: file.go, file.go:42, or file.go:42-50.
 
 **Flags**
 
 * `-m`, `--message=MSG`: Comment body. Opens editor if not provided.
-* `--pr`: Post an unanchored change request comment.
 * `--[no-]draft`: Save the comment as a local draft instead of posting it.
 * `-b`, `--branch=BRANCH`: Branch to comment on. Defaults to the current branch.
 
