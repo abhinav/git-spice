@@ -105,7 +105,7 @@ func (c *Gateway) FindPullRequestsByBranches(
 			Nodes []*PullRequestBranchMatch `json:"nodes"`
 		} `json:"repository"`
 	}
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return nil, fmt.Errorf("query pull requests by branch: %w", err)
 	}
 
@@ -141,7 +141,7 @@ func (c *Gateway) FindPullRequests(ctx context.Context, owner, repo, branch stri
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return nil, fmt.Errorf("query pull requests: %w", err)
 	}
 	return result.Repository.PullRequests.Nodes, nil
@@ -166,7 +166,7 @@ func (c *Gateway) PullRequest(ctx context.Context, owner, repo string, number in
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return nil, fmt.Errorf("query pull request: %w", err)
 	}
 	return result.Repository.PullRequest, nil

@@ -175,7 +175,7 @@ func (c *Gateway) PullRequestLatestOpinionatedReviews(ctx context.Context, id ID
 					}
 				}
 			`)
-			if err := c.execute(ctx, query, variables, &result); err != nil {
+			if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 				yield(nil, fmt.Errorf("list latest opinionated reviews (page %d): %w", pageNum, err))
 				return
 			}
@@ -483,7 +483,7 @@ func (c *Gateway) pullRequestReviewThreadListPage(ctx context.Context, id ID, fi
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return nil, err
 	}
 	return &result.Node.ReviewThreads, nil
@@ -519,7 +519,7 @@ func (c *Gateway) pullRequestReviewCommentsPage(ctx context.Context, id ID, firs
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return nil, err
 	}
 	return &result.Node.Comments, nil

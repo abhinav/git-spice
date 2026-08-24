@@ -6,16 +6,16 @@ import (
 	"strings"
 )
 
-// Sentinel errors classify GitHub GraphQL error types.
+// Sentinel errors classify GitHub errors.
 // Match them with [errors.Is].
 var (
-	// ErrNotFound matches a GraphQL error whose type is NOT_FOUND.
+	// ErrNotFound matches an error caused by a missing resource.
 	ErrNotFound = errors.New("not found")
 
-	// ErrForbidden matches a GraphQL error whose type is FORBIDDEN.
+	// ErrForbidden matches an error caused by insufficient permission.
 	ErrForbidden = errors.New("forbidden")
 
-	// ErrUnprocessable matches a GraphQL error whose type is UNPROCESSABLE.
+	// ErrUnprocessable matches an error caused by invalid input or state.
 	ErrUnprocessable = errors.New("unprocessable")
 )
 

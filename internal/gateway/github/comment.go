@@ -116,7 +116,7 @@ func (c *Gateway) pullRequestCommentsPage(ctx context.Context, id ID, first int,
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return nil, fmt.Errorf("query pull request comments: %w", err)
 	}
 	comments := result.Node.Comments

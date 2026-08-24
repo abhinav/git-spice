@@ -88,7 +88,7 @@ func (c *Gateway) pullRequestReviewThreadsFirstPages(ctx context.Context, ids []
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, struct {
+	if err := c.executeGQL(ctx, query, struct {
 		IDs []ID `json:"ids"`
 	}{ids}, &result); err != nil {
 		return nil, fmt.Errorf("query pull request review threads: %w", err)
@@ -126,7 +126,7 @@ func (c *Gateway) pullRequestReviewThreadsPage(ctx context.Context, id ID, first
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return nil, fmt.Errorf("query pull request review threads page: %w", err)
 	}
 	return reviewThreads(&result.Node.ReviewThreads), nil

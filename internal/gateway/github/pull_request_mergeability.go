@@ -29,7 +29,7 @@ func (c *Gateway) PullRequestMergeability(ctx context.Context, id ID) (*Mergeabi
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, struct {
+	if err := c.executeGQL(ctx, query, struct {
 		ID ID `json:"id"`
 	}{id}, &result); err != nil {
 		return nil, fmt.Errorf("query pull request mergeability: %w", err)

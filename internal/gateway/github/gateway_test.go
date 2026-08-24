@@ -16,12 +16,23 @@ import (
 
 func TestNewGateway_endpoint(t *testing.T) {
 	tests := []struct {
-		name string
-		give string
-		want string
+		name     string
+		give     string
+		wantGQL  string
+		wantREST string
 	}{
-		{name: "GitHub", give: "https://api.github.com", want: "https://api.github.com/graphql"},
-		{name: "Enterprise", give: "https://github.example.com/api", want: "https://github.example.com/api/graphql"},
+		{
+			name:     "GitHub",
+			give:     "https://api.github.com",
+			wantGQL:  "https://api.github.com/graphql",
+			wantREST: "https://api.github.com",
+		},
+		{
+			name:     "Enterprise",
+			give:     "https://github.example.com/api",
+			wantGQL:  "https://github.example.com/api/graphql",
+			wantREST: "https://github.example.com/api/v3",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -29,7 +40,8 @@ func TestNewGateway_endpoint(t *testing.T) {
 				return "token", nil
 			}))
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, gateway.endpoint)
+			assert.Equal(t, tt.wantGQL, gateway.graphQLEndpoint)
+			assert.Equal(t, tt.wantREST, gateway.restBaseURL.String())
 		})
 	}
 }

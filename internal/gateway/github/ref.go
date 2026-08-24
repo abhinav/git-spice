@@ -26,7 +26,7 @@ func (c *Gateway) RefExists(ctx context.Context, owner, repo, ref string) (bool,
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, vars, &result); err != nil {
+	if err := c.executeGQL(ctx, query, vars, &result); err != nil {
 		return false, fmt.Errorf("query ref: %w", err)
 	}
 	return result.Repository.Ref != nil, nil
