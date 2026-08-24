@@ -47,16 +47,3 @@ func reviewThreadID(
 	}
 	return threadID, nil
 }
-
-// reviewThreadSide translates diffmap's textual side into the shared review
-// model used by forge implementations.
-func reviewThreadSide(side string) (forge.ReviewThreadSide, error) {
-	switch side {
-	case "RIGHT":
-		return forge.ReviewThreadSideRight, nil
-	case "LEFT":
-		return forge.ReviewThreadSideLeft, nil
-	default:
-		return 0, fmt.Errorf("unknown review thread side %q", side)
-	}
-}

@@ -1,9 +1,9 @@
-# Verifies that the 'outdated' flag on inline comments is computed
+# Verifies that the 'outdated' flag on review comments is computed
 # automatically from the diff between the comment's commit and the
-# change's current head — not just a static seed value.
+# change's current head, not just a static seed value.
 #
-# A comment becomes outdated when the line it was anchored to is
-# changed in a subsequent commit. Comments on other lines stay live.
+# A comment becomes outdated when a subsequent commit deletes or replaces its
+# anchored line. Comments on other lines stay live.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
