@@ -11,11 +11,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
 	"go.abhg.dev/gs/internal/xec/xectest"
 	"go.uber.org/mock/gomock"
 )
+
+func newForgeForTest(t *testing.T, options Options, rawRemoteURL string) *Forge {
+	t.Helper()
+
+	remoteURL, err := giturl.Parse(rawRemoteURL)
+	require.NoError(t, err)
+
+	f, err := (&Definition{Options: options}).New(remoteURL)
+	require.NoError(t, err)
+	return f.(*Forge)
+}
 
 func TestForge_ID(t *testing.T) {
 	f := Forge{}
@@ -52,10 +64,9 @@ func TestForge_URL(t *testing.T) {
 	}
 }
 
-func TestExtractRepoInfo(t *testing.T) {
+func TestForge_ParseRepositoryPath(t *testing.T) {
 	tests := []struct {
 		name     string
-		baseURL  string
 		give     string
 		wantOrg  string
 		wantProj string
@@ -96,76 +107,72 @@ func TestExtractRepoInfo(t *testing.T) {
 			wantProj: "myproject",
 			wantRepo: "myrepo",
 		},
-		{
-			name:     "CustomURL",
-			baseURL:  "https://azuredevops.example.com",
-			give:     "https://azuredevops.example.com/myorg/myproject/_git/myrepo",
-			wantOrg:  "myorg",
-			wantProj: "myproject",
-			wantRepo: "myrepo",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := Forge{Options: Options{URL: tt.baseURL}}
-			org, proj, repo, err := extractRepoInfo(f.URL(), tt.give)
+			f := newForgeForTest(t, Options{}, tt.give)
+
+			remoteURL, err := giturl.Parse(tt.give)
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.wantOrg, org, "organization")
-			assert.Equal(t, tt.wantProj, proj, "project")
-			assert.Equal(t, tt.wantRepo, repo, "repository")
+			rid, err := f.ParseRepositoryPath(remoteURL.Path)
+			require.NoError(t, err)
+
+			azureRID := rid.(*RepositoryID)
+			assert.Equal(t, tt.wantOrg, azureRID.organization, "organization")
+			assert.Equal(t, tt.wantProj, azureRID.project, "project")
+			assert.Equal(t, tt.wantRepo, azureRID.repository, "repository")
 		})
 	}
 }
 
-func TestExtractRepoInfo_errors(t *testing.T) {
+func TestForge_ParseRepositoryPath_CustomURL(t *testing.T) {
+	f := newForgeForTest(t,
+		Options{URL: "https://azuredevops.example.com"},
+		"https://azuredevops.example.com/myorg/myproject/_git/myrepo")
+
+	remoteURL, err := giturl.Parse(
+		"https://azuredevops.example.com/myorg/myproject/_git/myrepo",
+	)
+	require.NoError(t, err)
+
+	rid, err := f.ParseRepositoryPath(remoteURL.Path)
+	require.NoError(t, err)
+
+	azureRID := rid.(*RepositoryID)
+	assert.Equal(t, "myorg", azureRID.organization)
+	assert.Equal(t, "myproject", azureRID.project)
+	assert.Equal(t, "myrepo", azureRID.repository)
+}
+
+func TestForge_ParseRepositoryPath_errors(t *testing.T) {
 	tests := []struct {
 		name    string
-		baseURL string
 		give    string
 		wantErr []string
 	}{
 		{
-			name:    "BadBaseURL",
-			baseURL: "NOT\tA\nVALID URL",
-			give:    "https://dev.azure.com/myorg/myproject/_git/myrepo",
-			wantErr: []string{"bad base URL"},
-		},
-		{
-			name:    "BadRemoteURL",
-			give:    "NOT\tA\nVALID URL",
-			wantErr: []string{"parse remote URL"},
-		},
-		{
-			name: "HostMismatch",
-			give: "https://github.com/example/repo",
-			wantErr: []string{
-				"not an Azure DevOps URL",
-				`expected host "dev.azure.com"`,
-			},
-		},
-		{
 			name:    "MissingGitSegment",
-			give:    "https://dev.azure.com/myorg/myproject/myrepo",
+			give:    "/myorg/myproject/myrepo",
 			wantErr: []string{"invalid Azure DevOps URL path"},
 		},
 		{
 			name:    "TooFewPathSegments",
-			give:    "https://dev.azure.com/myorg/_git/myrepo",
+			give:    "/myorg/_git/myrepo",
 			wantErr: []string{"invalid Azure DevOps URL path"},
 		},
 		{
 			name:    "InvalidSSHFormat",
-			give:    "git@ssh.dev.azure.com:v3/myorg/myproject",
+			give:    "/v3/myorg/myproject",
 			wantErr: []string{"invalid Azure DevOps SSH URL format"},
 		},
 	}
 
+	f := Forge{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := Forge{Options: Options{URL: tt.baseURL}}
-			_, _, _, err := extractRepoInfo(f.URL(), tt.give)
+			_, err := f.ParseRepositoryPath(tt.give)
 			require.Error(t, err)
 
 			for _, want := range tt.wantErr {
@@ -199,28 +206,6 @@ func TestRepositoryID_ChangeURL(t *testing.T) {
 		"https://dev.azure.com/myorg/myproject/_git/myrepo/pullrequest/123",
 		got,
 	)
-}
-
-func TestParseRemoteURL(t *testing.T) {
-	f := Forge{}
-
-	rid, err := f.ParseRemoteURL(
-		"https://dev.azure.com/myorg/myproject/_git/myrepo",
-	)
-	require.NoError(t, err)
-
-	azureRID := rid.(*RepositoryID)
-	assert.Equal(t, "myorg", azureRID.organization)
-	assert.Equal(t, "myproject", azureRID.project)
-	assert.Equal(t, "myrepo", azureRID.repository)
-}
-
-func TestParseRemoteURL_error(t *testing.T) {
-	f := Forge{}
-
-	_, err := f.ParseRemoteURL("https://github.com/example/repo")
-	require.Error(t, err)
-	assert.ErrorContains(t, err, "unsupported URL")
 }
 
 func TestOpenRepository_refreshAzureCLIToken(t *testing.T) {

@@ -1,7 +1,7 @@
 package azuredevops
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -54,7 +54,7 @@ func TestPRUnmarshal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pr, err := new(Forge).UnmarshalChangeID(json.RawMessage(tt.give))
+			pr, err := new(Forge).UnmarshalChangeID(jsontext.Value(tt.give))
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErr)
@@ -169,7 +169,7 @@ func TestPRMetadataUnmarshal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			md, err := new(Forge).UnmarshalChangeMetadata(json.RawMessage(tt.give))
+			md, err := new(Forge).UnmarshalChangeMetadata(jsontext.Value(tt.give))
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErr)
