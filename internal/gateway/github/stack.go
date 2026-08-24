@@ -12,14 +12,19 @@ type PullRequestStack struct {
 	// pull request numbers or entry positions.
 	Number int
 
-	// Members lists the open stack members from the base upward.
+	// Members lists every stack member from the base upward.
+	// Merged members remain present because GitHub cannot remove them when a
+	// stack is dissolved.
 	Members []PullRequestStackMember
 }
 
-// PullRequestStackMember describes one open member of a native stack.
+// PullRequestStackMember describes one member of a native stack.
 type PullRequestStackMember struct {
 	// Number is the repository-local pull request number.
 	Number int
+
+	// State is the pull request lifecycle state.
+	State PullRequestState
 
 	// Locked reports whether GitHub must preserve this member because it is in
 	// a merge queue or has auto-merge enabled.
