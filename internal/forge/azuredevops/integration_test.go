@@ -146,9 +146,9 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL:      remoteURL,
-		Forge:          &azureForge,
-		SkipAssignees:  true,
+		RemoteURL:     remoteURL,
+		Forge:         &azureForge,
+		SkipAssignees: true,
 		// Azure DevOps does not support PR assignees,
 		// so the combined reviewer+assignee scenario cannot be exercised.
 		SkipCombinedMetadata: true,
