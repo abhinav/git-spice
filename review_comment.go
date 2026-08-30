@@ -260,29 +260,6 @@ func postReviewComment(
 	return nil
 }
 
-// parseFileAndLine parses a file.go:42 argument into its path and line.
-func parseFileAndLine(value string) (string, int, error) {
-	idx := strings.LastIndex(value, ":")
-	if idx < 0 {
-		return "", 0, fmt.Errorf(
-			"expected file:line format, got %q", value,
-		)
-	}
-	file := value[:idx]
-	line, err := strconv.Atoi(value[idx+1:])
-	if err != nil {
-		return "", 0, fmt.Errorf(
-			"invalid line number in %q: %w", value, err,
-		)
-	}
-	if line <= 0 {
-		return "", 0, fmt.Errorf(
-			"line number must be positive, got %d", line,
-		)
-	}
-	return file, line, nil
-}
-
 // parseFileAndRange parses file.go:42 or file.go:42-50.
 // The returned end equals start for a single-line anchor.
 func parseFileAndRange(
