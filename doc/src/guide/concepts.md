@@ -118,9 +118,10 @@ text "Sibling" with s at F.n
 
 **Change Request**
 :   Change Request refers to a single merge-able unit of work
-    submitted to GitHub, GitLab, Bitbucket, Gitea, or Forgejo.
+    submitted to GitHub, GitLab, Bitbucket, Gitea, Forgejo, or Azure DevOps.
     Each Change Request corresponds to a branch.
-    On GitHub, Bitbucket, Gitea, and Forgejo, these are called Pull Requests,
+    On GitHub, Bitbucket, Gitea, Forgejo, and Azure DevOps,
+    these are called Pull Requests,
     and on GitLab, they are called Merge Requests.
     Since git-spice supports these platforms,
     the term Change Request is used to refer to all of them.

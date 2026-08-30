@@ -16,7 +16,7 @@ git-spice is a tool for stacking Git branches.
 It lets you manage and navigate stacks of branches,
 conveniently modify and rebase them, and create
 <!-- gs:github --> <!-- gs:bitbucket --> <!-- gs:gitea -->
-<!-- gs:forgejo --> *Pull Requests* or
+<!-- gs:forgejo --> <!-- gs:azuredevops --> *Pull Requests* or
 <!-- gs:gitlab --> *Merge Requests* from them.
 
 It works with Git instead of trying to replace Git.
@@ -99,7 +99,7 @@ $ gs repo sync
 -   [:octicons-git-pull-request-16:{ .lg .middle } __Submit change requests__](guide/cr.md)
     <!-- gs:icon:github --> <!-- gs:icon:gitlab -->
     <!-- gs:icon:bitbucket --> <!-- gs:icon:gitea -->
-    <!-- gs:icon:forgejo -->
+    <!-- gs:icon:forgejo --> <!-- gs:icon:azuredevops -->
 
     ---
 
@@ -145,7 +145,8 @@ $ gs repo sync
 
     git-spice operates entirely locally.
     It talks directly to Git, and when you ask for it,
-    to GitHub/GitLab/Bitbucket/Gitea/Forgejo hosts such as Codeberg.
+    to GitHub, GitLab, Bitbucket, Gitea, Forgejo (including Codeberg),
+    and Azure DevOps.
     All state is stored locally in your Git repository.
     A network connection is not required, except when pushing or pulling.
 

@@ -1,8 +1,8 @@
 ---
 icon: material/lock
 description: >-
-  Authenticate with GitHub/GitLab/Bitbucket/Gitea/Forgejo
-  to push and pull changes.
+  Authenticate with GitHub, GitLab, Bitbucket, Gitea, Forgejo,
+  or Azure DevOps to push and pull changes.
 ---
 
 # Authentication
@@ -14,13 +14,14 @@ you will need to authenticate with the respective service.
 
 This page covers methods to authenticate git-spice
 with GitHub, GitLab, Bitbucket Cloud,
-Bitbucket Data Center / Server, Gitea, and Forgejo.
+Bitbucket Data Center / Server, Gitea, Forgejo, and Azure DevOps.
 Note that GitLab support requires at least version <!-- gs:version v0.9.0 -->.
 Bitbucket Cloud support requires at least version <!-- gs:version v0.25.0 -->.
 Bitbucket Data Center / Server support requires at least version <!-- gs:version v0.31.0 -->.
 Gitea support requires at least version <!-- gs:version v0.30.0 -->.
 Forgejo support requires at least version <!-- gs:version v0.30.0 -->,
 and defaults to Codeberg.
+Azure DevOps support requires at least version <!-- gs:version unreleased -->.
 
 ## Logging in
 
@@ -45,7 +46,7 @@ Take the following steps to authenticate with a service:
 
     Skip prompt (2) by running $$gs auth login$$
     inside a Git repository cloned from
-    GitHub, GitLab, Bitbucket, Gitea, or Forgejo.
+    GitHub, GitLab, Bitbucket, Gitea, Forgejo, or Azure DevOps.
     For self-hosted Bitbucket,
     configure the instance first as described in
     [Bitbucket Data Center / Server](#bitbucket-data-center-server).
@@ -61,13 +62,15 @@ Each supported service supports different authentication methods.
   <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
   <!-- gs:badge:bitbucket --> <!-- gs:badge:bitbucket-server -->
   <!-- gs:badge:gitea -->
-  <!-- gs:badge:forgejo -->
-- [Service CLI](#service-cli): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+  <!-- gs:badge:forgejo --> <!-- gs:badge:azuredevops -->
+- [Service CLI](#service-cli):
+  <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+  <!-- gs:badge:azuredevops -->
 - [Environment variable](#environment-variable):
   <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
   <!-- gs:badge:bitbucket --> <!-- gs:badge:bitbucket-server -->
   <!-- gs:badge:gitea -->
-  <!-- gs:badge:forgejo -->
+  <!-- gs:badge:forgejo --> <!-- gs:badge:azuredevops -->
 
 Read on for more details on each method,
 or skip on to [Pick an authentication method](#picking-an-authentication-method).
@@ -199,7 +202,7 @@ After that, git-spice will use the stored OAuth token automatically.
 **Supported by**
 <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 <!-- gs:badge:bitbucket --> <!-- gs:badge:bitbucket-server -->
-<!-- gs:badge:gitea --> <!-- gs:badge:forgejo -->
+<!-- gs:badge:gitea --> <!-- gs:badge:forgejo --> <!-- gs:badge:azuredevops -->
 
 To use a Personal Access Token with git-spice,
 you will generate a Personal Access Token on the website
@@ -270,6 +273,18 @@ Select an authentication method: {red}Personal Access Token{reset}
         - pick a descriptive name for the token
         - pick an expiration date if needed
         - select the `api` scope
+
+=== "<!-- gs:azuredevops -->"
+
+    To use a Personal Access Token with Azure DevOps:
+
+    1. Go to
+       `https://dev.azure.com/{organization}/_usersSettings/tokens`,
+       replacing `{organization}` with your organization name.
+    2. Select *New Token*.
+    3. Enter a descriptive name and choose an expiration date.
+    4. Grant the **Code (Read & Write)** scope.
+    5. Select *Create* and copy the generated token.
 
 === "<!-- gs:bitbucket -->"
 
@@ -346,9 +361,10 @@ After you have a token, enter it into the prompt.
 
 ### Service CLI
 
-**Supported by** <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+**Supported by**
+<!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:azuredevops -->
 
-If you have the GitHub or GitLab CLIs installed and authenticated,
+If you have the GitHub, GitLab, or Azure CLI installed and authenticated,
 you can get authentication tokens for git-spice from them.
 
 === "<!-- gs:github -->"
@@ -369,6 +385,16 @@ you can get authentication tokens for git-spice from them.
         {green}${reset} glab auth login
         ```
 
+=== "<!-- gs:azuredevops -->"
+
+    1. Install the
+       [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli).
+    2. Authenticate it:
+
+        ```freeze language="terminal"
+        {green}${reset} az login
+        ```
+
 Once you pick this authentication option, no additional steps are required.
 git-spice will request a token from the CLI as needed.
 
@@ -377,7 +403,7 @@ git-spice will request a token from the CLI as needed.
 **Supported by**
 <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 <!-- gs:badge:bitbucket --> <!-- gs:badge:bitbucket-server -->
-<!-- gs:badge:gitea --> <!-- gs:badge:forgejo -->
+<!-- gs:badge:gitea --> <!-- gs:badge:forgejo --> <!-- gs:badge:azuredevops -->
 
 You can provide the authentication token as an environment variable.
 This is not recommended as a primary authentication method,
@@ -414,6 +440,11 @@ but it can be useful in CI/CD environments.
 === "<!-- gs:forgejo -->"
 
     Set the `FORGEJO_TOKEN` environment variable to your API token.
+
+=== "<!-- gs:azuredevops -->"
+
+    Set the `AZURE_DEVOPS_PAT` environment variable
+    to your Personal Access Token.
 
 If you have the environment variable set,
 this takes precedence over all other authentication methods.
@@ -489,6 +520,17 @@ The $$gs auth login$$ operation will always fail if you use this method.
     [Personal Access Token](#personal-access-token) is the primary
     authentication method for Forgejo and Codeberg.
     It requires manual token management but works without additional tools.
+
+=== "<!-- gs:azuredevops -->"
+
+    [Service CLI](#service-cli) is the recommended method
+    if the Azure CLI is already installed.
+    git-spice refreshes the Azure DevOps access token from the Azure CLI
+    before opening a repository.
+
+    [Personal Access Token](#personal-access-token)
+    works without additional tools,
+    but requires manual token management.
 
 [Environment variable](#environment-variable) is the least convenient
 and the least secure method. End users should typically never pick this.

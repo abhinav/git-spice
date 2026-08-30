@@ -311,7 +311,8 @@ the repository path.
 ```
 
 Accepted values are registered forge IDs,
-including `github`, `gitlab`, `bitbucket`, `gitea`, and `forgejo`.
+including `github`, `gitlab`, `bitbucket`, `gitea`, `forgejo`,
+and `azuredevops`.
 
 With `bitbucket`, the instance URL is derived from the remote URL
 when $$spice.forge.bitbucket.url$$ is not set,
