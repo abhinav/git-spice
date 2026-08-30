@@ -85,7 +85,8 @@ These objects take the following form:
       // (e.g. with 'gs branch submit').
       change?: {
         // Human-readable identifier for the Change Request.
-        // This is the PR number for GitHub, Bitbucket, Gitea, or Forgejo
+        // This is the PR number for GitHub, Bitbucket, Gitea, Forgejo,
+        // or Azure DevOps
         // (e.g. "#123"),
         // and the MR IID for GitLab (e.g. "!123").
         id: string,

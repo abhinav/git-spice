@@ -14,18 +14,21 @@ REPLACEMENTS = {
     '<!-- gs:bitbucket-server -->': ':simple-bitbucket: Bitbucket Data Center',
     '<!-- gs:gitea -->': ':simple-gitea: Gitea',
     '<!-- gs:forgejo -->': ':simple-forgejo: Forgejo',
+    '<!-- gs:azuredevops -->': ':material-microsoft-azure-devops: Azure DevOps',
     '<!-- gs:icon:github -->': ':simple-github:',
     '<!-- gs:icon:gitlab -->': ':simple-gitlab:',
     '<!-- gs:icon:bitbucket -->': ':simple-bitbucket:',
     '<!-- gs:icon:bitbucket-server -->': ':simple-bitbucket:',
     '<!-- gs:icon:gitea -->': ':simple-gitea:',
     '<!-- gs:icon:forgejo -->': ':simple-forgejo:',
+    '<!-- gs:icon:azuredevops -->': ':material-microsoft-azure-devops:',
     '<!-- gs:badge:github ': '<!-- gs:badge simple-github GitHub ',
     '<!-- gs:badge:gitlab ': '<!-- gs:badge simple-gitlab GitLab ',
     '<!-- gs:badge:bitbucket ': '<!-- gs:badge simple-bitbucket Bitbucket ',
     '<!-- gs:badge:bitbucket-server ': '<!-- gs:badge simple-bitbucket Bitbucket Data Center ',
     '<!-- gs:badge:gitea ': '<!-- gs:badge simple-gitea Gitea ',
     '<!-- gs:badge:forgejo ': '<!-- gs:badge simple-forgejo Forgejo ',
+    '<!-- gs:badge:azuredevops ': '<!-- gs:badge material-microsoft-azure-devops Azure DevOps ',
 }
 
 

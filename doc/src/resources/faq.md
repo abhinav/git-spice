@@ -89,7 +89,8 @@ With tooling like this, there are two options:
 each commit is an atomic unit of work, or each branch is.
 While the former might be more in line with Git's original philosophy,
 the latter is more practical for most teams
-with GitHub, GitLab, Bitbucket, Gitea, or Forgejo-based workflows.
+with GitHub, GitLab, Bitbucket, Gitea, Forgejo,
+or Azure DevOps-based workflows.
 
 With a PR per commit, when a PR gets review feedback,
 you must amend that commit with fixes and force-push.
@@ -125,7 +126,7 @@ and leave them as-is.
 As of writing this, git-spice supports
 GitHub, GitLab, Bitbucket Cloud,
 self-hosted Bitbucket Data Center / Server, Gitea,
-and Forgejo, including Codeberg.
+Forgejo, including Codeberg, and Azure DevOps.
 It is specifically designed to support other forges;
 most of the code is forge-agnostic,
 with forge-specific code is isolated to their own directories inside
@@ -145,7 +146,10 @@ In fact,
   without meaningful changes to the rest of the codebase
 - Gitea support was added by following the same forge boundary;
 - Forgejo support was added by following the same forge boundary,
-  with Codeberg as the default hosted instance
+  with Codeberg as the default hosted instance;
+- Azure DevOps support was added in
+  [#1422](https://github.com/abhinav/git-spice/pull/1422)
+  through the same forge boundary.
 
 Therefore we're confident that adding support for other forges is feasible.
 

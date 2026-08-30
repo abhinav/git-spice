@@ -369,3 +369,4 @@ Depending on the forge, the following additional variables may be set:
 | `GIT_SPICE_BITBUCKET_PR_ID` | <!-- gs:badge:bitbucket --> |
 | `GIT_SPICE_FORGEJO_PR_NUMBER` | <!-- gs:badge:forgejo --> |
 | `GIT_SPICE_GITEA_PR_NUMBER` | <!-- gs:badge:gitea --> |
+| `GIT_SPICE_AZUREDEVOPS_PR_NUMBER` | <!-- gs:badge:azuredevops --> |
