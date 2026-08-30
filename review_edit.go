@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -30,49 +27,11 @@ func (*reviewEditCmd) Help() string {
 
 func (cmd *reviewEditCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
-	wt *git.Worktree,
-	store *state.Store,
-	repo *git.Repository,
+	handler ReviewDraftHandler,
 ) error {
-	branch, err := reviewBranch(ctx, wt, cmd.Branch)
-	if err != nil {
-		return err
-	}
-
-	staged, err := store.LoadStagedComments(ctx, branch)
-	if err != nil {
-		return fmt.Errorf("load draft comments: %w", err)
-	}
-	if staged == nil {
-		staged = &state.StagedComments{}
-	}
-
-	idx := -1
-	for i, comment := range staged.Comments {
-		if comment.ID == cmd.ID {
-			idx = i
-			break
-		}
-	}
-	if idx < 0 {
-		return fmt.Errorf("draft comment %d not found", cmd.ID)
-	}
-
-	body, err := reviewCommentBody(
-		ctx,
-		repo,
-		cmd.Message,
-		staged.Comments[idx].Body,
-	)
-	if err != nil {
-		return err
-	}
-	staged.Comments[idx].Body = body
-	if err := store.SaveStagedComments(ctx, branch, staged); err != nil {
-		return fmt.Errorf("save draft comments: %w", err)
-	}
-
-	log.Infof("Updated draft comment %d.", cmd.ID)
-	return nil
+	return handler.ReplaceDraftBody(ctx, &review.ReplaceDraftBodyRequest{
+		Branch:  cmd.Branch,
+		ID:      review.DraftID(cmd.ID),
+		Message: cmd.Message,
+	})
 }
