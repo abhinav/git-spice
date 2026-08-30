@@ -1,0 +1,70 @@
+# 'repo sync' detaches another worktree before deleting its merged branch
+# when repoSync.detachWorktrees is enabled.
+
+as 'Test <test@example.com>'
+at '2026-08-30T18:30:00Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a remote
+shamhub-setup
+shamhub new origin alice/example.git
+git push origin main
+
+# set up user
+shamhub register alice
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create and submit a feature branch
+git add feat.txt
+gs bc -m 'Add feature' feature
+gs bs --fill
+
+# Keep staged, unstaged, and untracked changes in another worktree.
+git switch main
+git worktree add ../feature-wt feature
+cd ../feature-wt
+cp $WORK/extra/feat-staged.txt feat.txt
+git add feat.txt
+cp $WORK/extra/feat-unstaged.txt feat.txt
+cp $WORK/extra/untracked.txt untracked.txt
+
+# Merge the branch, then sync with automatic worktree detachment enabled.
+cd ../repo
+shamhub merge alice/example 1
+git checkout main
+git config spice.repoSync.detachWorktrees true
+gs repo sync
+stderr 'INF feature: #1 was merged'
+stderr 'INF feature: detached worktree .+/feature-wt at [a-f0-9]+\.'
+stderr 'INF feature: deleted \(was [a-f0-9]+\)'
+
+# The branch is gone, while its former worktree remains at the same commit
+# with all local changes intact.
+! git show-ref --verify refs/heads/feature
+cd ../feature-wt
+! git symbolic-ref --quiet HEAD
+git log --oneline -1
+cmp stdout $WORK/golden/head.txt
+git status --porcelain
+cmp stdout $WORK/golden/status.txt
+
+-- repo/feat.txt --
+committed feature
+-- extra/feat-staged.txt --
+staged feature
+-- extra/feat-unstaged.txt --
+unstaged feature
+-- extra/untracked.txt --
+untracked feature
+-- golden/head.txt --
+e3682ab Add feature
+-- golden/status.txt --
+MM feat.txt
+?? untracked.txt

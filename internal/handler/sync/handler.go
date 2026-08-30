@@ -174,6 +174,10 @@ type TrunkOptions struct {
 
 	Restack       spice.RestackMode `default:"none" config:"repoSync.restack" enum:"none,aboves,upstack" help:"How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'."`
 	ClosedChanges ClosedChanges     `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests. One of 'ask' and 'ignore'." hidden:""`
+
+	// DetachWorktrees allows SyncTrunk to detach another worktree
+	// before deleting its merged branch.
+	DetachWorktrees bool `default:"false" config:"repoSync.detachWorktrees" help:"Detach other worktrees before deleting their merged branches." hidden:""`
 }
 
 // SyncTrunk syncs the trunk branch with the remote repository,
@@ -443,7 +447,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 	}
 	autostashRescueBranch = branchAfterDelete
 
-	deletedBranchNames, err := h.deleteBranches(ctx, branchesToDelete)
+	deletedBranchNames, err := h.deleteBranches(ctx, branchesToDelete, opts.DetachWorktrees)
 	if err != nil {
 		return err
 	}

@@ -103,7 +103,11 @@ func (h *Handler) restackDeletedBranchUpstack(
 	return nil
 }
 
-func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchDeletion) ([]string, error) {
+func (h *Handler) deleteBranches(
+	ctx context.Context,
+	branchesToDelete []branchDeletion,
+	detachWorktrees bool,
+) ([]string, error) {
 	if len(branchesToDelete) == 0 {
 		return nil, nil
 	}
@@ -125,9 +129,36 @@ func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchD
 		}
 
 		if branchInfo.Worktree != "" && branchInfo.Worktree != h.Worktree.RootDir() {
-			h.Log.Warnf("%v: checked out in another worktree (%v), skipping deletion.", branchInfo.Name, branchInfo.Worktree)
-			h.Log.Warnf("Run '%[1]s branch delete' or run '%[1]s repo sync' again from that worktree to delete it.", cli.Name())
-			continue
+			if !detachWorktrees {
+				h.Log.Warnf("%v: checked out in another worktree (%v), skipping deletion.", branchInfo.Name, branchInfo.Worktree)
+				h.Log.Warnf("Run '%[1]s branch delete' or run '%[1]s repo sync' again from that worktree to delete it.", cli.Name())
+				continue
+			}
+
+			detachedHead, err := func() (git.Hash, error) {
+				worktree, err := h.Repository.OpenWorktree(ctx, branchInfo.Worktree)
+				if err != nil {
+					return "", fmt.Errorf("open worktree: %w", err)
+				}
+				if err := worktree.DetachHead(ctx, ""); err != nil {
+					return "", fmt.Errorf("detach HEAD: %w", err)
+				}
+
+				detachedHead, err := worktree.Head(ctx)
+				if err != nil {
+					return "", fmt.Errorf("read detached HEAD: %w", err)
+				}
+				return detachedHead, nil
+			}()
+			if err != nil {
+				h.Log.Warn("Unable to detach worktree; skipping branch deletion",
+					"branch", branchInfo.Name,
+					"worktree", branchInfo.Worktree,
+					"error", err)
+				continue
+			}
+			h.Log.Infof("%v: detached worktree %v at %v.",
+				branchInfo.Name, branchInfo.Worktree, detachedHead)
 		}
 
 		deleteBranchNames = append(deleteBranchNames, branchInfo.Name)

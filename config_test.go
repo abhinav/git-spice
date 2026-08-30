@@ -331,6 +331,50 @@ func TestRepoSyncRestackConfig(t *testing.T) {
 	}
 }
 
+func TestRepoSyncDetachWorktreesConfig(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		want   bool
+	}{
+		{name: "Default"},
+		{
+			name: "Config",
+			config: joinLines(
+				`[spice "repoSync"]`,
+				`  detachWorktrees = true`,
+			),
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spicecfg := loadTestSpiceConfig(t, tt.config)
+
+			var cmd mainCmd
+			logger := silogtest.New(t)
+			var (
+				forges   forge.Registry
+				sigStack sigstack.Stack
+			)
+			parser, err := kong.New(
+				&cmd,
+				kong.Resolvers(spicecfg),
+				kong.Bind(logger, &forges, &sigStack),
+				kong.BindTo(t.Context(), (*context.Context)(nil)),
+				kong.BindTo(spicecfg, (*experiment.Enabler)(nil)),
+				kong.Vars{"defaultPrompt": "false"},
+			)
+			require.NoError(t, err)
+
+			_, err = parser.Parse([]string{"repo", "sync"})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, cmd.Repo.Sync.DetachWorktrees)
+		})
+	}
+}
+
 func TestBranchDeleteRestackFlag(t *testing.T) {
 	tests := []struct {
 		name    string
