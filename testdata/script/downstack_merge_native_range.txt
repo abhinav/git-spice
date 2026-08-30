@@ -1,0 +1,51 @@
+# ShamHub merges an enabled native stack through one atomic range operation.
+
+as 'Test <test@example.com>'
+at '2026-08-05T13:00:00Z'
+
+cd repo
+git init
+git config spice.experiment.merge true
+git config spice.forge.shamhub.stacks on
+git commit --allow-empty -m 'Initial commit'
+git tag before
+
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add bottom.txt
+gs bc bottom -m 'Add bottom'
+git add middle.txt
+gs bc middle -m 'Add middle'
+git add top.txt
+gs bc top -m 'Add top'
+
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+
+gs downstack merge --no-prompt
+stderr 'bottom: #1 was merged'
+stderr 'middle: #2 was merged'
+stderr 'top: #3 was merged'
+stderr 'All 3 change.s. merged.'
+! stderr 'restacked on main'
+! stderr 'Updated #2'
+! stderr 'Updated #3'
+
+git rev-list --first-parent --count before..main
+stdout '^1$'
+git log -1 --format=%s main
+stdout '^Merge changes #1 through #3$'
+
+-- repo/bottom.txt --
+bottom
+-- repo/middle.txt --
+middle
+-- repo/top.txt --
+top
