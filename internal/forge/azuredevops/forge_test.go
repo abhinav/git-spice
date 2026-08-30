@@ -272,13 +272,8 @@ func TestOpenRepository_refreshAzureCLIToken(t *testing.T) {
 	require.NotEmpty(t, gotAuthHeaders,
 		"expected at least one request to the server")
 
-	// The Azure DevOps SDK encodes PAT connections as
-	// Basic auth with empty username: base64(":" + token).
-	wantEncoded := base64.StdEncoding.EncodeToString(
-		[]byte(":fresh-token"),
-	)
 	for _, hdr := range gotAuthHeaders {
-		assert.Equal(t, "Basic "+wantEncoded, hdr,
+		assert.Equal(t, "Bearer fresh-token", hdr,
 			"server should receive the refreshed token")
 	}
 }

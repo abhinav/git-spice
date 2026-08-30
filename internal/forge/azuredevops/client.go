@@ -31,9 +31,7 @@ func newAzureDevOpsClientWithHTTPClient(
 	token *AuthenticationToken,
 	httpClient *http.Client,
 ) (*azureDevOpsClient, error) {
-	// Create connection with PAT authentication.
-	// The Azure DevOps SDK uses PAT for basic auth.
-	connection := azuredevops.NewPatConnection(baseURL, token.AccessToken)
+	connection := newAzureDevOpsConnection(baseURL, token)
 
 	var (
 		gitClient      git.Client
@@ -61,4 +59,17 @@ func newAzureDevOpsClientWithHTTPClient(
 		gitClient:      gitClient,
 		identityClient: identityClient,
 	}, nil
+}
+
+func newAzureDevOpsConnection(
+	baseURL string,
+	token *AuthenticationToken,
+) *azuredevops.Connection {
+	if token.AuthType != AuthTypeAzureCLI {
+		return azuredevops.NewPatConnection(baseURL, token.AccessToken)
+	}
+
+	connection := azuredevops.NewAnonymousConnection(baseURL)
+	connection.AuthorizationString = "Bearer " + token.AccessToken
+	return connection
 }
