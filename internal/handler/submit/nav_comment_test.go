@@ -18,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicetest"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/statetest"
 	gomock "go.uber.org/mock/gomock"
@@ -351,40 +352,36 @@ func TestUpdateNavigationComments(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			store := statetest.NewMemoryStore(t, "main", "origin", log)
 
-			mockService := NewMockService(ctrl)
-			mockService.EXPECT().
-				LoadBranches(gomock.Any()).
-				DoAndReturn(func(context.Context) ([]spice.LoadBranchItem, error) {
-					items := make([]spice.LoadBranchItem, len(tt.trackedBranches))
-					for i, b := range tt.trackedBranches {
-						item := spice.LoadBranchItem{
-							Name:           b.Name,
-							Base:           cmp.Or(b.Base, "main"),
-							Head:           "abcd1234",
-							BaseHash:       "efgh5678",
-							UpstreamBranch: b.Name,
-						}
+			items := make([]spice.LoadBranchItem, len(tt.trackedBranches))
+			for i, b := range tt.trackedBranches {
+				item := spice.LoadBranchItem{
+					Name:           b.Name,
+					Base:           cmp.Or(b.Base, "main"),
+					Head:           "abcd1234",
+					BaseHash:       "efgh5678",
+					UpstreamBranch: b.Name,
+				}
 
-						if b.ChangeID > 0 {
-							item.Change = &shamhub.ChangeMetadata{
-								Number: b.ChangeID,
-							}
-						}
-
-						// Add merged downstack entries if any
-						for _, mergedID := range b.MergedDownstack {
-							mergedMeta := &shamhub.ChangeMetadata{Number: mergedID}
-							mergedJSON, err := json.Marshal(mergedMeta)
-							require.NoError(t, err)
-							item.MergedDownstack = append(item.MergedDownstack, mergedJSON)
-						}
-
-						items[i] = item
+				if b.ChangeID > 0 {
+					item.Change = &shamhub.ChangeMetadata{
+						Number: b.ChangeID,
 					}
+				}
 
-					return items, nil
-				}).
-				AnyTimes()
+				// Add merged downstack entries if any
+				for _, mergedID := range b.MergedDownstack {
+					mergedMeta := &shamhub.ChangeMetadata{Number: mergedID}
+					mergedJSON, err := json.Marshal(mergedMeta)
+					require.NoError(t, err)
+					item.MergedDownstack = append(item.MergedDownstack, mergedJSON)
+				}
+
+				items[i] = item
+			}
+			graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk:    "main",
+				Branches: items,
+			})
 
 			mockForge := forgetest.NewMockForge(ctrl)
 			mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
@@ -445,20 +442,16 @@ func TestUpdateNavigationComments(t *testing.T) {
 
 			err := updateNavigationComments(
 				t.Context(),
-				store,
-				mockService,
-				log,
-				tt.when,
-				tt.sync,
-				tt.downstack,
-				"",
-				NavCommentTrunkLinkOff, // trunk comparison link
-				"",                     // trunk comparison link text
-				tt.submit,
-				func(context.Context) (forge.Repository, error) {
-					return mockRemoteRepo, nil
+				navigationCommentUpdate{
+					store:             store,
+					graph:             graph,
+					log:               log,
+					remoteRepository:  mockRemoteRepo,
+					when:              tt.when,
+					sync:              tt.sync,
+					downstack:         tt.downstack,
+					submittedBranches: tt.submit,
 				},
-				nil, // push repository
 			)
 			require.NoError(t, err)
 
@@ -516,10 +509,9 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		mockService := NewMockService(ctrl)
-		mockService.EXPECT().
-			LoadBranches(gomock.Any()).
-			Return([]spice.LoadBranchItem{
+		graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+			Trunk: "main",
+			Branches: []spice.LoadBranchItem{
 				{
 					Name:           "feat1",
 					Base:           "main",
@@ -528,7 +520,8 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 					UpstreamBranch: "feat1",
 					Change:         existingMeta,
 				},
-			}, nil)
+			},
+		})
 
 		mockForge := forgetest.NewMockForge(ctrl)
 		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
@@ -561,19 +554,16 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 
 		err = updateNavigationComments(
 			t.Context(),
-			store,
-			mockService, log,
-			NavCommentAlways,
-			NavCommentSyncBranch,
-			NavCommentDownstackAll,
-			"",
-			NavCommentTrunkLinkOff, // trunk comparison link
-			"",                     // trunk comparison link text
-			[]string{"feat1"},
-			func(context.Context) (forge.Repository, error) {
-				return mockRemoteRepo, nil
+			navigationCommentUpdate{
+				store:             store,
+				graph:             graph,
+				log:               log,
+				remoteRepository:  mockRemoteRepo,
+				when:              NavCommentAlways,
+				sync:              NavCommentSyncBranch,
+				downstack:         NavCommentDownstackAll,
+				submittedBranches: []string{"feat1"},
 			},
-			nil, // push repository
 		)
 		require.NoError(t, err)
 	})
@@ -610,10 +600,9 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		mockService := NewMockService(ctrl)
-		mockService.EXPECT().
-			LoadBranches(gomock.Any()).
-			Return([]spice.LoadBranchItem{
+		graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+			Trunk: "main",
+			Branches: []spice.LoadBranchItem{
 				{
 					Name:           "feat1",
 					Base:           "main",
@@ -638,7 +627,8 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 					UpstreamBranch: "feat3",
 					Change:         existingMetas[2],
 				},
-			}, nil)
+			},
+		})
 
 		mockForge := forgetest.NewMockForge(ctrl)
 		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
@@ -678,20 +668,16 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 
 		err = updateNavigationComments(
 			t.Context(),
-			store,
-			mockService,
-			log,
-			NavCommentAlways,
-			NavCommentSyncDownstack,
-			NavCommentDownstackAll,
-			"",
-			NavCommentTrunkLinkOff, // trunk comparison link
-			"",                     // trunk comparison link text
-			[]string{"feat3"},
-			func(context.Context) (forge.Repository, error) {
-				return mockRemoteRepo, nil
+			navigationCommentUpdate{
+				store:             store,
+				graph:             graph,
+				log:               log,
+				remoteRepository:  mockRemoteRepo,
+				when:              NavCommentAlways,
+				sync:              NavCommentSyncDownstack,
+				downstack:         NavCommentDownstackAll,
+				submittedBranches: []string{"feat3"},
 			},
-			nil, // push repository
 		)
 		require.NoError(t, err)
 	})
@@ -750,11 +736,10 @@ func TestUpdateNavigationComments_trunkComparisonLink(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		store := statetest.NewMemoryStore(t, "main", "origin", log)
 
-		mockService := NewMockService(ctrl)
-		mockService.EXPECT().
-			LoadBranches(gomock.Any()).
-			Return(newBranches(), nil).
-			AnyTimes()
+		graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+			Trunk:    "main",
+			Branches: newBranches(),
+		})
 
 		mockForge := forgetest.NewMockForge(ctrl)
 		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
@@ -789,20 +774,18 @@ func TestUpdateNavigationComments_trunkComparisonLink(t *testing.T) {
 
 		err := updateNavigationComments(
 			t.Context(),
-			store,
-			mockService,
-			log,
-			NavCommentAlways,
-			NavCommentSyncDownstack,
-			NavCommentDownstackAll,
-			"",
-			mode, // trunk comparison link mode
-			"",   // default text
-			[]string{"feat3"},
-			func(context.Context) (forge.Repository, error) {
-				return getRepo(mockRepo), nil
+			navigationCommentUpdate{
+				store:             store,
+				graph:             graph,
+				log:               log,
+				remoteRepository:  getRepo(mockRepo),
+				when:              NavCommentAlways,
+				sync:              NavCommentSyncDownstack,
+				downstack:         NavCommentDownstackAll,
+				trunkLink:         mode,
+				submittedBranches: []string{"feat3"},
+				pushRepositoryID:  getPushRepositoryID,
 			},
-			getPushRepositoryID,
 		)
 		require.NoError(t, err)
 		return bodies

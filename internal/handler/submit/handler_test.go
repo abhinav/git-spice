@@ -3,6 +3,7 @@ package submit
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/spicetest"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/spice/state/statetest"
 	"go.abhg.dev/gs/internal/ui"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -184,6 +186,105 @@ func TestHandler_SubmitBatch_rejectsStaleBaseBeforeSubmitting(t *testing.T) {
 	assert.Contains(t, logBuffer.String(), "Branch has stale base")
 	assert.Contains(t, logBuffer.String(), "branch=feat2")
 	assert.Contains(t, logBuffer.String(), "base=feat1")
+}
+
+func TestHandler_SubmitBatch_updatesStackRepresentationsAfterPartialFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := silogtest.New(t)
+	store := statetest.NewMemoryStore(t, "main", "origin", log)
+	branches := []spice.LoadBranchItem{
+		{
+			Name:           "bottom",
+			Base:           "main",
+			Head:           "bottom-head",
+			UpstreamBranch: "bottom",
+			Change:         submitFakeChange("pr-1"),
+		},
+		{
+			Name: "top",
+			Base: "bottom",
+			Head: "top-head",
+		},
+	}
+	graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+		Trunk:    "main",
+		Branches: branches,
+	})
+
+	remoteForge := forgetest.NewMockForge(ctrl)
+	remoteForge.EXPECT().ID().Return("test").AnyTimes()
+	remoteForge.EXPECT().
+		MarshalChangeMetadata(gomock.Any()).
+		Return(json.RawMessage(`{}`), nil)
+
+	remoteRepo := forgetest.NewMockRepository(ctrl)
+	remoteRepo.EXPECT().Forge().Return(remoteForge).AnyTimes()
+	remoteRepo.EXPECT().
+		FindChangeByID(gomock.Any(), submitFakeChangeID("pr-1")).
+		Return(&forge.FindChangeItem{
+			ID:       submitFakeChangeID("pr-1"),
+			URL:      "https://example.com/pr-1",
+			State:    forge.ChangeOpen,
+			Subject:  "Bottom",
+			HeadHash: git.Hash("bottom-head"),
+			BaseName: "main",
+		}, nil)
+	remoteRepo.EXPECT().
+		PostChangeComment(gomock.Any(), submitFakeChangeID("pr-1"), gomock.Any()).
+		Return(submitFakeCommentID("comment-1"), nil)
+	stackRepo := &submitStackRepository{Repository: remoteRepo}
+
+	service := NewMockService(ctrl)
+	service.EXPECT().BranchGraph(gomock.Any(), nil).Return(graph, nil)
+
+	transientErr := errors.New("transient submit failure")
+	handler := &Handler{
+		Log:  log,
+		View: ui.NewFileView(&bytes.Buffer{}),
+		Repository: &submitTestGitRepository{
+			peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
+				switch ref {
+				case "bottom":
+					return git.Hash("bottom-head"), nil
+				case "top":
+					return "", transientErr
+				default:
+					t.Fatalf("unexpected ref: %q", ref)
+					return "", nil
+				}
+			},
+		},
+		Worktree: &submitTestGitWorktree{},
+		Store:    store,
+		Service:  service,
+		Browser:  &browser.Noop{},
+		FindRemote: func(context.Context) (state.Remote, error) {
+			return state.Remote{Upstream: "origin", Push: "origin"}, nil
+		},
+		ResolveRepository: func(
+			context.Context,
+			string,
+		) (forge.Forge, forge.RepositoryID, error) {
+			return remoteForge, stubRepositoryID("alice/repo"), nil
+		},
+		OpenRepository: func(
+			context.Context,
+			forge.Forge,
+			forge.RepositoryID,
+		) (forge.Repository, error) {
+			return stackRepo, nil
+		},
+	}
+
+	err := handler.SubmitBatch(t.Context(), &BatchRequest{
+		Branches:     []string{"bottom", "top"},
+		Options:      &Options{Force: true, Publish: true},
+		BatchOptions: &BatchOptions{},
+		BranchGraph:  graph,
+	})
+
+	require.ErrorIs(t, err, transientErr)
+	assert.Empty(t, stackRepo.plans)
 }
 
 func TestHandler_submitBranch_editBase(t *testing.T) {
@@ -721,6 +822,10 @@ func (m *submitFakeChangeMetadata) SetNavigationCommentID(forge.ChangeCommentID)
 type submitFakeChangeID string
 
 func (id submitFakeChangeID) String() string { return string(id) }
+
+type submitFakeCommentID string
+
+func (id submitFakeCommentID) String() string { return string(id) }
 
 func submitFakeChange(id string) forge.ChangeMetadata {
 	return &submitFakeChangeMetadata{id: submitFakeChangeID(id)}
