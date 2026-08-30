@@ -4,37 +4,26 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 	"go.uber.org/mock/gomock"
 )
 
 func TestRepository_SubmitChange_pushRepository(t *testing.T) {
-	var gotArgs git.CreatePullRequestArgs
-	client := NewMockGitClient(gomock.NewController(t))
-	client.EXPECT().GetRepository(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			args git.GetRepositoryArgs,
-		) (*git.GitRepository, error) {
-			assert.Equal(t, "forkproject", *args.Project)
-			assert.Equal(t, "myfork", *args.RepositoryId)
-			return &git.GitRepository{Name: new("myfork")}, nil
+	var gotInput *azuredevops.CreatePullRequestInput
+	gateway := NewMockAzureDevOpsGateway(gomock.NewController(t))
+	gateway.EXPECT().Repository(gomock.Any(), "forkproject", "myfork").Return(
+		&azuredevops.Repository{Name: "myfork"}, nil,
+	)
+	gateway.EXPECT().CreatePullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, input *azuredevops.CreatePullRequestInput) (*azuredevops.PullRequest, error) {
+			gotInput = input
+			return &azuredevops.PullRequest{ID: 42}, nil
 		},
 	)
-	client.EXPECT().CreatePullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			args git.CreatePullRequestArgs,
-		) (*git.GitPullRequest, error) {
-			gotArgs = args
-			return &git.GitPullRequest{PullRequestId: new(42)}, nil
-		},
-	)
-	repo := newTestRepository(client)
+	repo := newTestRepository(gateway)
 	pushRepository := &RepositoryID{
 		organization: "myorg",
 		project:      "forkproject",
@@ -49,39 +38,28 @@ func TestRepository_SubmitChange_pushRepository(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.NotNil(t, gotArgs.GitPullRequestToCreate.ForkSource)
-	require.NotNil(t, gotArgs.GitPullRequestToCreate.ForkSource.Repository)
-	assert.Equal(t, "myfork", *gotArgs.GitPullRequestToCreate.ForkSource.Repository.Name)
+	require.NotNil(t, gotInput.ForkSource)
+	assert.Equal(t, "myfork", gotInput.ForkSource.Name)
 }
 
 func TestRepository_FindChangesByBranch_pushRepository(t *testing.T) {
-	var gotArgs git.GetPullRequestsArgs
-	client := NewMockGitClient(gomock.NewController(t))
-	client.EXPECT().GetPullRequests(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			args git.GetPullRequestsArgs,
-		) (*[]git.GitPullRequest, error) {
-			gotArgs = args
-			return new([]git.GitPullRequest), nil
+	var gotInput *azuredevops.FindPullRequestsInput
+	gateway := NewMockAzureDevOpsGateway(gomock.NewController(t))
+	gateway.EXPECT().FindPullRequests(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, input *azuredevops.FindPullRequestsInput) ([]*azuredevops.PullRequest, error) {
+			gotInput = input
+			return nil, nil
 		},
 	)
-	repo := newTestRepository(client)
-	pushRepositoryID := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+	repo := newTestRepository(gateway)
+	pushRepositoryID := "22222222-2222-2222-2222-222222222222"
 	pushRepository := &RepositoryID{
 		organization: "myorg",
 		project:      "forkproject",
 		repository:   "myfork",
 	}
-	client.EXPECT().GetRepository(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			args git.GetRepositoryArgs,
-		) (*git.GitRepository, error) {
-			assert.Equal(t, "forkproject", *args.Project)
-			assert.Equal(t, "myfork", *args.RepositoryId)
-			return &git.GitRepository{Id: &pushRepositoryID}, nil
-		},
+	gateway.EXPECT().Repository(gomock.Any(), "forkproject", "myfork").Return(
+		&azuredevops.Repository{ID: pushRepositoryID}, nil,
 	)
 
 	_, err := repo.FindChangesByBranch(t.Context(), "feature", forge.FindChangesOptions{
@@ -89,6 +67,5 @@ func TestRepository_FindChangesByBranch_pushRepository(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.NotNil(t, gotArgs.SearchCriteria.SourceRepositoryId)
-	assert.Equal(t, pushRepositoryID, *gotArgs.SearchCriteria.SourceRepositoryId)
+	assert.Equal(t, pushRepositoryID, gotInput.SourceRepository)
 }

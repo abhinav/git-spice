@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
 )
 
@@ -30,26 +29,22 @@ func (r *Repository) commentCounts(
 	ctx context.Context,
 	prID int,
 ) (*forge.CommentCounts, error) {
-	threads, err := r.client.gitClient.GetThreads(ctx, git.GetThreadsArgs{
-		Project:       new(r.project()),
-		RepositoryId:  new(r.repositoryID()),
-		PullRequestId: &prID,
-	})
+	threads, err := r.gateway.Threads(ctx, r.project(), r.repositoryID(), prID)
 	if err != nil {
 		return nil, fmt.Errorf("get threads: %w", err)
 	}
 
 	var total, resolved int
-	for _, thread := range *threads {
-		if thread.IsDeleted != nil && *thread.IsDeleted {
+	for _, thread := range threads {
+		if thread.Deleted {
 			continue
 		}
-		if thread.Comments == nil || len(*thread.Comments) == 0 {
+		if len(thread.Comments) == 0 {
 			continue
 		}
 
 		total++
-		if thread.Status != nil && isResolvedThreadStatus(*thread.Status) {
+		if thread.Resolved {
 			resolved++
 		}
 	}
@@ -59,16 +54,4 @@ func (r *Repository) commentCounts(
 		Resolved:   resolved,
 		Unresolved: total - resolved,
 	}, nil
-}
-
-func isResolvedThreadStatus(status git.CommentThreadStatus) bool {
-	switch status {
-	case git.CommentThreadStatusValues.Fixed,
-		git.CommentThreadStatusValues.WontFix,
-		git.CommentThreadStatusValues.Closed,
-		git.CommentThreadStatusValues.ByDesign:
-		return true
-	default:
-		return false
-	}
 }

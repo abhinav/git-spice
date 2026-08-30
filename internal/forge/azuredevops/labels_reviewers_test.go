@@ -4,48 +4,35 @@ import (
 	"context"
 	"testing"
 
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/core"
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 	"go.uber.org/mock/gomock"
 )
 
 func TestRepository_SubmitChange_addsLabelsAndReviewers(t *testing.T) {
 	var gotLabels []string
 	var gotReviewers []string
-	client := NewMockGitClient(gomock.NewController(t))
-	client.EXPECT().CreatePullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			_ git.CreatePullRequestArgs,
-		) (*git.GitPullRequest, error) {
-			prID := 42
-			return &git.GitPullRequest{PullRequestId: &prID}, nil
+	gateway := NewMockAzureDevOpsGateway(gomock.NewController(t))
+	gateway.EXPECT().CreatePullRequest(gomock.Any(), gomock.Any()).Return(
+		&azuredevops.PullRequest{ID: 42}, nil,
+	)
+	gateway.EXPECT().AddLabel(gomock.Any(), "myproject", "myrepo", 42, gomock.Any()).Times(2).DoAndReturn(
+		func(_ context.Context, _, _ string, _ int, label string) error {
+			gotLabels = append(gotLabels, label)
+			return nil
 		},
 	)
-	client.EXPECT().CreatePullRequestLabel(gomock.Any(), gomock.Any()).Times(2).DoAndReturn(
-		func(
-			_ context.Context,
-			args git.CreatePullRequestLabelArgs,
-		) (*core.WebApiTagDefinition, error) {
-			gotLabels = append(gotLabels, *args.Label.Name)
-			return &core.WebApiTagDefinition{Name: args.Label.Name}, nil
-		},
-	)
-	client.EXPECT().CreateUnmaterializedPullRequestReviewer(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			args git.CreateUnmaterializedPullRequestReviewerArgs,
-		) (*git.IdentityRefWithVote, error) {
-			gotReviewers = append(gotReviewers, *args.Reviewer.UniqueName)
-			assert.Equal(t, 0, *args.Reviewer.Vote)
-			return args.Reviewer, nil
-		},
-	)
+	gateway.EXPECT().ReviewerID(gomock.Any(), "reviewer@example.com").Return("", nil)
+	gateway.EXPECT().AddReviewerByName(
+		gomock.Any(), "myproject", "myrepo", 42, "reviewer@example.com",
+	).DoAndReturn(func(context.Context, string, string, int, string) error {
+		gotReviewers = append(gotReviewers, "reviewer@example.com")
+		return nil
+	})
 
-	repo := newTestRepository(client)
+	repo := newTestRepository(gateway)
 
 	_, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
 		Subject:   "Test PR",
@@ -63,27 +50,22 @@ func TestRepository_SubmitChange_addsLabelsAndReviewers(t *testing.T) {
 func TestRepository_EditChange_addsLabelsAndReviewers(t *testing.T) {
 	var gotLabels []string
 	var gotReviewers []string
-	client := NewMockGitClient(gomock.NewController(t))
-	client.EXPECT().CreatePullRequestLabel(gomock.Any(), gomock.Any()).Times(2).DoAndReturn(
-		func(
-			_ context.Context,
-			args git.CreatePullRequestLabelArgs,
-		) (*core.WebApiTagDefinition, error) {
-			gotLabels = append(gotLabels, *args.Label.Name)
-			return &core.WebApiTagDefinition{Name: args.Label.Name}, nil
+	gateway := NewMockAzureDevOpsGateway(gomock.NewController(t))
+	gateway.EXPECT().AddLabel(gomock.Any(), "myproject", "myrepo", 42, gomock.Any()).Times(2).DoAndReturn(
+		func(_ context.Context, _, _ string, _ int, label string) error {
+			gotLabels = append(gotLabels, label)
+			return nil
 		},
 	)
-	client.EXPECT().CreateUnmaterializedPullRequestReviewer(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			args git.CreateUnmaterializedPullRequestReviewerArgs,
-		) (*git.IdentityRefWithVote, error) {
-			gotReviewers = append(gotReviewers, *args.Reviewer.UniqueName)
-			return args.Reviewer, nil
-		},
-	)
+	gateway.EXPECT().ReviewerID(gomock.Any(), "reviewer@example.com").Return("", nil)
+	gateway.EXPECT().AddReviewerByName(
+		gomock.Any(), "myproject", "myrepo", 42, "reviewer@example.com",
+	).DoAndReturn(func(context.Context, string, string, int, string) error {
+		gotReviewers = append(gotReviewers, "reviewer@example.com")
+		return nil
+	})
 
-	repo := newTestRepository(client)
+	repo := newTestRepository(gateway)
 
 	err := repo.EditChange(t.Context(), &PR{Number: 42}, forge.EditChangeOptions{
 		AddLabels:    []string{"label1", "label2"},
@@ -96,48 +78,17 @@ func TestRepository_EditChange_addsLabelsAndReviewers(t *testing.T) {
 }
 
 func TestRepository_FindChangeByID_fetchesLabelsAndReviewers(t *testing.T) {
-	prID := 42
-	subject := "Test PR"
-	status := git.PullRequestStatusValues.Active
-	baseRef := "refs/heads/main"
-	labelName := "label1"
-	reviewerName := "reviewer@example.com"
-	client := NewMockGitClient(gomock.NewController(t))
-	client.EXPECT().GetPullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			_ git.GetPullRequestArgs,
-		) (*git.GitPullRequest, error) {
-			return &git.GitPullRequest{
-				PullRequestId: &prID,
-				Title:         &subject,
-				Status:        &status,
-				TargetRefName: &baseRef,
-			}, nil
-		},
+	gateway := NewMockAzureDevOpsGateway(gomock.NewController(t))
+	gateway.EXPECT().PullRequest(gomock.Any(), "myproject", "myrepo", 42).Return(
+		&azuredevops.PullRequest{
+			ID: 42, Title: "Test PR", Status: azuredevops.PullRequestStatusActive,
+			TargetRef: "refs/heads/main",
+		}, nil,
 	)
-	client.EXPECT().GetPullRequestLabels(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			_ git.GetPullRequestLabelsArgs,
-		) (*[]core.WebApiTagDefinition, error) {
-			return &[]core.WebApiTagDefinition{
-				{Name: &labelName},
-			}, nil
-		},
-	)
-	client.EXPECT().GetPullRequestReviewers(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			_ git.GetPullRequestReviewersArgs,
-		) (*[]git.IdentityRefWithVote, error) {
-			return &[]git.IdentityRefWithVote{
-				{UniqueName: &reviewerName},
-			}, nil
-		},
-	)
+	gateway.EXPECT().Labels(gomock.Any(), "myproject", "myrepo", 42).Return([]string{"label1"}, nil)
+	gateway.EXPECT().Reviewers(gomock.Any(), "myproject", "myrepo", 42).Return([]string{"reviewer@example.com"}, nil)
 
-	repo := newTestRepository(client)
+	repo := newTestRepository(gateway)
 
 	got, err := repo.FindChangeByID(t.Context(), &PR{Number: 42})
 	require.NoError(t, err)
@@ -147,34 +98,17 @@ func TestRepository_FindChangeByID_fetchesLabelsAndReviewers(t *testing.T) {
 }
 
 func TestRepository_FindChangeByID_includesLabelsAndReviewers(t *testing.T) {
-	prID := 42
-	subject := "Test PR"
-	status := git.PullRequestStatusValues.Active
-	baseRef := "refs/heads/main"
-	labelName := "label1"
-	reviewerName := "reviewer@example.com"
-	client := NewMockGitClient(gomock.NewController(t))
-	client.EXPECT().GetPullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			_ git.GetPullRequestArgs,
-		) (*git.GitPullRequest, error) {
-			return &git.GitPullRequest{
-				PullRequestId: &prID,
-				Title:         &subject,
-				Status:        &status,
-				TargetRefName: &baseRef,
-				Labels: &[]core.WebApiTagDefinition{
-					{Name: &labelName},
-				},
-				Reviewers: &[]git.IdentityRefWithVote{
-					{UniqueName: &reviewerName},
-				},
-			}, nil
-		},
+	labels := []string{"label1"}
+	reviewers := []string{"reviewer@example.com"}
+	gateway := NewMockAzureDevOpsGateway(gomock.NewController(t))
+	gateway.EXPECT().PullRequest(gomock.Any(), "myproject", "myrepo", 42).Return(
+		&azuredevops.PullRequest{
+			ID: 42, Title: "Test PR", Status: azuredevops.PullRequestStatusActive,
+			TargetRef: "refs/heads/main", Labels: &labels, Reviewers: &reviewers,
+		}, nil,
 	)
 
-	repo := newTestRepository(client)
+	repo := newTestRepository(gateway)
 
 	got, err := repo.FindChangeByID(t.Context(), &PR{Number: 42})
 	require.NoError(t, err)

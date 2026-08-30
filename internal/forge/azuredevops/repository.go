@@ -4,20 +4,47 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 	"go.abhg.dev/gs/internal/silog"
 )
 
+//go:generate go tool mockgen -destination=mocks_test.go -package=azuredevops -write_package_comment=false -typed -mock_names=azureDevOpsGateway=MockAzureDevOpsGateway . azureDevOpsGateway
+
+type azureDevOpsGateway interface {
+	AddComment(context.Context, string, string, int, string) (int, int, error)
+	AddLabel(context.Context, string, string, int, string) error
+	AddReviewer(context.Context, string, string, int, string) error
+	AddReviewerByName(context.Context, string, string, int, string) error
+	CommentExists(context.Context, string, string, int, int, int) (bool, error)
+	CurrentUserID(context.Context) (string, error)
+	DeleteComment(context.Context, string, string, int, int, int) error
+	FindPullRequests(context.Context, *azuredevops.FindPullRequestsInput) ([]*azuredevops.PullRequest, error)
+	Item(context.Context, string, string, string) (*azuredevops.Item, error)
+	Items(context.Context, string, string, string) ([]azuredevops.Item, error)
+	Labels(context.Context, string, string, int) ([]string, error)
+	PullRequest(context.Context, string, string, int) (*azuredevops.PullRequest, error)
+	RefExists(context.Context, string, string, string) (bool, error)
+	Repository(context.Context, string, string) (*azuredevops.Repository, error)
+	ReviewerID(context.Context, string) (string, error)
+	Reviewers(context.Context, string, string, int) ([]string, error)
+	Threads(context.Context, string, string, int) ([]azuredevops.Thread, error)
+	UpdateComment(context.Context, string, string, int, int, int, string) error
+	UpdatePullRequest(context.Context, *azuredevops.UpdatePullRequestInput) error
+	CreatePullRequest(context.Context, *azuredevops.CreatePullRequestInput) (*azuredevops.PullRequest, error)
+}
+
+var _ azureDevOpsGateway = (*azuredevops.Gateway)(nil)
+
 // Repository is an Azure DevOps repository.
 type Repository struct {
-	forge  *Forge
-	repoID *RepositoryID
-	log    *silog.Logger
-	client *azureDevOpsClient
+	forge   *Forge
+	repoID  *RepositoryID
+	log     *silog.Logger
+	gateway azureDevOpsGateway
 
 	// Cached repository info from API.
-	repoInfo *git.GitRepository
+	repoInfo *azuredevops.Repository
 
 	// reviewerIDs maps reviewer names to Azure DevOps identity IDs.
 	reviewerIDs map[string]string
@@ -30,7 +57,7 @@ func newRepository(
 	f *Forge,
 	repoID *RepositoryID,
 	log *silog.Logger,
-	client *azureDevOpsClient,
+	gateway azureDevOpsGateway,
 ) (*Repository, error) {
 	log = log.With(
 		"org", repoID.organization,
@@ -39,10 +66,7 @@ func newRepository(
 	)
 
 	// Get the repository info to ensure it exists and get the UUID.
-	repoInfo, err := client.gitClient.GetRepository(ctx, git.GetRepositoryArgs{
-		Project:      &repoID.project,
-		RepositoryId: &repoID.repository,
-	})
+	repoInfo, err := gateway.Repository(ctx, repoID.project, repoID.repository)
 	if err != nil {
 		return nil, fmt.Errorf("get repository: %w", err)
 	}
@@ -51,7 +75,7 @@ func newRepository(
 		forge:    f,
 		repoID:   repoID,
 		log:      log,
-		client:   client,
+		gateway:  gateway,
 		repoInfo: repoInfo,
 	}, nil
 }
@@ -61,8 +85,8 @@ func (r *Repository) Forge() forge.Forge { return r.forge }
 
 // repositoryID returns the repository ID as a string for API calls.
 func (r *Repository) repositoryID() string {
-	if r.repoInfo != nil && r.repoInfo.Id != nil {
-		return r.repoInfo.Id.String()
+	if r.repoInfo != nil && r.repoInfo.ID != "" {
+		return r.repoInfo.ID
 	}
 	return r.repoID.repository
 }
@@ -75,7 +99,7 @@ func (r *Repository) project() string {
 func (r *Repository) getRepository(
 	ctx context.Context,
 	id forge.RepositoryID,
-) (*git.GitRepository, error) {
+) (*azuredevops.Repository, error) {
 	rid := mustRepositoryID(id)
 	if rid.organization != r.repoID.organization {
 		return nil, fmt.Errorf(
@@ -84,10 +108,7 @@ func (r *Repository) getRepository(
 		)
 	}
 
-	repo, err := r.client.gitClient.GetRepository(ctx, git.GetRepositoryArgs{
-		Project:      &rid.project,
-		RepositoryId: &rid.repository,
-	})
+	repo, err := r.gateway.Repository(ctx, rid.project, rid.repository)
 	if err != nil {
 		return nil, fmt.Errorf("get repository: %w", err)
 	}
