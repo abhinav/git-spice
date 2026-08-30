@@ -20,6 +20,7 @@ type reviewCmd struct {
 	Publish reviewPublishCmd `cmd:"" help:"Publish draft comments as a review"`
 	List    reviewListCmd    `cmd:"" aliases:"ls" help:"List review comments"`
 	Edit    reviewEditCmd    `cmd:"" help:"Edit a draft comment"`
+	Delete  reviewDeleteCmd  `cmd:"" aliases:"rm" help:"Delete draft comments"`
 	Resolve reviewResolveCmd `cmd:"" help:"Resolve a review thread"`
 	Reopen  reviewReopenCmd  `cmd:"" help:"Reopen a resolved review thread"`
 }
@@ -97,6 +98,7 @@ type ReviewHandler interface {
 type ReviewDraftHandler interface {
 	SaveCommentDraft(context.Context, *review.CommentRequest) error
 	SaveReplyDraft(context.Context, *review.ReplyRequest) error
+	DeleteDrafts(context.Context, *review.DeleteDraftsRequest) error
 	ReplaceDraftBody(context.Context, *review.ReplaceDraftBodyRequest) error
 }
 

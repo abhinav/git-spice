@@ -128,6 +128,61 @@ func TestReviewDraftsConcurrentEdit(t *testing.T) {
 	assert.Equal(t, "Second edited", drafts[1].Body)
 }
 
+func TestReviewDraftsConcurrentDeleteAndAdd(t *testing.T) {
+	ctx := t.Context()
+	stores, repo := newConcurrentReviewDraftStores(t)
+	_, err := stores[0].AddReviewDraft(
+		ctx,
+		"feat",
+		review.Draft{
+			ID:   0,
+			Body: "First",
+			Anchor: review.Anchor{
+				Path:      "first.go",
+				StartLine: 1,
+				EndLine:   1,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	var added review.Draft
+	repo.pauseNextRefUpdates(2)
+	errs := runConcurrently(
+		func() error {
+			_, err := stores[0].DeleteReviewDrafts(
+				ctx,
+				"feat",
+				[]review.DraftID{1},
+			)
+			return err
+		},
+		func() (err error) {
+			added, err = stores[1].AddReviewDraft(
+				ctx,
+				"feat",
+				review.Draft{
+					ID:   0,
+					Body: "Second",
+					Anchor: review.Anchor{
+						Path:      "second.go",
+						StartLine: 2,
+						EndLine:   2,
+					},
+				},
+			)
+			return err
+		},
+	)
+	require.NoError(t, errs[0])
+	require.NoError(t, errs[1])
+
+	drafts, err := stores[0].LoadReviewDrafts(ctx, "feat")
+	require.NoError(t, err)
+	require.NotNil(t, drafts)
+	assert.Equal(t, []review.Draft{added}, drafts)
+}
+
 func newConcurrentReviewDraftStores(
 	t *testing.T,
 ) ([2]*state.Store, *pausingGitRepository) {

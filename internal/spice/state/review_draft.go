@@ -61,6 +61,60 @@ func (s *Store) AddReviewDraft(
 	return draft, nil
 }
 
+// DeleteReviewDrafts atomically removes drafts by branch-local ID.
+func (s *Store) DeleteReviewDrafts(
+	ctx context.Context,
+	branch string,
+	ids []review.DraftID,
+) (int, error) {
+	requested := make(map[review.DraftID]struct{}, len(ids))
+	for _, id := range ids {
+		requested[id] = struct{}{}
+	}
+
+	statements := make([]jsonmut.Statement, 0, len(requested))
+	for _, id := range slices.Sorted(maps.Keys(requested)) {
+		path := jsontext.Pointer("/drafts").AppendToken(id.String())
+		statements = append(statements,
+			jsonmut.Lookup(path).Then(func(value jsontext.Value) jsonmut.Statement {
+				if len(value) == 0 {
+					return jsonmut.Fail[struct{}](
+						&reviewDraftNotFoundError{ID: id},
+					)
+				}
+				return jsonmut.Delete(path)
+			}),
+		)
+	}
+
+	err := storage.UpdateJSON(
+		ctx,
+		s.db,
+		storage.JSONMutationRequest{
+			Key:       reviewDraftsJSON(branch),
+			IfMissing: jsontext.Value(`{}`),
+			Requires:  []string{branchKey(branch)},
+			Message:   fmt.Sprintf("%v: delete review drafts", branch),
+		},
+		jsonmut.Block(statements...),
+	)
+	if notFound, ok := errors.AsType[*reviewDraftNotFoundError](err); ok {
+		return 0, notFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("delete review drafts: %w", err)
+	}
+	return len(requested), nil
+}
+
+type reviewDraftNotFoundError struct {
+	ID review.DraftID
+}
+
+func (e *reviewDraftNotFoundError) Error() string {
+	return fmt.Sprintf("draft comment %d not found", e.ID)
+}
+
 // UpdateReviewDraftBody atomically replaces one draft's body.
 func (s *Store) UpdateReviewDraftBody(
 	ctx context.Context,

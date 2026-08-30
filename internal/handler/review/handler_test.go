@@ -226,6 +226,31 @@ func TestDraftHandler_ReplaceDraftBody(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestDraftHandler_DeleteDrafts(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	store := NewMockStore(ctrl)
+	handler := &DraftHandler{
+		Log:    silog.Nop(),
+		Store:  store,
+		Editor: nil,
+	}
+
+	store.
+		EXPECT().
+		DeleteReviewDrafts(
+			gomock.Any(),
+			"feature",
+			[]DraftID{1, 3},
+		).
+		Return(2, nil)
+
+	err := handler.DeleteDrafts(t.Context(), &DeleteDraftsRequest{
+		Branch: "feature",
+		IDs:    []DraftID{1, 3},
+	})
+	require.NoError(t, err)
+}
+
 func TestHandler_LoadReviewData(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	store := NewMockStore(ctrl)
