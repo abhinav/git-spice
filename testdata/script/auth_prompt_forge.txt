@@ -20,7 +20,8 @@ cmp $WORK/robot.actual $WORK/robot.golden
 ===
 > Select a Forge: 
 >
-> ▶ bitbucket
+> ▶ azuredevops
+>   bitbucket
 >   forgejo
 >   gitea
 >   github
