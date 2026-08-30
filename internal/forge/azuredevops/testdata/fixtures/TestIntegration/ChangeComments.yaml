@@ -1,0 +1,489 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/azure-project
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":"00000000-0000-4000-8000-000000000001","name":"azure-project","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001","project":{"id":"00000000-0000-4000-8000-000000000002","name":"azure-project","url":"https://dev.azure.example.com/azure-org/_apis/projects/00000000-0000-4000-8000-000000000002","state":"wellFormed","revision":11,"visibility":"private","lastUpdateTime":"2026-05-26T18:15:48.83Z"},"defaultBranch":"refs/heads/main","size":3062,"remoteUrl":"https://azure-org@dev.azure.example.com/azure-org/azure-project/_git/azure-project","sshUrl":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project","webUrl":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"project":{"href":"vstfs:///Classification/TeamProject/00000000-0000-4000-8000-000000000002"},"web":{"href":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project"},"ssh":{"href":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project"},"commits":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits"},"refs":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests"},"items":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items"},"pushes":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pushes"}},"isDisabled":false,"isInMaintenance":false}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 44.759458ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 153
+        host: dev.azure.example.com
+        body: '{"description":"Test PR for comments","isDraft":false,"sourceRefName":"refs/heads/xXkLF7Ps","targetRefName":"refs/heads/main","title":"Testing xXkLF7Ps"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 4418
+        body: '{"repository":{"id":"00000000-0000-4000-8000-000000000001","name":"azure-project","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001","project":{"id":"00000000-0000-4000-8000-000000000002","name":"azure-project","url":"https://dev.azure.example.com/azure-org/_apis/projects/00000000-0000-4000-8000-000000000002","state":"wellFormed","revision":11,"visibility":"private","lastUpdateTime":"2026-05-26T18:15:48.83Z"},"size":3062,"remoteUrl":"https://azure-org@dev.azure.example.com/azure-org/azure-project/_git/azure-project","sshUrl":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project","webUrl":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project","isDisabled":false,"isInMaintenance":false},"pullRequestId":96,"codeReviewId":96,"status":"active","createdBy":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_api/_common/identityImage?id=00000000-0000-4000-8000-000000000999","descriptor":"msa.REVIEWER_DESCRIPTOR"},"creationDate":"2026-05-26T20:32:55.5851369Z","title":"Testing xXkLF7Ps","description":"Test PR for comments","sourceRefName":"refs/heads/xXkLF7Ps","targetRefName":"refs/heads/main","mergeStatus":"queued","isDraft":false,"mergeId":"00000000-0000-4000-8000-000000000004","lastMergeSourceCommit":{"commitId":"f345ed9db9db679f15f3788b41b669e24a3c6660","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/f345ed9db9db679f15f3788b41b669e24a3c6660"},"lastMergeTargetCommit":{"commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"reviewers":[],"labels":[],"url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"workItems":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/workitems"},"sourceBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/xXkLF7Ps"},"targetBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/main"},"statuses":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/statuses"},"sourceCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/f345ed9db9db679f15f3788b41b669e24a3c6660"},"targetCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"createdBy":{"href":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999"},"iterations":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/iterations"}},"supportsIterations":true,"artifactId":"vstfs:///Git/PullRequestId/00000000-0000-4000-8000-000000000002%2f00000000-0000-4000-8000-000000000001%2f96"}'
+        headers:
+            Content-Length:
+                - "4259"
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 201 Created
+        code: 201
+        duration: 254.011166ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"54uBsMiyxIRpIqOasH2kgaOVO2bQibb6"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":231,"publishedDate":"2026-05-26T20:32:55.737Z","lastUpdatedDate":"2026-05-26T20:32:55.737Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"54uBsMiyxIRpIqOasH2kgaOVO2bQibb6","publishedDate":"2026-05-26T20:32:55.737Z","lastUpdatedDate":"2026-05-26T20:32:55.737Z","lastContentUpdatedDate":"2026-05-26T20:32:55.737Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 67.975542ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"c19Vh8OjDMhaMHw3QIpYOSjSdVhcEcvS"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":233,"publishedDate":"2026-05-26T20:32:55.817Z","lastUpdatedDate":"2026-05-26T20:32:55.817Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"c19Vh8OjDMhaMHw3QIpYOSjSdVhcEcvS","publishedDate":"2026-05-26T20:32:55.817Z","lastUpdatedDate":"2026-05-26T20:32:55.817Z","lastContentUpdatedDate":"2026-05-26T20:32:55.817Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 86.109792ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"ThCdmGL94uzj0atOqR03tGQALg2wqZFT"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":234,"publishedDate":"2026-05-26T20:32:55.903Z","lastUpdatedDate":"2026-05-26T20:32:55.903Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"ThCdmGL94uzj0atOqR03tGQALg2wqZFT","publishedDate":"2026-05-26T20:32:55.903Z","lastUpdatedDate":"2026-05-26T20:32:55.903Z","lastContentUpdatedDate":"2026-05-26T20:32:55.903Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/234/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/234"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/234"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 84.273375ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"xrlC46ybM8M9f8RD213JJxXgjvIBYJOK"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":235,"publishedDate":"2026-05-26T20:32:55.98Z","lastUpdatedDate":"2026-05-26T20:32:55.98Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"xrlC46ybM8M9f8RD213JJxXgjvIBYJOK","publishedDate":"2026-05-26T20:32:55.98Z","lastUpdatedDate":"2026-05-26T20:32:55.98Z","lastContentUpdatedDate":"2026-05-26T20:32:55.98Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/235/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/235"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/235"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 73.18025ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"drJDjv1fRabAAYAuO1WsvOFYyOUwORIH"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":236,"publishedDate":"2026-05-26T20:32:56.053Z","lastUpdatedDate":"2026-05-26T20:32:56.053Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"drJDjv1fRabAAYAuO1WsvOFYyOUwORIH","publishedDate":"2026-05-26T20:32:56.053Z","lastUpdatedDate":"2026-05-26T20:32:56.053Z","lastContentUpdatedDate":"2026-05-26T20:32:56.053Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/236/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/236"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/236"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 75.248125ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"nm2F61P3DqYb8Ead1C9ZUymxPIvZiRXI"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":239,"publishedDate":"2026-05-26T20:32:56.14Z","lastUpdatedDate":"2026-05-26T20:32:56.14Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"nm2F61P3DqYb8Ead1C9ZUymxPIvZiRXI","publishedDate":"2026-05-26T20:32:56.14Z","lastUpdatedDate":"2026-05-26T20:32:56.14Z","lastContentUpdatedDate":"2026-05-26T20:32:56.14Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/239/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/239"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/239"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 82.106583ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"bkWM58djlTbJDlizeDPUse7rmPglcuWz"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":240,"publishedDate":"2026-05-26T20:32:56.21Z","lastUpdatedDate":"2026-05-26T20:32:56.21Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"bkWM58djlTbJDlizeDPUse7rmPglcuWz","publishedDate":"2026-05-26T20:32:56.21Z","lastUpdatedDate":"2026-05-26T20:32:56.21Z","lastContentUpdatedDate":"2026-05-26T20:32:56.21Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/240/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/240"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/240"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 75.233625ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"HjbBSwFSjNzwuujgmm0JL3FUQjmuXJfw"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":241,"publishedDate":"2026-05-26T20:32:56.293Z","lastUpdatedDate":"2026-05-26T20:32:56.293Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"HjbBSwFSjNzwuujgmm0JL3FUQjmuXJfw","publishedDate":"2026-05-26T20:32:56.293Z","lastUpdatedDate":"2026-05-26T20:32:56.293Z","lastContentUpdatedDate":"2026-05-26T20:32:56.293Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/241/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/241"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/241"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 81.19725ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"23gZLXsooDe8JrIIXnBQ6Tusq6wCML1X"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":242,"publishedDate":"2026-05-26T20:32:56.367Z","lastUpdatedDate":"2026-05-26T20:32:56.367Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"23gZLXsooDe8JrIIXnBQ6Tusq6wCML1X","publishedDate":"2026-05-26T20:32:56.367Z","lastUpdatedDate":"2026-05-26T20:32:56.367Z","lastContentUpdatedDate":"2026-05-26T20:32:56.367Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/242/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/242"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/242"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 70.542167ms
+    - id: 11
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: dev.azure.example.com
+        body: '{"comments":[{"commentType":"text","content":"QMMW2mViakGUUeStqc5Cmpeh9GXY4EZk"}],"status":"closed"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pullRequestThreadContext":null,"id":243,"publishedDate":"2026-05-26T20:32:56.437Z","lastUpdatedDate":"2026-05-26T20:32:56.437Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"QMMW2mViakGUUeStqc5Cmpeh9GXY4EZk","publishedDate":"2026-05-26T20:32:56.437Z","lastUpdatedDate":"2026-05-26T20:32:56.437Z","lastContentUpdatedDate":"2026-05-26T20:32:56.437Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/243/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/243"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/243"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 68.74175ms
+    - id: 12
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231/comments/1
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"54uBsMiyxIRpIqOasH2kgaOVO2bQibb6","publishedDate":"2026-05-26T20:32:55.737Z","lastUpdatedDate":"2026-05-26T20:32:55.737Z","lastContentUpdatedDate":"2026-05-26T20:32:55.737Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 53.880375ms
+    - id: 13
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 46
+        host: dev.azure.example.com
+        body: '{"content":"hHHGJaldc0vVc2ThKeXtogVeTBkY7Pfi"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231/comments/1
+        method: PATCH
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"hHHGJaldc0vVc2ThKeXtogVeTBkY7Pfi","publishedDate":"2026-05-26T20:32:55.737Z","lastUpdatedDate":"2026-05-26T20:32:56.557Z","lastContentUpdatedDate":"2026-05-26T20:32:56.557Z","commentType":"text","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 63.507459ms
+    - id: 14
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233/comments/1
+        method: DELETE
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 0
+        body: ""
+        headers:
+            Content-Length:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 65.880584ms
+    - id: 15
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233/comments/1
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"publishedDate":"2026-05-26T20:32:55.817Z","lastUpdatedDate":"2026-05-26T20:32:56.627Z","lastContentUpdatedDate":"2026-05-26T20:32:56.627Z","isDeleted":true,"commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 56.638208ms
+    - id: 16
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"value":[{"pullRequestThreadContext":null,"id":231,"publishedDate":"2026-05-26T20:32:55.737Z","lastUpdatedDate":"2026-05-26T20:32:56.557Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"hHHGJaldc0vVc2ThKeXtogVeTBkY7Pfi","publishedDate":"2026-05-26T20:32:55.737Z","lastUpdatedDate":"2026-05-26T20:32:56.557Z","lastContentUpdatedDate":"2026-05-26T20:32:56.557Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":233,"publishedDate":"2026-05-26T20:32:55.817Z","lastUpdatedDate":"2026-05-26T20:32:56.627Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"publishedDate":"2026-05-26T20:32:55.817Z","lastUpdatedDate":"2026-05-26T20:32:56.627Z","lastContentUpdatedDate":"2026-05-26T20:32:56.627Z","isDeleted":true,"commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":true,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":234,"publishedDate":"2026-05-26T20:32:55.903Z","lastUpdatedDate":"2026-05-26T20:32:55.903Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"ThCdmGL94uzj0atOqR03tGQALg2wqZFT","publishedDate":"2026-05-26T20:32:55.903Z","lastUpdatedDate":"2026-05-26T20:32:55.903Z","lastContentUpdatedDate":"2026-05-26T20:32:55.903Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/234/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/234"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/234"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":235,"publishedDate":"2026-05-26T20:32:55.98Z","lastUpdatedDate":"2026-05-26T20:32:55.98Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"xrlC46ybM8M9f8RD213JJxXgjvIBYJOK","publishedDate":"2026-05-26T20:32:55.98Z","lastUpdatedDate":"2026-05-26T20:32:55.98Z","lastContentUpdatedDate":"2026-05-26T20:32:55.98Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/235/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/235"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/235"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":236,"publishedDate":"2026-05-26T20:32:56.053Z","lastUpdatedDate":"2026-05-26T20:32:56.053Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"drJDjv1fRabAAYAuO1WsvOFYyOUwORIH","publishedDate":"2026-05-26T20:32:56.053Z","lastUpdatedDate":"2026-05-26T20:32:56.053Z","lastContentUpdatedDate":"2026-05-26T20:32:56.053Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/236/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/236"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/236"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":239,"publishedDate":"2026-05-26T20:32:56.14Z","lastUpdatedDate":"2026-05-26T20:32:56.14Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"nm2F61P3DqYb8Ead1C9ZUymxPIvZiRXI","publishedDate":"2026-05-26T20:32:56.14Z","lastUpdatedDate":"2026-05-26T20:32:56.14Z","lastContentUpdatedDate":"2026-05-26T20:32:56.14Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/239/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/239"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/239"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":240,"publishedDate":"2026-05-26T20:32:56.21Z","lastUpdatedDate":"2026-05-26T20:32:56.21Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"bkWM58djlTbJDlizeDPUse7rmPglcuWz","publishedDate":"2026-05-26T20:32:56.21Z","lastUpdatedDate":"2026-05-26T20:32:56.21Z","lastContentUpdatedDate":"2026-05-26T20:32:56.21Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/240/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/240"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/240"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":241,"publishedDate":"2026-05-26T20:32:56.293Z","lastUpdatedDate":"2026-05-26T20:32:56.293Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"HjbBSwFSjNzwuujgmm0JL3FUQjmuXJfw","publishedDate":"2026-05-26T20:32:56.293Z","lastUpdatedDate":"2026-05-26T20:32:56.293Z","lastContentUpdatedDate":"2026-05-26T20:32:56.293Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/241/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/241"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/241"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":242,"publishedDate":"2026-05-26T20:32:56.367Z","lastUpdatedDate":"2026-05-26T20:32:56.367Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"23gZLXsooDe8JrIIXnBQ6Tusq6wCML1X","publishedDate":"2026-05-26T20:32:56.367Z","lastUpdatedDate":"2026-05-26T20:32:56.367Z","lastContentUpdatedDate":"2026-05-26T20:32:56.367Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/242/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/242"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/242"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":243,"publishedDate":"2026-05-26T20:32:56.437Z","lastUpdatedDate":"2026-05-26T20:32:56.437Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"QMMW2mViakGUUeStqc5Cmpeh9GXY4EZk","publishedDate":"2026-05-26T20:32:56.437Z","lastUpdatedDate":"2026-05-26T20:32:56.437Z","lastContentUpdatedDate":"2026-05-26T20:32:56.437Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/243/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/243"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/243"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}],"count":10}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 51.71075ms
+    - id: 17
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"value":[{"pullRequestThreadContext":null,"id":231,"publishedDate":"2026-05-26T20:32:55.737Z","lastUpdatedDate":"2026-05-26T20:32:56.557Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"hHHGJaldc0vVc2ThKeXtogVeTBkY7Pfi","publishedDate":"2026-05-26T20:32:55.737Z","lastUpdatedDate":"2026-05-26T20:32:56.557Z","lastContentUpdatedDate":"2026-05-26T20:32:56.557Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/231"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":233,"publishedDate":"2026-05-26T20:32:55.817Z","lastUpdatedDate":"2026-05-26T20:32:56.627Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"publishedDate":"2026-05-26T20:32:55.817Z","lastUpdatedDate":"2026-05-26T20:32:56.627Z","lastContentUpdatedDate":"2026-05-26T20:32:56.627Z","isDeleted":true,"commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":true,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/233"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":234,"publishedDate":"2026-05-26T20:32:55.903Z","lastUpdatedDate":"2026-05-26T20:32:55.903Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"ThCdmGL94uzj0atOqR03tGQALg2wqZFT","publishedDate":"2026-05-26T20:32:55.903Z","lastUpdatedDate":"2026-05-26T20:32:55.903Z","lastContentUpdatedDate":"2026-05-26T20:32:55.903Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/234/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/234"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/234"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":235,"publishedDate":"2026-05-26T20:32:55.98Z","lastUpdatedDate":"2026-05-26T20:32:55.98Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"xrlC46ybM8M9f8RD213JJxXgjvIBYJOK","publishedDate":"2026-05-26T20:32:55.98Z","lastUpdatedDate":"2026-05-26T20:32:55.98Z","lastContentUpdatedDate":"2026-05-26T20:32:55.98Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/235/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/235"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/235"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":236,"publishedDate":"2026-05-26T20:32:56.053Z","lastUpdatedDate":"2026-05-26T20:32:56.053Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"drJDjv1fRabAAYAuO1WsvOFYyOUwORIH","publishedDate":"2026-05-26T20:32:56.053Z","lastUpdatedDate":"2026-05-26T20:32:56.053Z","lastContentUpdatedDate":"2026-05-26T20:32:56.053Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/236/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/236"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/236"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":239,"publishedDate":"2026-05-26T20:32:56.14Z","lastUpdatedDate":"2026-05-26T20:32:56.14Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"nm2F61P3DqYb8Ead1C9ZUymxPIvZiRXI","publishedDate":"2026-05-26T20:32:56.14Z","lastUpdatedDate":"2026-05-26T20:32:56.14Z","lastContentUpdatedDate":"2026-05-26T20:32:56.14Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/239/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/239"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/239"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":240,"publishedDate":"2026-05-26T20:32:56.21Z","lastUpdatedDate":"2026-05-26T20:32:56.21Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"bkWM58djlTbJDlizeDPUse7rmPglcuWz","publishedDate":"2026-05-26T20:32:56.21Z","lastUpdatedDate":"2026-05-26T20:32:56.21Z","lastContentUpdatedDate":"2026-05-26T20:32:56.21Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/240/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/240"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/240"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":241,"publishedDate":"2026-05-26T20:32:56.293Z","lastUpdatedDate":"2026-05-26T20:32:56.293Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"HjbBSwFSjNzwuujgmm0JL3FUQjmuXJfw","publishedDate":"2026-05-26T20:32:56.293Z","lastUpdatedDate":"2026-05-26T20:32:56.293Z","lastContentUpdatedDate":"2026-05-26T20:32:56.293Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/241/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/241"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/241"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":242,"publishedDate":"2026-05-26T20:32:56.367Z","lastUpdatedDate":"2026-05-26T20:32:56.367Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"23gZLXsooDe8JrIIXnBQ6Tusq6wCML1X","publishedDate":"2026-05-26T20:32:56.367Z","lastUpdatedDate":"2026-05-26T20:32:56.367Z","lastContentUpdatedDate":"2026-05-26T20:32:56.367Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/242/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/242"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/242"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}},{"pullRequestThreadContext":null,"id":243,"publishedDate":"2026-05-26T20:32:56.437Z","lastUpdatedDate":"2026-05-26T20:32:56.437Z","comments":[{"id":1,"parentCommentId":0,"author":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR","descriptor":"msa.REVIEWER_DESCRIPTOR"},"content":"QMMW2mViakGUUeStqc5Cmpeh9GXY4EZk","publishedDate":"2026-05-26T20:32:56.437Z","lastUpdatedDate":"2026-05-26T20:32:56.437Z","lastContentUpdatedDate":"2026-05-26T20:32:56.437Z","commentType":"text","usersLiked":[],"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/243/comments/1"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"threads":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/243"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/_apis/git/pullRequests/96"}}}],"status":"closed","threadContext":null,"properties":null,"identities":null,"isDeleted":false,"_links":{"self":{"href":"https://dev.azure.example.com/azure-org/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/96/threads/243"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"}}}],"count":10}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 56.6855ms

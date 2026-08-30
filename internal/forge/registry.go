@@ -61,7 +61,13 @@ func (r *Registry) New(id string, remoteURL *giturl.URL) (Forge, error) {
 // It returns the matched forge and information about the matched repository.
 func InferFromRemoteURL(r *Registry, remoteURL *giturl.URL) (forge Forge, rid RepositoryID, ok bool) {
 	for d := range r.All() {
-		if !remoteURLMatches(d.BaseURL(), remoteURL) {
+		matches := remoteURLMatches(d.BaseURL(), remoteURL)
+		if matcher, ok := d.(interface {
+			MatchesRemoteURL(*giturl.URL) bool
+		}); ok {
+			matches = matcher.MatchesRemoteURL(remoteURL)
+		}
+		if !matches {
 			continue
 		}
 

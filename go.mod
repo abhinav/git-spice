@@ -15,8 +15,10 @@ require (
 	github.com/cli/browser v1.3.0
 	github.com/creack/pty v1.1.24
 	github.com/dustin/go-humanize v1.0.1
+	github.com/google/uuid v1.1.1
 	github.com/hexops/autogold/v2 v2.3.1
 	github.com/mattn/go-isatty v0.0.22
+	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/sahilm/fuzzy v0.1.2
 	github.com/stretchr/testify v1.11.1

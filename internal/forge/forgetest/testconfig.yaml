@@ -80,3 +80,17 @@ forgejo:
   reviewer: "test-reviewer"
   # User who can be assigned to pull requests.
   assignee: "test-assignee"
+
+azuredevops:
+  # Azure DevOps organization name.
+  organization: "my-organization"
+  # Azure DevOps project name.
+  project: "git-spice-test"
+  # Azure Repos repository name.
+  repository: "git-spice-test"
+  # A user who can be added as an optional reviewer.
+  # Use a value Azure DevOps accepts as a unique name,
+  # such as the user's email address.
+  reviewer: "reviewer@example.com"
+  # Azure DevOps does not support PR assignees, leave empty.
+  assignee: ""

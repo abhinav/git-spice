@@ -1,0 +1,185 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/azure-project
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":"00000000-0000-4000-8000-000000000001","name":"azure-project","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001","project":{"id":"00000000-0000-4000-8000-000000000002","name":"azure-project","url":"https://dev.azure.example.com/azure-org/_apis/projects/00000000-0000-4000-8000-000000000002","state":"wellFormed","revision":11,"visibility":"private","lastUpdateTime":"2026-05-26T18:15:48.83Z"},"defaultBranch":"refs/heads/main","size":3062,"remoteUrl":"https://azure-org@dev.azure.example.com/azure-org/azure-project/_git/azure-project","sshUrl":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project","webUrl":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"project":{"href":"vstfs:///Classification/TeamProject/00000000-0000-4000-8000-000000000002"},"web":{"href":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project"},"ssh":{"href":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project"},"commits":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits"},"refs":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests"},"items":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items"},"pushes":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pushes"}},"isDisabled":false,"isInMaintenance":false}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 48.928125ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 161
+        host: dev.azure.example.com
+        body: '{"description":"Test PR with custom base","isDraft":false,"sourceRefName":"refs/heads/XeJfmfbc","targetRefName":"refs/heads/zpyEiWV8","title":"Testing XeJfmfbc"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 4430
+        body: '{"repository":{"id":"00000000-0000-4000-8000-000000000001","name":"azure-project","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001","project":{"id":"00000000-0000-4000-8000-000000000002","name":"azure-project","url":"https://dev.azure.example.com/azure-org/_apis/projects/00000000-0000-4000-8000-000000000002","state":"wellFormed","revision":11,"visibility":"private","lastUpdateTime":"2026-05-26T18:15:48.83Z"},"size":3062,"remoteUrl":"https://azure-org@dev.azure.example.com/azure-org/azure-project/_git/azure-project","sshUrl":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project","webUrl":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project","isDisabled":false,"isInMaintenance":false},"pullRequestId":94,"codeReviewId":94,"status":"active","createdBy":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_api/_common/identityImage?id=00000000-0000-4000-8000-000000000999","descriptor":"msa.REVIEWER_DESCRIPTOR"},"creationDate":"2026-05-26T20:32:55.1426969Z","title":"Testing XeJfmfbc","description":"Test PR with custom base","sourceRefName":"refs/heads/XeJfmfbc","targetRefName":"refs/heads/zpyEiWV8","mergeStatus":"queued","isDraft":false,"mergeId":"00000000-0000-4000-8000-000000000008","lastMergeSourceCommit":{"commitId":"fd35a7550acd978efb6f3a80091565a3c54f3516","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/fd35a7550acd978efb6f3a80091565a3c54f3516"},"lastMergeTargetCommit":{"commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"reviewers":[],"labels":[],"url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"workItems":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/workitems"},"sourceBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/XeJfmfbc"},"targetBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/zpyEiWV8"},"statuses":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/statuses"},"sourceCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/fd35a7550acd978efb6f3a80091565a3c54f3516"},"targetCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"createdBy":{"href":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999"},"iterations":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/iterations"}},"supportsIterations":true,"artifactId":"vstfs:///Git/PullRequestId/00000000-0000-4000-8000-000000000002%2f00000000-0000-4000-8000-000000000001%2f94"}'
+        headers:
+            Content-Length:
+                - "4271"
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 201 Created
+        code: 201
+        duration: 243.470208ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"repository":{"id":"00000000-0000-4000-8000-000000000001","name":"azure-project","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001","project":{"id":"00000000-0000-4000-8000-000000000002","name":"azure-project","url":"https://dev.azure.example.com/azure-org/_apis/projects/00000000-0000-4000-8000-000000000002","state":"wellFormed","revision":11,"visibility":"private","lastUpdateTime":"2026-05-26T18:15:48.83Z"},"size":3062,"remoteUrl":"https://azure-org@dev.azure.example.com/azure-org/azure-project/_git/azure-project","sshUrl":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project","webUrl":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project","isDisabled":false,"isInMaintenance":false},"pullRequestId":94,"codeReviewId":94,"status":"active","createdBy":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_api/_common/identityImage?id=00000000-0000-4000-8000-000000000999","descriptor":"msa.REVIEWER_DESCRIPTOR"},"creationDate":"2026-05-26T20:32:55.1426969Z","title":"Testing XeJfmfbc","description":"Test PR with custom base","sourceRefName":"refs/heads/XeJfmfbc","targetRefName":"refs/heads/zpyEiWV8","mergeStatus":"queued","isDraft":false,"mergeId":"00000000-0000-4000-8000-000000000008","lastMergeSourceCommit":{"commitId":"fd35a7550acd978efb6f3a80091565a3c54f3516","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/fd35a7550acd978efb6f3a80091565a3c54f3516"},"lastMergeTargetCommit":{"commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"reviewers":[],"url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"workItems":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/workitems"},"sourceBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/XeJfmfbc"},"targetBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/zpyEiWV8"},"statuses":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/statuses"},"sourceCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/fd35a7550acd978efb6f3a80091565a3c54f3516"},"targetCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"createdBy":{"href":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999"},"iterations":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/iterations"}},"supportsIterations":true,"artifactId":"vstfs:///Git/PullRequestId/00000000-0000-4000-8000-000000000002%2f00000000-0000-4000-8000-000000000001%2f94"}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 42.8305ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/labels
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"count":0,"value":[]}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 43.442208ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 35
+        host: dev.azure.example.com
+        body: '{"targetRefName":"refs/heads/main"}'
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94
+        method: PATCH
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"repository":{"id":"00000000-0000-4000-8000-000000000001","name":"azure-project","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001","project":{"id":"00000000-0000-4000-8000-000000000002","name":"azure-project","url":"https://dev.azure.example.com/azure-org/_apis/projects/00000000-0000-4000-8000-000000000002","state":"wellFormed","revision":11,"visibility":"private","lastUpdateTime":"2026-05-26T18:15:48.83Z"},"size":3062,"remoteUrl":"https://azure-org@dev.azure.example.com/azure-org/azure-project/_git/azure-project","sshUrl":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project","webUrl":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project","isDisabled":false,"isInMaintenance":false},"pullRequestId":94,"codeReviewId":94,"status":"active","createdBy":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_api/_common/identityImage?id=00000000-0000-4000-8000-000000000999","descriptor":"msa.REVIEWER_DESCRIPTOR"},"creationDate":"2026-05-26T20:32:55.1426969Z","title":"Testing XeJfmfbc","description":"Test PR with custom base","sourceRefName":"refs/heads/XeJfmfbc","targetRefName":"refs/heads/main","mergeStatus":"succeeded","isDraft":false,"mergeId":"00000000-0000-4000-8000-000000000008","lastMergeSourceCommit":{"commitId":"fd35a7550acd978efb6f3a80091565a3c54f3516","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/fd35a7550acd978efb6f3a80091565a3c54f3516"},"lastMergeTargetCommit":{"commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"lastMergeCommit":{"commitId":"971942220fd6b723afba55bd93f37e27838ff4eb","author":{"name":"Git Spice Reviewer","email":"reviewer@example.com","date":"2026-05-26T20:32:55Z"},"committer":{"name":"Git Spice Reviewer","email":"reviewer@example.com","date":"2026-05-26T20:32:55Z"},"comment":"Merge pull request 94 from XeJfmfbc into zpyEiWV8","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/971942220fd6b723afba55bd93f37e27838ff4eb"},"reviewers":[],"url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"workItems":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/workitems"},"sourceBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/XeJfmfbc"},"targetBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/main"},"statuses":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/statuses"},"sourceCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/fd35a7550acd978efb6f3a80091565a3c54f3516"},"targetCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"createdBy":{"href":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999"},"iterations":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/iterations"}},"supportsIterations":true,"artifactId":"vstfs:///Git/PullRequestId/00000000-0000-4000-8000-000000000002%2f00000000-0000-4000-8000-000000000001%2f94"}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 253.92875ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"repository":{"id":"00000000-0000-4000-8000-000000000001","name":"azure-project","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001","project":{"id":"00000000-0000-4000-8000-000000000002","name":"azure-project","url":"https://dev.azure.example.com/azure-org/_apis/projects/00000000-0000-4000-8000-000000000002","state":"wellFormed","revision":11,"visibility":"private","lastUpdateTime":"2026-05-26T18:15:48.83Z"},"size":3062,"remoteUrl":"https://azure-org@dev.azure.example.com/azure-org/azure-project/_git/azure-project","sshUrl":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project","webUrl":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project","isDisabled":false,"isInMaintenance":false},"pullRequestId":94,"codeReviewId":94,"status":"active","createdBy":{"displayName":"Git Spice Reviewer","url":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999","_links":{"avatar":{"href":"https://dev.azure.example.com/azure-org/_apis/GraphProfile/MemberAvatars/msa.REVIEWER_DESCRIPTOR"}},"id":"00000000-0000-4000-8000-000000000999","uniqueName":"reviewer@example.com","imageUrl":"https://dev.azure.example.com/azure-org/_api/_common/identityImage?id=00000000-0000-4000-8000-000000000999","descriptor":"msa.REVIEWER_DESCRIPTOR"},"creationDate":"2026-05-26T20:32:55.1426969Z","title":"Testing XeJfmfbc","description":"Test PR with custom base","sourceRefName":"refs/heads/XeJfmfbc","targetRefName":"refs/heads/main","mergeStatus":"queued","isDraft":false,"mergeId":"00000000-0000-4000-8000-000000000008","lastMergeSourceCommit":{"commitId":"fd35a7550acd978efb6f3a80091565a3c54f3516","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/fd35a7550acd978efb6f3a80091565a3c54f3516"},"lastMergeTargetCommit":{"commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"reviewers":[],"url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"workItems":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/workitems"},"sourceBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/XeJfmfbc"},"targetBranch":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs/heads/main"},"statuses":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/statuses"},"sourceCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/fd35a7550acd978efb6f3a80091565a3c54f3516"},"targetCommit":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits/a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29"},"createdBy":{"href":"https://vssps.azure.example.com/A00000000-0000-4000-8000-000000000003/_apis/Identities/00000000-0000-4000-8000-000000000999"},"iterations":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/iterations"}},"supportsIterations":true,"artifactId":"vstfs:///Git/PullRequestId/00000000-0000-4000-8000-000000000002%2f00000000-0000-4000-8000-000000000001%2f94"}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 52.382208ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests/94/labels
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"count":0,"value":[]}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 41.114292ms

@@ -1,0 +1,459 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/azure-project
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":"00000000-0000-4000-8000-000000000001","name":"azure-project","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001","project":{"id":"00000000-0000-4000-8000-000000000002","name":"azure-project","url":"https://dev.azure.example.com/azure-org/_apis/projects/00000000-0000-4000-8000-000000000002","state":"wellFormed","revision":11,"visibility":"private","lastUpdateTime":"2026-05-26T18:15:48.83Z"},"defaultBranch":"refs/heads/main","size":3062,"remoteUrl":"https://azure-org@dev.azure.example.com/azure-org/azure-project/_git/azure-project","sshUrl":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project","webUrl":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"project":{"href":"vstfs:///Classification/TeamProject/00000000-0000-4000-8000-000000000002"},"web":{"href":"https://dev.azure.example.com/azure-org/azure-project/_git/azure-project"},"ssh":{"href":"git@ssh.dev.azure.example.com:v3/azure-org/azure-project/azure-project"},"commits":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/commits"},"refs":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/refs"},"pullRequests":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pullRequests"},"items":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items"},"pushes":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/pushes"}},"isDisabled":false,"isInMaintenance":false}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 40.507208ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - .azuredevops/pull_request_template.md
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=.azuredevops%2Fpull_request_template.md
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 440
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''.azuredevops/pull_request_template.md'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "441"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 76.093625ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - .azuredevops/pull_request_template.txt
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=.azuredevops%2Fpull_request_template.txt
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 441
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''.azuredevops/pull_request_template.txt'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "442"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 45.246459ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - .vsts/pull_request_template.md
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=.vsts%2Fpull_request_template.md
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 433
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''.vsts/pull_request_template.md'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 43.372ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - .vsts/pull_request_template.txt
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=.vsts%2Fpull_request_template.txt
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 434
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''.vsts/pull_request_template.txt'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "435"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 39.619416ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - docs/pull_request_template.md
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=docs%2Fpull_request_template.md
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 432
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''docs/pull_request_template.md'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "433"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 42.283666ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - docs/pull_request_template.txt
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=docs%2Fpull_request_template.txt
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 433
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''docs/pull_request_template.txt'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 46.226208ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - pull_request_template.md
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=pull_request_template.md
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 427
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''pull_request_template.md'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "428"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 45.561417ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - pull_request_template.txt
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=pull_request_template.txt
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 428
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''pull_request_template.txt'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "429"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 40.896666ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            recursionLevel:
+                - oneLevel
+            scopePath:
+                - .azuredevops/pull_request_template
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?recursionLevel=oneLevel&scopePath=.azuredevops%2Fpull_request_template
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"count":3,"value":[{"objectId":"407edd356f76e223d5bb4289fab6f20179e99f98","gitObjectType":"tree","commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","path":"/.azuredevops/pull_request_template","isFolder":true,"url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?path=%2F.azuredevops%2Fpull_request_template&versionType=Branch&versionOptions=None"},{"objectId":"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391","gitObjectType":"blob","commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","path":"/.azuredevops/pull_request_template/trMXxDbB.md","url":"https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items//.azuredevops/pull_request_template/trMXxDbB.md?versionType=Branch&versionOptions=None"},{"objectId":"a9130f91a8118af0090124b90c12847a86b887c1","gitObjectType":"blob","commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","path":"/.azuredevops/pull_request_template/v7vJIeM3.md","url":"https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items//.azuredevops/pull_request_template/v7vJIeM3.md?versionType=Branch&versionOptions=None"}]}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 45.64575ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - /.azuredevops/pull_request_template/trMXxDbB.md
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=%2F.azuredevops%2Fpull_request_template%2FtrMXxDbB.md
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"objectId":"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391","gitObjectType":"blob","commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","path":"/.azuredevops/pull_request_template/trMXxDbB.md","content":"","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?path=%2F.azuredevops%2Fpull_request_template%2FtrMXxDbB.md&versionType=Branch&versionOptions=None","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?path=%2F.azuredevops%2Fpull_request_template%2FtrMXxDbB.md&versionType=Branch&versionOptions=None"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"blob":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/blobs/e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 42.278625ms
+    - id: 11
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            includeContent:
+                - "true"
+            path:
+                - /.azuredevops/pull_request_template/v7vJIeM3.md
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?includeContent=true&path=%2F.azuredevops%2Fpull_request_template%2Fv7vJIeM3.md
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"objectId":"a9130f91a8118af0090124b90c12847a86b887c1","gitObjectType":"blob","commitId":"a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29","path":"/.azuredevops/pull_request_template/v7vJIeM3.md","content":"This is a test template\n","url":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?path=%2F.azuredevops%2Fpull_request_template%2Fv7vJIeM3.md&versionType=Branch&versionOptions=None","_links":{"self":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?path=%2F.azuredevops%2Fpull_request_template%2Fv7vJIeM3.md&versionType=Branch&versionOptions=None"},"repository":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001"},"blob":{"href":"https://dev.azure.example.com/azure-org/00000000-0000-4000-8000-000000000002/_apis/git/repositories/00000000-0000-4000-8000-000000000001/blobs/a9130f91a8118af0090124b90c12847a86b887c1"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8; api-version=7.1-preview.1
+        status: 200 OK
+        code: 200
+        duration: 41.230125ms
+    - id: 12
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            recursionLevel:
+                - oneLevel
+            scopePath:
+                - .vsts/pull_request_template
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?recursionLevel=oneLevel&scopePath=.vsts%2Fpull_request_template
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 430
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''.vsts/pull_request_template'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "431"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 47.964459ms
+    - id: 13
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            recursionLevel:
+                - oneLevel
+            scopePath:
+                - docs/pull_request_template
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?recursionLevel=oneLevel&scopePath=docs%2Fpull_request_template
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 429
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''docs/pull_request_template'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "430"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 41.146958ms
+    - id: 14
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: dev.azure.example.com
+        form:
+            recursionLevel:
+                - oneLevel
+            scopePath:
+                - pull_request_template
+        headers:
+            User-Agent:
+                - go/go1.26.0 (darwin arm64) azure-devops-go-api/7.1.220.1 (dev)
+        url: https://dev.azure.example.com/azure-org/azure-project/_apis/git/repositories/00000000-0000-4000-8000-000000000001/items?recursionLevel=oneLevel&scopePath=pull_request_template
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 424
+        body: '{"$id":"1","innerException":null,"message":"TF401174: The item ''pull_request_template'' could not be found in the repository ''azure-project'' at the version specified by ''<Branch:  >'' (resolved to commit ''a02e73561dbf9e0dd3cdfa9b6acac7f9402bea29'')","typeName":"Microsoft.TeamFoundation.Git.Server.GitItemNotFoundException, Microsoft.TeamFoundation.Git.Server","typeKey":"GitItemNotFoundException","errorCode":0,"eventId":3000}'
+        headers:
+            Content-Length:
+                - "425"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 43.928917ms

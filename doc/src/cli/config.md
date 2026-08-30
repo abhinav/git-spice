@@ -320,6 +320,14 @@ so this option alone supports self-hosted Bitbucket instances.
 Alternatively, set this option with the `GIT_SPICE_FORGE_KIND`
 environment variable.
 
+### spice.forge.azuredevops.url
+
+<!-- gs:version unreleased -->
+
+Base URL of the Azure DevOps instance used for Azure DevOps requests.
+Defaults to `$AZURE_DEVOPS_URL` if set,
+or `https://dev.azure.com` otherwise.
+
 ### spice.forge.github.apiUrl
 
 URL at which the GitHub API is available.

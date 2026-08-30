@@ -84,7 +84,7 @@ type IntegrationConfig struct {
 	Reviewers []string // required
 
 	// Assignees is a list of usernames that can be assigned to changes.
-	Assignees []string // required
+	Assignees []string // required unless SkipAssignees is true
 
 	// SkipCombinedMetadata skips submitting one change with both a reviewer and
 	// an assignee.
