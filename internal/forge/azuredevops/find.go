@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
 	internalgit "go.abhg.dev/gs/internal/git"
@@ -38,12 +39,25 @@ func (r *Repository) FindChangesByBranch(
 		limit = 10
 	}
 
+	var sourceRepositoryID *uuid.UUID
+	if opts.PushRepository != nil {
+		pushRepository, err := r.getRepository(ctx, opts.PushRepository)
+		if err != nil {
+			return nil, fmt.Errorf("resolve push repository: %w", err)
+		}
+		if pushRepository.Id == nil {
+			return nil, errors.New("push repository has no ID")
+		}
+		sourceRepositoryID = pushRepository.Id
+	}
+
 	prs, err := r.client.gitClient.GetPullRequests(ctx, git.GetPullRequestsArgs{
 		Project:      new(r.project()),
 		RepositoryId: new(r.repositoryID()),
 		SearchCriteria: &git.GitPullRequestSearchCriteria{
-			SourceRefName: &sourceRef,
-			Status:        status,
+			SourceRefName:      &sourceRef,
+			SourceRepositoryId: sourceRepositoryID,
+			Status:             status,
 		},
 		Top: &limit,
 	})

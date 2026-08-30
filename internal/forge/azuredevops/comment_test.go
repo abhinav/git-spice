@@ -142,6 +142,14 @@ type stubGitClient struct {
 		context.Context,
 		git.GetPullRequestArgs,
 	) (*git.GitPullRequest, error)
+	getPullRequests func(
+		context.Context,
+		git.GetPullRequestsArgs,
+	) (*[]git.GitPullRequest, error)
+	getRepository func(
+		context.Context,
+		git.GetRepositoryArgs,
+	) (*git.GitRepository, error)
 	getItems func(
 		context.Context,
 		git.GetItemsArgs,
@@ -207,6 +215,20 @@ func (s *stubGitClient) GetPullRequest(
 	args git.GetPullRequestArgs,
 ) (*git.GitPullRequest, error) {
 	return s.getPullRequest(ctx, args)
+}
+
+func (s *stubGitClient) GetPullRequests(
+	ctx context.Context,
+	args git.GetPullRequestsArgs,
+) (*[]git.GitPullRequest, error) {
+	return s.getPullRequests(ctx, args)
+}
+
+func (s *stubGitClient) GetRepository(
+	ctx context.Context,
+	args git.GetRepositoryArgs,
+) (*git.GitRepository, error) {
+	return s.getRepository(ctx, args)
 }
 
 func (s *stubGitClient) GetItems(

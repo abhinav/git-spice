@@ -71,3 +71,25 @@ func (r *Repository) repositoryID() string {
 func (r *Repository) project() string {
 	return r.repoID.project
 }
+
+func (r *Repository) getRepository(
+	ctx context.Context,
+	id forge.RepositoryID,
+) (*git.GitRepository, error) {
+	rid := mustRepositoryID(id)
+	if rid.organization != r.repoID.organization {
+		return nil, fmt.Errorf(
+			"repository %q belongs to organization %q, not %q",
+			rid.repository, rid.organization, r.repoID.organization,
+		)
+	}
+
+	repo, err := r.client.gitClient.GetRepository(ctx, git.GetRepositoryArgs{
+		Project:      &rid.project,
+		RepositoryId: &rid.repository,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get repository: %w", err)
+	}
+	return repo, nil
+}

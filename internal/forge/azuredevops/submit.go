@@ -35,6 +35,17 @@ func (r *Repository) SubmitChange(
 			IsDraft:       &req.Draft,
 		},
 	}
+	if req.PushRepository != nil {
+		pushRepository, err := r.getRepository(ctx, req.PushRepository)
+		if err != nil {
+			return forge.SubmitChangeResult{}, fmt.Errorf(
+				"resolve push repository: %w", err,
+			)
+		}
+		createArgs.GitPullRequestToCreate.ForkSource = &git.GitForkRef{
+			Repository: pushRepository,
+		}
+	}
 
 	pr, err := r.client.gitClient.CreatePullRequest(ctx, createArgs)
 	if err != nil {
