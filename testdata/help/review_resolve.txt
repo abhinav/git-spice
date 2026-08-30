@@ -1,20 +1,17 @@
-Usage: gs branch (b) comment (cmt) resolve <thread-id> [flags]
+Usage: gs review resolve <thread-id> [flags]
 
-Resolve or unresolve a review thread
+Resolve a review thread
 
 Resolves a review thread on the change request for the current branch.
 
-Use --unresolve to mark the thread as unresolved.
-
-The thread ID is shown in 'gs branch comment list'.
+The thread ID is shown in 'gs review list'.
 
 Arguments:
   <thread-id>    Thread ID to resolve.
 
 Flags:
-      --unresolve        Unresolve the thread instead of resolving it.
-  -b, --branch=BRANCH    Branch whose change request contains the thread.
-                         Defaults to current branch.
+  -b, --branch=BRANCH    Branch containing the thread. Defaults to the current
+                         branch.
 
 Global Flags:
   -h, --help           Show help for the command

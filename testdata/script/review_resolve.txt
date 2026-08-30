@@ -1,4 +1,4 @@
-# Resolve and unresolve a review thread.
+# Resolve and reopen a review thread.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -25,12 +25,19 @@ gs branch submit --fill
 stderr 'Created #'
 
 # post an inline comment to create a thread
-gs branch comment add util.go:3 -m 'Rename this function.'
+gs review comment util.go:3 -m 'Rename this function.' --no-draft
 stderr 'Posted comment'
 
-# get the thread ID from the list output
-gs branch comment list
-stderr 'thread-'
+# resolve and reopen the deterministic ShamHub thread
+gs review resolve thread-2
+stderr 'Resolved thread thread-2'
+gs review list
+stderr 'resolved'
+
+gs review reopen thread-2
+stderr 'Reopened thread thread-2'
+gs review list
+stderr 'open'
 
 -- repo/util.go --
 package main
