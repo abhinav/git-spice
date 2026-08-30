@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'azuredevops: Fix change templates being silently dropped when checking one of the candidate template paths failed (e.g. due to a timeout), and check candidate paths concurrently to reduce the chance of hitting ''submit.listTemplatesTimeout''.'
-time: 2026-08-24T11:34:42.086833729-04:00
