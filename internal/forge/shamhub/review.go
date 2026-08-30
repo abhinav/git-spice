@@ -277,22 +277,6 @@ func (sh *ShamHub) handleSubmitReview(
 	return sh.submitReview(submitter, req, rootCommitHash, time.Now())
 }
 
-func submitReviewCreatesRoot(req *submitReviewRequest) bool {
-	for _, comment := range req.Comments {
-		if comment.ThreadID == "" {
-			return true
-		}
-	}
-	return false
-}
-
-type reviewHeadSnapshot struct {
-	Hash   git.Hash
-	Owner  string
-	Repo   string
-	Branch string
-}
-
 // reviewRootCommitHash captures the change head selected when root creation
 // begins. That revision remains the thread's identity if the branch later moves.
 func (sh *ShamHub) reviewRootCommitHash(
@@ -311,6 +295,22 @@ func (sh *ShamHub) reviewRootCommitHash(
 		return "", err
 	}
 	return head.Hash, nil
+}
+
+func submitReviewCreatesRoot(req *submitReviewRequest) bool {
+	for _, comment := range req.Comments {
+		if comment.ThreadID == "" {
+			return true
+		}
+	}
+	return false
+}
+
+type reviewHeadSnapshot struct {
+	Hash   git.Hash
+	Owner  string
+	Repo   string
+	Branch string
 }
 
 // resolveReviewHead snapshots and resolves the current head of a change. Git
