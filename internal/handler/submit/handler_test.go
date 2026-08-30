@@ -3,6 +3,7 @@ package submit
 import (
 	"bytes"
 	"context"
+	"encoding/json/jsontext"
 	"errors"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/spicetest"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/spice/state/statetest"
 	"go.abhg.dev/gs/internal/ui"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -187,6 +189,11 @@ func TestHandler_SubmitBatch_rejectsStaleBaseBeforeSubmitting(t *testing.T) {
 }
 
 func TestHandler_submitBranch_editBase(t *testing.T) {
+	const (
+		fullHead  = git.Hash("0123456789abcdef0123456789abcdef01234567")
+		shortHead = git.Hash("0123456789ab")
+	)
+
 	draft := true
 	tests := []struct {
 		name       string
@@ -236,6 +243,22 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 				Base: "main",
 			},
 		},
+		{
+			name: "AbbreviatedHead",
+			change: &forge.FindChangeItem{
+				ID:       submitFakeChangeID("pr-1"),
+				URL:      "https://example.com/pr-1",
+				State:    forge.ChangeOpen,
+				Subject:  "Feature",
+				HeadHash: shortHead,
+				BaseName: "old-main",
+				Draft:    false,
+			},
+			opts: &Options{},
+			wantEdit: forge.EditChangeOptions{
+				Base: "main",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -265,12 +288,16 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 					peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
 						switch ref {
 						case "feature":
+							if tt.name == "AbbreviatedHead" {
+								return fullHead, nil
+							}
 							return git.Hash("new-head"), nil
+						case shortHead.String():
+							return fullHead, nil
 						case "origin/feature":
 							return "", git.ErrNotExist
 						default:
-							t.Fatalf("unexpected ref: %q", ref)
-							return "", nil
+							return "", git.ErrNotExist
 						}
 					},
 				},
@@ -313,6 +340,124 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 			assert.Equal(t, tt.wantPushed, pushed)
 		})
 	}
+}
+
+func TestHandler_submitBranch_importsChangeWithAbbreviatedHead(t *testing.T) {
+	const (
+		fullHead  = git.Hash("0123456789abcdef0123456789abcdef01234567")
+		shortHead = git.Hash("0123456789ab")
+	)
+
+	mockCtrl := gomock.NewController(t)
+	var logBuffer bytes.Buffer
+	log := silog.New(&logBuffer, nil)
+	store := statetest.NewMemoryStore(t, "main", "origin", log)
+	require.NoError(t, statetest.UpdateBranch(t.Context(), store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{{
+			Name: "feature",
+			Base: "main",
+		}},
+		Message: "track feature",
+	}))
+
+	mockService := NewMockService(mockCtrl)
+	mockService.EXPECT().
+		UnusedBranchName(gomock.Any(), "origin", "feature").
+		Return("feature-2", nil).
+		AnyTimes()
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feature").
+		Return(nil)
+
+	changeID := submitFakeChangeID("pr-1")
+	changeMetadata := submitFakeChange("pr-1")
+	mockForge := forgetest.NewMockForge(mockCtrl)
+	mockForge.EXPECT().ID().Return("test").AnyTimes()
+	mockForge.EXPECT().
+		MarshalChangeMetadata(changeMetadata).
+		Return(jsontext.Value(`{"id":"pr-1"}`), nil)
+
+	mockRemoteRepo := forgetest.NewMockRepository(mockCtrl)
+	mockRemoteRepo.EXPECT().Forge().Return(mockForge)
+	mockRemoteRepo.EXPECT().
+		FindChangesByBranch(gomock.Any(), "feature", forge.FindChangesOptions{
+			State:          forge.ChangeOpen,
+			PushRepository: stubRepositoryID("alice/repo"),
+			Limit:          3,
+		}).
+		Return([]*forge.FindChangeItem{{
+			ID:       changeID,
+			URL:      "https://example.com/pr-1",
+			State:    forge.ChangeOpen,
+			Subject:  "Feature",
+			HeadHash: shortHead,
+			BaseName: "main",
+		}}, nil)
+	mockRemoteRepo.EXPECT().
+		NewChangeMetadata(gomock.Any(), changeID).
+		Return(changeMetadata, nil)
+	mockRemoteRepo.EXPECT().
+		ListChangeComments(gomock.Any(), changeID, gomock.Any()).
+		Return(func(func(*forge.ListChangeCommentItem, error) bool) {})
+
+	handler := &Handler{
+		Log:  log,
+		View: ui.NewFileView(&bytes.Buffer{}),
+		Repository: &submitTestGitRepository{
+			peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
+				switch ref {
+				case "feature", shortHead.String():
+					return fullHead, nil
+				default:
+					return "", git.ErrNotExist
+				}
+			},
+			branchUpstream: func(context.Context, string) (string, error) {
+				return "", git.ErrNotExist
+			},
+		},
+		Worktree: &submitTestGitWorktree{
+			push: func(context.Context, git.PushOptions) error {
+				t.Fatal("unexpected push")
+				return nil
+			},
+		},
+		Store:   store,
+		Service: mockService,
+		Browser: &browser.Noop{},
+		FindRemote: func(context.Context) (state.Remote, error) {
+			return state.Remote{Upstream: "origin", Push: "origin"}, nil
+		},
+		ResolveRepository: func(context.Context, string) (forge.Forge, forge.RepositoryID, error) {
+			return mockForge, stubRepositoryID("alice/repo"), nil
+		},
+		OpenRepository: func(context.Context, forge.Forge, forge.RepositoryID) (forge.Repository, error) {
+			return mockRemoteRepo, nil
+		},
+	}
+	graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+		Trunk: "main",
+		Branches: []spice.LoadBranchItem{{
+			Name: "feature",
+			Base: "main",
+		}},
+	})
+
+	status, err := handler.submitBranch(t.Context(), graph, "feature", &submitOptions{
+		Options: &Options{DryRun: true, Publish: true},
+	})
+	require.NoError(t, err)
+	assert.True(t, status.Submitted)
+
+	branch, err := store.LookupBranch(t.Context(), "feature")
+	require.NoError(t, err)
+	assert.Equal(t, "feature", branch.UpstreamBranch)
+	assert.Equal(t, "test", branch.ChangeForge)
+	assert.JSONEq(t, `{"id":"pr-1"}`, string(branch.ChangeMetadata))
+	assert.Contains(t, logBuffer.String(), "feature: Found existing CR pr-1")
+	assert.Contains(t, logBuffer.String(), "CR pr-1 is up-to-date")
+	assert.NotContains(t, logBuffer.String(), "Ignoring CR")
+	assert.NotContains(t, logBuffer.String(), "feature-2")
 }
 
 func TestHandler_resolveUpstreamBranch_refusesStoredTrunk(t *testing.T) {
@@ -664,7 +809,8 @@ func TestEffectiveLabels(t *testing.T) {
 type submitTestGitRepository struct {
 	GitRepository
 
-	peelToCommit func(context.Context, string) (git.Hash, error)
+	peelToCommit   func(context.Context, string) (git.Hash, error)
+	branchUpstream func(context.Context, string) (string, error)
 }
 
 func (r *submitTestGitRepository) PeelToCommit(
@@ -672,6 +818,13 @@ func (r *submitTestGitRepository) PeelToCommit(
 	ref string,
 ) (git.Hash, error) {
 	return r.peelToCommit(ctx, ref)
+}
+
+func (r *submitTestGitRepository) BranchUpstream(
+	ctx context.Context,
+	branch string,
+) (string, error) {
+	return r.branchUpstream(ctx, branch)
 }
 
 // submitTestGitWorktree stubs Push and leaves other Git worktree operations

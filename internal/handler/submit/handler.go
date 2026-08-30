@@ -454,7 +454,7 @@ func (h *Handler) submitBranch(
 			// If not, pretend we didn't find a matching CR.
 			if upstreamBranch == "" {
 				change := changes[0]
-				if change.HeadHash != commitHash {
+				if !h.changeHeadMatchesCommit(ctx, change.HeadHash, commitHash) {
 					log.Infof("%v: Ignoring CR %v with the same branch name: remote HEAD (%v) does not match local HEAD (%v)",
 						branchToSubmit, change.ID, change.HeadHash, commitHash)
 					log.Infof("%v: If this is incorrect, cancel this operation, 'git pull' the branch, and retry.", branchToSubmit)
@@ -806,7 +806,8 @@ func (h *Handler) submitBranch(
 		pull := existingChange
 		openURL = pull.URL
 		var updates []string
-		if pull.HeadHash != commitHash {
+		headMatches := h.changeHeadMatchesCommit(ctx, pull.HeadHash, commitHash)
+		if !headMatches {
 			updates = append(updates, "push branch")
 		}
 		if pull.BaseName != upstreamBase {
@@ -898,7 +899,7 @@ func (h *Handler) submitBranch(
 			return status, nil
 		}
 
-		if pull.HeadHash != commitHash {
+		if !headMatches {
 			pushOpts := git.PushOptions{
 				Remote: remote.Push,
 				Refspec: git.Refspec(
@@ -950,6 +951,24 @@ func (h *Handler) submitBranch(
 	}
 
 	return status, nil
+}
+
+func (h *Handler) changeHeadMatchesCommit(
+	ctx context.Context,
+	changeHead git.Hash,
+	commit git.Hash,
+) bool {
+	// Exact hashes are the common case, so avoid invoking Git when both sides
+	// already agree.
+	if changeHead == commit {
+		return true
+	}
+
+	// Bitbucket Cloud reports abbreviated commit hashes. Resolve every
+	// non-exact head through Git instead of accepting a raw string prefix;
+	// Git rejects unknown or ambiguous abbreviations.
+	resolved, err := h.Repository.PeelToCommit(ctx, changeHead.String())
+	return err == nil && resolved == commit
 }
 
 // resolveUpstreamBranch determines the effective upstream branch name to use
