@@ -85,11 +85,12 @@ func (cmd *reviewCommentCmd) Run(
 	if err != nil {
 		return err
 	}
-	diff, err := wt.DiffBranchBytes(ctx, b.Base, branch)
+	diff, err := wt.OpenBranchDiff(ctx, b.Base, branch)
 	if err != nil {
-		return fmt.Errorf("get diff: %w", err)
+		return fmt.Errorf("open diff: %w", err)
 	}
 	patch, err := reviewdiff.Parse(diff)
+	err = errors.Join(err, diff.Close())
 	if err != nil {
 		return fmt.Errorf("parse diff: %w", err)
 	}
