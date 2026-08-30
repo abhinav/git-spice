@@ -1470,7 +1470,7 @@ This command requires at least Git 2.45.
 ### git-spice review comment {#gs-review-comment}
 
 ```
-gs review comment [<anchor>] [flags]
+gs review comment <anchor> [flags]
 ```
 
 Draft or post a review comment

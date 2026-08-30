@@ -2,13 +2,8 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
-	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -28,21 +23,13 @@ func (*reviewResolveCmd) Help() string {
 
 func (cmd *reviewResolveCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
-	wt *git.Worktree,
-	svc *spice.Service,
-	forgeRepo forge.Repository,
+	handler ReviewThreadHandler,
 ) error {
-	return setReviewThreadResolved(
-		ctx,
-		log,
-		wt,
-		svc,
-		forgeRepo,
-		cmd.Branch,
-		cmd.ThreadID,
-		true,
-	)
+	return handler.SetThreadResolution(ctx, &review.SetThreadResolutionRequest{
+		Branch:   cmd.Branch,
+		ThreadID: cmd.ThreadID,
+		Resolved: true,
+	})
 }
 
 type reviewReopenCmd struct {
@@ -61,73 +48,11 @@ func (*reviewReopenCmd) Help() string {
 
 func (cmd *reviewReopenCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
-	wt *git.Worktree,
-	svc *spice.Service,
-	forgeRepo forge.Repository,
+	handler ReviewThreadHandler,
 ) error {
-	return setReviewThreadResolved(
-		ctx,
-		log,
-		wt,
-		svc,
-		forgeRepo,
-		cmd.Branch,
-		cmd.ThreadID,
-		false,
-	)
-}
-
-func setReviewThreadResolved(
-	ctx context.Context,
-	log *silog.Logger,
-	wt *git.Worktree,
-	svc *spice.Service,
-	forgeRepo forge.Repository,
-	branch string,
-	thread string,
-	resolved bool,
-) error {
-	branch, err := reviewBranch(ctx, wt, branch)
-	if err != nil {
-		return err
-	}
-	b, reviewRepo, err := reviewRepositoryForBranch(
-		ctx, svc, forgeRepo, branch,
-	)
-	if err != nil {
-		return err
-	}
-	resolver, ok := forgeRepo.(forge.ReviewThreadResolver)
-	if !ok {
-		return errors.New(
-			"forge does not support review thread resolution",
-		)
-	}
-
-	threadIDs, err := loadReviewThreadIDs(
-		ctx,
-		reviewRepo,
-		b.Change.ChangeID(),
-	)
-	if err != nil {
-		return err
-	}
-	threadID, err := reviewThreadID(threadIDs, thread)
-	if err != nil {
-		return err
-	}
-
-	if resolved {
-		if err := resolver.ResolveReviewThread(ctx, threadID); err != nil {
-			return fmt.Errorf("resolve thread: %w", err)
-		}
-		log.Infof("Resolved thread %s.", thread)
-		return nil
-	}
-	if err := resolver.UnresolveReviewThread(ctx, threadID); err != nil {
-		return fmt.Errorf("reopen thread: %w", err)
-	}
-	log.Infof("Reopened thread %s.", thread)
-	return nil
+	return handler.SetThreadResolution(ctx, &review.SetThreadResolutionRequest{
+		Branch:   cmd.Branch,
+		ThreadID: cmd.ThreadID,
+		Resolved: false,
+	})
 }
