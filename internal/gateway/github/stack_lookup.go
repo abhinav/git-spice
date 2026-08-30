@@ -37,7 +37,7 @@ type StackUpdatePullRequest struct {
 // membership in input order.
 // A nil result entry means that GitHub did not find the corresponding pull
 // request.
-// When Stack is non-nil, it includes all open members in base-up order.
+// When Stack is non-nil, it includes all members in base-up order.
 //
 // The result combines two API snapshots because GitHub exposes stack identity
 // on the pull request and ordered membership on a separate stack node.
@@ -158,7 +158,7 @@ func (c *Gateway) PullRequestsForStackUpdate(
 		return pullRequests, nil
 	}
 
-	// Resolve the ordered open members for every unique stack ID in one query.
+	// Resolve the ordered members for every unique stack ID in one query.
 	// A node may disappear after the pull request query; in that case, leaving
 	// Stack nil preserves the best snapshot this non-atomic operation obtained.
 	resolvedStacksByID, err := c.pullRequestStacksByID(ctx, stackIDsToResolve)
@@ -177,7 +177,7 @@ func (c *Gateway) PullRequestsForStackUpdate(
 	return pullRequests, nil
 }
 
-// pullRequestStacksByID loads every ordered open member of each native stack.
+// pullRequestStacksByID loads every ordered member of each native stack.
 // The first page for all stacks is batched; stacks larger than one GraphQL page
 // are completed with per-stack continuation queries.
 func (c *Gateway) pullRequestStacksByID(
@@ -240,11 +240,12 @@ func (c *Gateway) pullRequestStacksByID(
 		for pageNum := 1; ; pageNum++ {
 			for _, entry := range entries.Nodes {
 				pullRequest := entry.PullRequest
-				if pullRequest == nil || pullRequest.State != PullRequestStateOpen {
+				if pullRequest == nil {
 					continue
 				}
 				stack.Members = append(stack.Members, PullRequestStackMember{
 					Number: pullRequest.Number,
+					State:  pullRequest.State,
 					Locked: pullRequest.MergeQueueEntry != nil ||
 						pullRequest.AutoMergeRequest != nil,
 				})
