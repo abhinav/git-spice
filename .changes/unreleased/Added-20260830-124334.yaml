@@ -1,0 +1,3 @@
+kind: Added
+body: 'repo sync: Other worktrees may be detached before deleting their merged branches by enabling `spice.repoSync.detachWorktrees`.'
+time: 2026-08-30T12:43:34.419724-07:00

@@ -1098,6 +1098,19 @@ $$gs repo sync$$ will skip closed CRs entirely
 and log an informational message about the closed CR being ignored.
 The branch will remain on the system.
 
+### spice.repoSync.detachWorktrees
+
+<!-- gs:version unreleased -->
+
+Whether $$gs repo sync$$ detaches other worktrees
+before deleting their merged branches.
+
+The default is `false`.
+When set to `true`,
+git-spice leaves each affected worktree at its current commit
+with staged, unstaged, and untracked changes intact,
+then deletes the merged branch.
+
 ### spice.submit.web
 
 <!-- gs:version v0.8.0 -->

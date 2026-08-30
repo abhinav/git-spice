@@ -26,3 +26,6 @@ Global Flags:
 Configuration (🔧):
   spice.repoSync.closedChanges    How to handle closed change requests. One of
                                   'ask' and 'ignore'.
+  spice.repoSync.detachWorktrees
+                                  Detach other worktrees before deleting their
+                                  merged branches.
