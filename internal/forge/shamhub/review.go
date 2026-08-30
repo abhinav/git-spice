@@ -1,6 +1,7 @@
 package shamhub
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -746,7 +747,7 @@ func (sh *ShamHub) reviewCommentOutdated(
 		return false, fmt.Errorf("diff reviewed revision: %w", err)
 	}
 
-	patch, err := reviewdiff.Parse(out)
+	patch, err := reviewdiff.Parse(bytes.NewReader(out))
 	if err != nil {
 		return false, fmt.Errorf("parse reviewed revision diff: %w", err)
 	}
