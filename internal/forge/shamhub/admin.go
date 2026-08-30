@@ -1,6 +1,7 @@
 package shamhub
 
 import (
+	"cmp"
 	"context"
 	json "encoding/json/v2"
 	"errors"
@@ -72,6 +73,10 @@ var (
 	_ = shamhubRESTHandler(
 		"GET /_shamhub/admin/dump/changes/{number}",
 		(*ShamHub).handleAdminDumpChange,
+	)
+	_ = shamhubRESTHandler(
+		"GET /_shamhub/admin/dump/stacks/{owner}/{repo}",
+		(*ShamHub).handleAdminDumpStacks,
 	)
 	_ = shamhubHTTPHandler(
 		"GET /_shamhub/admin/dump/comments",
@@ -629,6 +634,34 @@ func (sh *ShamHub) handleAdminDumpChange(
 
 type adminDumpCommentsResponse struct {
 	Comments []*ChangeComment `json:"comments"`
+}
+
+type adminDumpStacksRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+}
+
+type adminDumpStacksResponse struct {
+	Changes []stackChange `json:"changes"`
+}
+
+// Stack dumps return stored native relationships for script assertions.
+func (sh *ShamHub) handleAdminDumpStacks(
+	_ context.Context,
+	req adminDumpStacksRequest,
+) (*adminDumpStacksResponse, error) {
+	sh.mu.RLock()
+	defer sh.mu.RUnlock()
+
+	bases := sh.stackBases[repoID{Owner: req.Owner, Name: req.Repo}]
+	changes := make([]stackChange, 0, len(bases))
+	for number, base := range bases {
+		changes = append(changes, stackChange{Number: number, Base: base})
+	}
+	slices.SortFunc(changes, func(a, b stackChange) int {
+		return cmp.Compare(a.Number, b.Number)
+	})
+	return &adminDumpStacksResponse{Changes: changes}, nil
 }
 
 // Comment dumps keep repeated change query parameters for script ergonomics.

@@ -48,6 +48,11 @@ type ShamHub struct {
 	feedbackSubmissions []shamFeedbackSubmission // all feedback submissions
 	repos               []shamRepo               // all repositories
 
+	// stackBases stores the immediate base for every change represented in a
+	// native stack. A zero base number marks a root; an absent change has no
+	// native-stack relationship.
+	stackBases map[repoID]map[int]int // repository -> change -> base change
+
 	tokens             map[string]string // token -> username
 	defaultMergeMethod MergeMethod       // used when API merge requests omit a method
 	// changeTemplateErrorDelay makes the change-template endpoint return a
@@ -122,6 +127,7 @@ func New(cfg Config) (*ShamHub, error) {
 		keepGitRoot:        cfg.KeepGitRoot,
 		adminToken:         adminToken,
 		tokens:             make(map[string]string),
+		stackBases:         make(map[repoID]map[int]int),
 		defaultMergeMethod: MergeMethodMerge,
 	}
 	var err error
