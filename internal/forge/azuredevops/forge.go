@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
@@ -200,12 +201,21 @@ func (f *Forge) OpenRepository(
 	// (e.g. https://dev.azure.com/{org}),
 	// not just the base URL.
 	orgURL := f.URL() + "/" + rid.organization
-	client, err := newAzureDevOpsClient(ctx, orgURL, adt)
+	gateway, err := azuredevops.NewGateway(
+		ctx, orgURL, gatewayAuthentication(adt), adt.AccessToken, nil,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("create Azure DevOps client: %w", err)
 	}
 
-	return newRepository(ctx, f, rid, f.logger(), client)
+	return newRepository(ctx, f, rid, f.logger(), gateway)
+}
+
+func gatewayAuthentication(token *AuthenticationToken) azuredevops.Authentication {
+	if token.AuthType == AuthTypeAzureCLI {
+		return azuredevops.AuthenticationBearer
+	}
+	return azuredevops.AuthenticationPAT
 }
 
 // RepositoryID is a unique identifier for an Azure DevOps repository.

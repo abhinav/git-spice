@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 )
 
 // ChangeMergeability reports whether the pull request can be merged.
@@ -15,52 +15,41 @@ func (r *Repository) ChangeMergeability(
 ) (forge.ChangeMergeability, error) {
 	prID := mustPR(id).Number
 
-	pr, err := r.client.gitClient.GetPullRequest(ctx, git.GetPullRequestArgs{
-		Project:       new(r.project()),
-		RepositoryId:  new(r.repositoryID()),
-		PullRequestId: &prID,
-	})
+	pr, err := r.gateway.PullRequest(ctx, r.project(), r.repositoryID(), prID)
 	if err != nil {
 		return forge.ChangeMergeability{},
 			fmt.Errorf("get pull request %d: %w", prID, err)
 	}
 
-	if pr.IsDraft != nil && *pr.IsDraft {
+	if pr.Draft {
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityBlocked,
 			Reason: forge.ChangeMergeabilityReasonDraft,
 		}, nil
 	}
 
-	if pr.MergeStatus == nil {
-		return forge.ChangeMergeability{
-			State:  forge.ChangeMergeabilityUnknown,
-			Reason: forge.ChangeMergeabilityReasonUnknown,
-		}, nil
-	}
-
-	switch *pr.MergeStatus {
-	case git.PullRequestAsyncStatusValues.Succeeded:
+	switch pr.MergeStatus {
+	case azuredevops.MergeStatusSucceeded:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityReady,
 			Reason: forge.ChangeMergeabilityReasonUnknown,
 		}, nil
-	case git.PullRequestAsyncStatusValues.Conflicts:
+	case azuredevops.MergeStatusConflicts:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityBlocked,
 			Reason: forge.ChangeMergeabilityReasonConflicts,
 		}, nil
-	case git.PullRequestAsyncStatusValues.RejectedByPolicy:
+	case azuredevops.MergeStatusRejectedByPolicy:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityBlocked,
 			Reason: forge.ChangeMergeabilityReasonPolicy,
 		}, nil
-	case git.PullRequestAsyncStatusValues.Failure:
+	case azuredevops.MergeStatusFailure:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityBlocked,
 			Reason: forge.ChangeMergeabilityReasonUnknown,
 		}, nil
-	case git.PullRequestAsyncStatusValues.Queued:
+	case azuredevops.MergeStatusQueued:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityWaiting,
 			Reason: forge.ChangeMergeabilityReasonUnknown,

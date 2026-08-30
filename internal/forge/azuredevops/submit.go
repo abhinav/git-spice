@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 )
 
 const _unsupportedAssigneesWarning = "Azure DevOps does not support PR assignees; " +
@@ -24,16 +24,14 @@ func (r *Repository) SubmitChange(
 	sourceRef := "refs/heads/" + req.Head
 	targetRef := "refs/heads/" + req.Base
 
-	createArgs := git.CreatePullRequestArgs{
-		Project:      new(r.project()),
-		RepositoryId: new(r.repositoryID()),
-		GitPullRequestToCreate: &git.GitPullRequest{
-			Title:         &req.Subject,
-			Description:   &req.Body,
-			SourceRefName: &sourceRef,
-			TargetRefName: &targetRef,
-			IsDraft:       &req.Draft,
-		},
+	createInput := azuredevops.CreatePullRequestInput{
+		Project:     r.project(),
+		Repository:  r.repositoryID(),
+		Title:       req.Subject,
+		Description: req.Body,
+		SourceRef:   sourceRef,
+		TargetRef:   targetRef,
+		Draft:       req.Draft,
 	}
 	if req.PushRepository != nil {
 		pushRepository, err := r.getRepository(ctx, req.PushRepository)
@@ -42,12 +40,10 @@ func (r *Repository) SubmitChange(
 				"resolve push repository: %w", err,
 			)
 		}
-		createArgs.GitPullRequestToCreate.ForkSource = &git.GitForkRef{
-			Repository: pushRepository,
-		}
+		createInput.ForkSource = pushRepository
 	}
 
-	pr, err := r.client.gitClient.CreatePullRequest(ctx, createArgs)
+	pr, err := r.gateway.CreatePullRequest(ctx, &createInput)
 	if err != nil {
 		if exists, existsErr := r.refExists(ctx, req.Base); existsErr == nil && !exists {
 			return forge.SubmitChangeResult{}, fmt.Errorf(
@@ -58,10 +54,7 @@ func (r *Repository) SubmitChange(
 		return forge.SubmitChangeResult{}, fmt.Errorf("create pull request: %w", err)
 	}
 
-	prID := 0
-	if pr.PullRequestId != nil {
-		prID = *pr.PullRequestId
-	}
+	prID := pr.ID
 
 	r.log.Debug("Created pull request",
 		"pr", prID,
@@ -90,22 +83,11 @@ func (r *Repository) warnUnsupportedSubmitAssignees(req forge.SubmitChangeReques
 
 func (r *Repository) refExists(ctx context.Context, branch string) (bool, error) {
 	filter := "heads/" + strings.TrimPrefix(branch, "refs/heads/")
-	top := 10
-	refs, err := r.client.gitClient.GetRefs(ctx, git.GetRefsArgs{
-		Project:      new(r.project()),
-		RepositoryId: new(r.repositoryID()),
-		Filter:       &filter,
-		Top:          &top,
-	})
+	exists, err := r.gateway.RefExists(
+		ctx, r.project(), r.repositoryID(), filter,
+	)
 	if err != nil {
 		return false, fmt.Errorf("get refs: %w", err)
 	}
-
-	want := "refs/" + filter
-	for _, ref := range refs.Value {
-		if ref.Name != nil && *ref.Name == want {
-			return true, nil
-		}
-	}
-	return false, nil
+	return exists, nil
 }

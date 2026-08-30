@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
-	internalgit "go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
+	"go.abhg.dev/gs/internal/git"
 )
 
 // ChangeStatuses retrieves compact statuses for the given changes in bulk.
@@ -21,25 +21,13 @@ func (r *Repository) ChangeStatuses(
 	for i, id := range ids {
 		prID := mustPR(id).Number
 
-		pr, err := r.client.gitClient.GetPullRequest(ctx, git.GetPullRequestArgs{
-			Project:       new(r.project()),
-			RepositoryId:  new(r.repositoryID()),
-			PullRequestId: &prID,
-		})
+		pr, err := r.gateway.PullRequest(ctx, r.project(), r.repositoryID(), prID)
 		if err != nil {
 			return nil, fmt.Errorf("get pull request %d: %w", prID, err)
 		}
 
-		statuses[i].State = forge.ChangeOpen
-		if pr.Status != nil {
-			statuses[i].State = mapPRStatusToChangeState(*pr.Status)
-		}
-		if pr.LastMergeSourceCommit != nil &&
-			pr.LastMergeSourceCommit.CommitId != nil {
-			statuses[i].HeadHash = internalgit.Hash(
-				*pr.LastMergeSourceCommit.CommitId,
-			)
-		}
+		statuses[i].State = mapPRStatusToChangeState(pr.Status)
+		statuses[i].HeadHash = git.Hash(pr.HeadCommit)
 	}
 
 	return statuses, nil
@@ -58,13 +46,13 @@ func (r *Repository) ChangeChecks(
 
 // mapPRStatusToChangeState maps an Azure DevOps PR status
 // to a forge.ChangeState.
-func mapPRStatusToChangeState(status git.PullRequestStatus) forge.ChangeState {
+func mapPRStatusToChangeState(status azuredevops.PullRequestStatus) forge.ChangeState {
 	switch status {
-	case git.PullRequestStatusValues.Active:
+	case azuredevops.PullRequestStatusActive:
 		return forge.ChangeOpen
-	case git.PullRequestStatusValues.Completed:
+	case azuredevops.PullRequestStatusCompleted:
 		return forge.ChangeMerged
-	case git.PullRequestStatusValues.Abandoned:
+	case azuredevops.PullRequestStatusAbandoned:
 		return forge.ChangeClosed
 	default:
 		// NotSet or unknown status - treat as open.

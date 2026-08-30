@@ -15,11 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/fixturetest"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/cassette"
 	"gopkg.in/yaml.v3"
@@ -160,11 +160,12 @@ func TestIntegration(t *testing.T) {
 		SetCommentsPageSize:   func(testing.TB, int) {},
 		BaseBranchMayBeAbsent: false,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
-			client, err := newAzureDevOpsClientWithHTTPClient(
+			gateway, err := azuredevops.NewGateway(
 				t.Context(),
 				baseURL+"/"+organization,
-				authToken,
-				httpClient,
+				gatewayAuthentication(authToken),
+				authToken.AccessToken,
+				&azuredevops.Options{HTTPClient: httpClient},
 			)
 			require.NoError(t, err)
 
@@ -173,7 +174,7 @@ func TestIntegration(t *testing.T) {
 				&azureForge,
 				repoID,
 				silogtest.New(t),
-				client,
+				gateway,
 			)
 			require.NoError(t, err)
 			repo.reviewerIDs = map[string]string{reviewer: reviewerID}
@@ -191,55 +192,39 @@ func TestIntegration(t *testing.T) {
 func mergeChange(t *testing.T, repo *Repository, pr *PR) error {
 	t.Helper()
 
-	pullRequest, err := repo.client.gitClient.GetPullRequest(
-		t.Context(),
-		git.GetPullRequestArgs{
-			Project:       new(repo.project()),
-			RepositoryId:  new(repo.repositoryID()),
-			PullRequestId: &pr.Number,
-		},
+	pullRequest, err := repo.gateway.PullRequest(
+		t.Context(), repo.project(), repo.repositoryID(), pr.Number,
 	)
 	if err != nil {
 		return fmt.Errorf("get pull request: %w", err)
 	}
 
 	deleteSourceBranch := false
-	mergeStrategy := git.GitPullRequestMergeStrategyValues.NoFastForward
-	status := git.PullRequestStatusValues.Completed
-	_, err = repo.client.gitClient.UpdatePullRequest(
-		t.Context(),
-		git.UpdatePullRequestArgs{
-			Project:       new(repo.project()),
-			RepositoryId:  new(repo.repositoryID()),
-			PullRequestId: &pr.Number,
-			GitPullRequestToUpdate: &git.GitPullRequest{
-				Status:                &status,
-				LastMergeSourceCommit: pullRequest.LastMergeSourceCommit,
-				CompletionOptions: &git.GitPullRequestCompletionOptions{
-					DeleteSourceBranch: &deleteSourceBranch,
-					MergeStrategy:      &mergeStrategy,
-				},
-			},
+	status := azuredevops.PullRequestStatusCompleted
+	err = repo.gateway.UpdatePullRequest(t.Context(), &azuredevops.UpdatePullRequestInput{
+		Project:       repo.project(),
+		Repository:    repo.repositoryID(),
+		ID:            pr.Number,
+		Status:        &status,
+		HeadCommit:    pullRequest.HeadCommit,
+		HeadCommitURL: pullRequest.HeadCommitURL,
+		Completion: &azuredevops.CompletionOptions{
+			MergeMethod:  azuredevops.MergeMethodNoFastForward,
+			DeleteSource: &deleteSourceBranch,
 		},
-	)
+	})
 	if err != nil {
 		return fmt.Errorf("update pull request: %w", err)
 	}
 
 	for range 30 {
-		pullRequest, err := repo.client.gitClient.GetPullRequest(
-			t.Context(),
-			git.GetPullRequestArgs{
-				Project:       new(repo.project()),
-				RepositoryId:  new(repo.repositoryID()),
-				PullRequestId: &pr.Number,
-			},
+		pullRequest, err := repo.gateway.PullRequest(
+			t.Context(), repo.project(), repo.repositoryID(), pr.Number,
 		)
 		if err != nil {
 			return fmt.Errorf("get pull request: %w", err)
 		}
-		if pullRequest.Status != nil &&
-			*pullRequest.Status == git.PullRequestStatusValues.Completed {
+		if pullRequest.Status == azuredevops.PullRequestStatusCompleted {
 			return nil
 		}
 		time.Sleep(500 * time.Millisecond)
@@ -250,18 +235,13 @@ func mergeChange(t *testing.T, repo *Repository, pr *PR) error {
 func closeChange(t *testing.T, repo *Repository, pr *PR) error {
 	t.Helper()
 
-	status := git.PullRequestStatusValues.Abandoned
-	_, err := repo.client.gitClient.UpdatePullRequest(
-		t.Context(),
-		git.UpdatePullRequestArgs{
-			Project:       new(repo.project()),
-			RepositoryId:  new(repo.repositoryID()),
-			PullRequestId: &pr.Number,
-			GitPullRequestToUpdate: &git.GitPullRequest{
-				Status: &status,
-			},
-		},
-	)
+	status := azuredevops.PullRequestStatusAbandoned
+	err := repo.gateway.UpdatePullRequest(t.Context(), &azuredevops.UpdatePullRequestInput{
+		Project:    repo.project(),
+		Repository: repo.repositoryID(),
+		ID:         pr.Number,
+		Status:     &status,
+	})
 	if err != nil {
 		return fmt.Errorf("update pull request: %w", err)
 	}

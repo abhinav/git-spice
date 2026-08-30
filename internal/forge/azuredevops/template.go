@@ -2,13 +2,13 @@ package azuredevops
 
 import (
 	"context"
-	"net/http"
+	"errors"
 	"path"
 	"strings"
 	"sync"
 
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -71,7 +71,7 @@ func (r *Repository) ListChangeTemplates(
 		g.Go(func() error {
 			template, err := r.getChangeTemplateFile(ctx, filePath)
 			if err != nil {
-				if isAzureStatus(err, http.StatusNotFound) {
+				if errors.Is(err, azuredevops.ErrNotFound) {
 					return nil
 				}
 				// A single candidate path failing (e.g. a
@@ -90,7 +90,7 @@ func (r *Repository) ListChangeTemplates(
 		g.Go(func() error {
 			dirTemplates, err := r.listChangeTemplateDir(ctx, dir)
 			if err != nil {
-				if isAzureStatus(err, http.StatusNotFound) {
+				if errors.Is(err, azuredevops.ErrNotFound) {
 					return nil
 				}
 				r.log.Warn("could not list change templates",
@@ -113,33 +113,27 @@ func (r *Repository) listChangeTemplateDir(
 	ctx context.Context,
 	dir string,
 ) ([]*forge.ChangeTemplate, error) {
-	recursionLevel := git.VersionControlRecursionTypeValues.OneLevel
-	items, err := r.client.gitClient.GetItems(ctx, git.GetItemsArgs{
-		Project:        new(r.project()),
-		RepositoryId:   new(r.repositoryID()),
-		ScopePath:      &dir,
-		RecursionLevel: &recursionLevel,
-	})
+	items, err := r.gateway.Items(ctx, r.project(), r.repositoryID(), dir)
 	if err != nil {
 		return nil, err
 	}
 
 	var templates []*forge.ChangeTemplate
-	for _, item := range *items {
-		if item.Path == nil || (item.IsFolder != nil && *item.IsFolder) {
+	for _, item := range items {
+		if item.Path == "" || item.Folder {
 			continue
 		}
-		if !isChangeTemplateFile(*item.Path) {
+		if !isChangeTemplateFile(item.Path) {
 			continue
 		}
 
-		template, err := r.getChangeTemplateFile(ctx, *item.Path)
+		template, err := r.getChangeTemplateFile(ctx, item.Path)
 		if err != nil {
-			if isAzureStatus(err, http.StatusNotFound) {
+			if errors.Is(err, azuredevops.ErrNotFound) {
 				continue
 			}
 			r.log.Warn("could not fetch change template",
-				"path", *item.Path, "error", err)
+				"path", item.Path, "error", err)
 			continue
 		}
 		templates = append(templates, template)
@@ -151,24 +145,14 @@ func (r *Repository) getChangeTemplateFile(
 	ctx context.Context,
 	filePath string,
 ) (*forge.ChangeTemplate, error) {
-	includeContent := true
-	item, err := r.client.gitClient.GetItem(ctx, git.GetItemArgs{
-		Project:        new(r.project()),
-		RepositoryId:   new(r.repositoryID()),
-		Path:           &filePath,
-		IncludeContent: &includeContent,
-	})
+	item, err := r.gateway.Item(ctx, r.project(), r.repositoryID(), filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	var body string
-	if item.Content != nil {
-		body = *item.Content
-	}
 	return &forge.ChangeTemplate{
 		Filename: path.Base(strings.TrimPrefix(filePath, "/")),
-		Body:     body,
+		Body:     item.Content,
 	}, nil
 }
 

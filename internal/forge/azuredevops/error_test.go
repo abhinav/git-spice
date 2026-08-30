@@ -1,40 +1,23 @@
 package azuredevops
 
 import (
-	"context"
 	"errors"
-	"net/http"
 	"testing"
 
-	azdo "github.com/microsoft/azure-devops-go-api/azuredevops/v7"
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 	"go.uber.org/mock/gomock"
 )
 
 func TestRepository_SubmitChange_unsubmittedBase(t *testing.T) {
 	createErr := errors.New("target branch not found")
-	client := NewMockGitClient(gomock.NewController(t))
-	client.EXPECT().CreatePullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			_ git.CreatePullRequestArgs,
-		) (*git.GitPullRequest, error) {
-			return nil, createErr
-		},
-	)
-	client.EXPECT().GetRefs(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			_ context.Context,
-			_ git.GetRefsArgs,
-		) (*git.GetRefsResponseValue, error) {
-			return &git.GetRefsResponseValue{}, nil
-		},
-	)
+	gateway := NewMockAzureDevOpsGateway(gomock.NewController(t))
+	gateway.EXPECT().CreatePullRequest(gomock.Any(), gomock.Any()).Return(nil, createErr)
+	gateway.EXPECT().RefExists(gomock.Any(), "myproject", "myrepo", "heads/missing-base").Return(false, nil)
 
-	repo := newTestRepository(client)
+	repo := newTestRepository(gateway)
 
 	_, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
 		Subject: "Test PR",
@@ -47,18 +30,12 @@ func TestRepository_SubmitChange_unsubmittedBase(t *testing.T) {
 }
 
 func TestRepository_UpdateChangeComment_notFound(t *testing.T) {
-	statusCode := http.StatusNotFound
-	client := NewMockGitClient(gomock.NewController(t))
-	client.EXPECT().GetComment(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(
-			context.Context,
-			git.GetCommentArgs,
-		) (*git.Comment, error) {
-			return nil, azdo.WrappedError{StatusCode: &statusCode}
-		},
-	)
+	gateway := NewMockAzureDevOpsGateway(gomock.NewController(t))
+	gateway.EXPECT().CommentExists(
+		gomock.Any(), "myproject", "myrepo", 42, 7, 3,
+	).Return(false, azuredevops.ErrNotFound)
 
-	repo := newTestRepository(client)
+	repo := newTestRepository(gateway)
 
 	err := repo.UpdateChangeComment(t.Context(), &PRComment{
 		PRID:      42,

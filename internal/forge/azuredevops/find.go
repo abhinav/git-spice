@@ -5,10 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
-	internalgit "go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
+	"go.abhg.dev/gs/internal/git"
 )
 
 // FindChangesByBranch searches for pull requests with the given branch
@@ -21,17 +20,17 @@ func (r *Repository) FindChangesByBranch(
 	sourceRef := "refs/heads/" + branch
 
 	// Map state filter.
-	var status *git.PullRequestStatus
+	var status azuredevops.PullRequestStatus
 	switch opts.State {
 	case forge.ChangeOpen:
-		status = new(git.PullRequestStatusValues.Active)
+		status = azuredevops.PullRequestStatusActive
 	case forge.ChangeMerged:
-		status = new(git.PullRequestStatusValues.Completed)
+		status = azuredevops.PullRequestStatusCompleted
 	case forge.ChangeClosed:
-		status = new(git.PullRequestStatusValues.Abandoned)
+		status = azuredevops.PullRequestStatusAbandoned
 	default:
 		// All states.
-		status = new(git.PullRequestStatusValues.All)
+		status = azuredevops.PullRequestStatusUnknown
 	}
 
 	limit := opts.Limit
@@ -39,39 +38,33 @@ func (r *Repository) FindChangesByBranch(
 		limit = 10
 	}
 
-	var sourceRepositoryID *uuid.UUID
+	var sourceRepositoryID string
 	if opts.PushRepository != nil {
 		pushRepository, err := r.getRepository(ctx, opts.PushRepository)
 		if err != nil {
 			return nil, fmt.Errorf("resolve push repository: %w", err)
 		}
-		if pushRepository.Id == nil {
+		if pushRepository.ID == "" {
 			return nil, errors.New("push repository has no ID")
 		}
-		sourceRepositoryID = pushRepository.Id
+		sourceRepositoryID = pushRepository.ID
 	}
 
-	prs, err := r.client.gitClient.GetPullRequests(ctx, git.GetPullRequestsArgs{
-		Project:      new(r.project()),
-		RepositoryId: new(r.repositoryID()),
-		SearchCriteria: &git.GitPullRequestSearchCriteria{
-			SourceRefName:      &sourceRef,
-			SourceRepositoryId: sourceRepositoryID,
-			Status:             status,
-		},
-		Top: &limit,
+	prs, err := r.gateway.FindPullRequests(ctx, &azuredevops.FindPullRequestsInput{
+		Project:          r.project(),
+		Repository:       r.repositoryID(),
+		SourceRef:        sourceRef,
+		SourceRepository: sourceRepositoryID,
+		Status:           status,
+		Limit:            limit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get pull requests: %w", err)
 	}
 
-	if prs == nil {
-		return nil, nil
-	}
-
-	items := make([]*forge.FindChangeItem, 0, len(*prs))
-	for _, pr := range *prs {
-		item, err := r.prToFindChangeItem(ctx, &pr)
+	items := make([]*forge.FindChangeItem, 0, len(prs))
+	for _, pr := range prs {
+		item, err := r.prToFindChangeItem(ctx, pr)
 		if err != nil {
 			r.log.Warn("Failed to convert PR", "err", err)
 			continue
@@ -89,11 +82,7 @@ func (r *Repository) FindChangeByID(
 ) (*forge.FindChangeItem, error) {
 	prID := mustPR(id).Number
 
-	pr, err := r.client.gitClient.GetPullRequest(ctx, git.GetPullRequestArgs{
-		Project:       new(r.project()),
-		RepositoryId:  new(r.repositoryID()),
-		PullRequestId: &prID,
-	})
+	pr, err := r.gateway.PullRequest(ctx, r.project(), r.repositoryID(), prID)
 	if err != nil {
 		return nil, fmt.Errorf("get pull request: %w", err)
 	}
@@ -103,41 +92,19 @@ func (r *Repository) FindChangeByID(
 
 func (r *Repository) prToFindChangeItem(
 	ctx context.Context,
-	pr *git.GitPullRequest,
+	pr *azuredevops.PullRequest,
 ) (*forge.FindChangeItem, error) {
 	if pr == nil {
 		return nil, errors.New("nil pull request")
 	}
 
-	prID := 0
-	if pr.PullRequestId != nil {
-		prID = *pr.PullRequestId
-	}
+	prID := pr.ID
 
-	state := forge.ChangeOpen
-	if pr.Status != nil {
-		state = mapPRStatusToChangeState(*pr.Status)
-	}
+	state := mapPRStatusToChangeState(pr.Status)
 
-	var headHash internalgit.Hash
-	if pr.LastMergeSourceCommit != nil && pr.LastMergeSourceCommit.CommitId != nil {
-		headHash = internalgit.Hash(*pr.LastMergeSourceCommit.CommitId)
-	}
+	headHash := git.Hash(pr.HeadCommit)
 
-	baseName := ""
-	if pr.TargetRefName != nil {
-		baseName = trimRefPrefix(*pr.TargetRefName)
-	}
-
-	subject := ""
-	if pr.Title != nil {
-		subject = *pr.Title
-	}
-
-	isDraft := false
-	if pr.IsDraft != nil {
-		isDraft = *pr.IsDraft
-	}
+	baseName := trimRefPrefix(pr.TargetRef)
 
 	labels, err := r.prLabels(ctx, prID, pr.Labels)
 	if err != nil {
@@ -153,10 +120,10 @@ func (r *Repository) prToFindChangeItem(
 		ID:        &PR{Number: prID},
 		URL:       r.repoID.ChangeURL(&PR{Number: prID}),
 		State:     state,
-		Subject:   subject,
+		Subject:   pr.Title,
 		HeadHash:  headHash,
 		BaseName:  baseName,
-		Draft:     isDraft,
+		Draft:     pr.Draft,
 		Labels:    labels,
 		Reviewers: reviewers,
 	}, nil

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/azuredevops"
 )
 
 // EditChange updates an existing pull request.
@@ -17,31 +17,30 @@ func (r *Repository) EditChange(
 	prID := mustPR(id).Number
 
 	// Build the update payload.
-	update := &git.GitPullRequest{}
+	update := &azuredevops.UpdatePullRequestInput{
+		Project:    r.project(),
+		Repository: r.repositoryID(),
+		ID:         prID,
+	}
 	hasUpdate := false
 
 	// Update target (base) branch.
 	if opts.Base != "" {
 		targetRef := "refs/heads/" + opts.Base
-		update.TargetRefName = &targetRef
+		update.TargetRef = &targetRef
 		hasUpdate = true
 	}
 
 	// Update draft status.
 	if opts.Draft != nil {
-		update.IsDraft = opts.Draft
+		update.Draft = opts.Draft
 		hasUpdate = true
 	}
 
 	r.warnUnsupportedEditAssignees(opts)
 
 	if hasUpdate {
-		_, err := r.client.gitClient.UpdatePullRequest(ctx, git.UpdatePullRequestArgs{
-			Project:                new(r.project()),
-			RepositoryId:           new(r.repositoryID()),
-			PullRequestId:          &prID,
-			GitPullRequestToUpdate: update,
-		})
+		err := r.gateway.UpdatePullRequest(ctx, update)
 		if err != nil {
 			return fmt.Errorf("update pull request: %w", err)
 		}
