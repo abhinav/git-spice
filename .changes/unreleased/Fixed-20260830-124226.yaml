@@ -1,0 +1,6 @@
+kind: Fixed
+body: >-
+  Bitbucket Cloud: `branch submit` now reuses an existing pull request for an
+  unchanged branch instead of creating a duplicate pull request on a suffixed
+  branch or pushing the branch again.
+time: 2026-08-30T12:42:26.103623-07:00
