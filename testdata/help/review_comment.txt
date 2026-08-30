@@ -19,8 +19,8 @@ Arguments:
 
 Flags:
   -m, --message=MSG      Comment body. Opens editor if not provided.
-      --[no-]draft       Save the comment as a local draft instead of posting
-                         it.
+      --[no-]draft       Whether to save the comment as a local draft or post
+                         it. (🔧 spice.reviewComment.draft)
   -b, --branch=BRANCH    Branch to comment on. Defaults to the current branch.
 
 Global Flags:
