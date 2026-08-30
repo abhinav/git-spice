@@ -222,3 +222,49 @@ func TestReviewDraftsFollowBranchLifecycle(t *testing.T) {
 		assert.Nil(t, drafts)
 	})
 }
+
+func TestReviewDraftScopes(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
+		DB:    storage.NewDB(make(storage.MapBackend)),
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name: "feature",
+		Base: "main",
+	}))
+	require.NoError(t, tx.Commit(ctx, "track feature"))
+
+	fileDraft, err := store.AddReviewDraft(
+		ctx,
+		"feature",
+		review.Draft{
+			ID:     0,
+			Body:   "file body",
+			Anchor: review.Anchor{Path: "main.go"},
+		},
+	)
+	require.NoError(t, err)
+	rangeDraft, err := store.AddReviewDraft(
+		ctx,
+		"feature",
+		review.Draft{
+			ID:   0,
+			Body: "range body",
+			Anchor: review.Anchor{
+				Path:      "main.go",
+				StartLine: 2,
+				EndLine:   4,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	drafts, err := store.LoadReviewDrafts(ctx, "feature")
+	require.NoError(t, err)
+	assert.Equal(t, []review.Draft{fileDraft, rangeDraft}, drafts)
+}

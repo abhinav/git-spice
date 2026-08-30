@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/silog"
@@ -193,6 +194,7 @@ func reviewDraftToJSON(draft review.Draft) jsonComment {
 		comment.Scope = "file"
 	} else {
 		comment.Scope = "line"
+		comment.Side = forge.ReviewThreadSideRight.String()
 		if !draft.Anchor.IsLine() {
 			comment.Range = &jsonCommentRange{
 				Start: draft.Anchor.StartLine,
