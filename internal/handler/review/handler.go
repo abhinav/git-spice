@@ -65,8 +65,8 @@ var _ Service = (*spice.Service)(nil)
 type Store interface {
 	AddReviewDraft(context.Context, string, review.Draft) (review.Draft, error)
 	LoadReviewDrafts(context.Context, string) ([]review.Draft, error)
+	RemovePublishedReviewDrafts(context.Context, string, []review.Draft) error
 	UpdateReviewDraftBody(context.Context, string, review.DraftID, string) error
-	ClearReviewDrafts(context.Context, string) error
 }
 
 var _ Store = (*state.Store)(nil)

@@ -125,6 +125,8 @@ func Block(statements ...Statement) Statement {
 	for i, statement := range statements {
 		must.Bef(statement.apply != nil, "statement %d is a zero Statement", i)
 	}
+	// A program may outlive the slice used to construct it.
+	// Keep its replay sequence independent of later caller mutations.
 	statements = slices.Clone(statements)
 	return Statement{
 		apply: func(document jsontext.Value) (jsontext.Value, struct{}, error) {
@@ -182,67 +184,82 @@ func Decode[T any](path jsontext.Pointer) Program[T] {
 // Set returns a statement that adds or replaces the value at path.
 // Parent objects addressed by path must exist.
 func Set(path jsontext.Pointer, value jsontext.Value) Statement {
-	return newSetStatement(path, value, setUpsert)
+	return newMutationStatement(path, value, mutationUpsert)
 }
 
 // SetIfAbsent returns a statement that adds value only when path is absent.
 // Parent objects addressed by path must exist.
 func SetIfAbsent(path jsontext.Pointer, value jsontext.Value) Statement {
-	return newSetStatement(path, value, setIfAbsent)
+	return newMutationStatement(path, value, mutationIfAbsent)
 }
 
 // Insert returns a statement that adds value at path.
 // It returns [ErrExist] when path already exists.
 // Parent objects addressed by path must exist.
 func Insert(path jsontext.Pointer, value jsontext.Value) Statement {
-	return newSetStatement(path, value, setInsert)
+	return newMutationStatement(path, value, mutationInsert)
 }
 
 // Replace returns a statement that replaces the value at path.
 // It returns [ErrNotExist] when path does not exist.
 func Replace(path jsontext.Pointer, value jsontext.Value) Statement {
-	return newSetStatement(path, value, setReplace)
+	return newMutationStatement(path, value, mutationReplace)
 }
 
-type setMode uint8
+// Delete returns a statement that removes the object member at path.
+// It returns [ErrNotExist] when path does not exist.
+func Delete(path jsontext.Pointer) Statement {
+	must.Bef(path.IsValid(), "invalid JSON pointer %q", path)
+	must.Bef(path != "", "delete path must not be the document root")
+	return newMutationStatement(path, nil, mutationDelete)
+}
+
+type mutationMode uint8
 
 const (
-	setUpsert setMode = iota
-	setIfAbsent
-	setInsert
-	setReplace
+	mutationUpsert mutationMode = iota
+	mutationIfAbsent
+	mutationInsert
+	mutationReplace
+	mutationDelete
 )
 
-func newSetStatement(
+func newMutationStatement(
 	path jsontext.Pointer,
 	value jsontext.Value,
-	mode setMode,
+	mode mutationMode,
 ) Statement {
 	must.Bef(path.IsValid(), "invalid JSON pointer %q", path)
-	must.Bef(value.IsValid(), "invalid JSON mutation value")
-	value = value.Clone()
+	if mode != mutationDelete {
+		must.Bef(value.IsValid(), "invalid JSON mutation value")
+		// Programs may run after the caller reuses value's backing buffer.
+		// Capture immutable input so every replay applies the same mutation.
+		value = value.Clone()
+	}
 	return Statement{
 		apply: func(document jsontext.Value) (jsontext.Value, struct{}, error) {
-			updated, err := applySet(document, path, value, mode)
+			updated, err := applyMutation(document, path, value, mode)
 			return updated, struct{}{}, err
 		},
 	}
 }
 
-func applySet(
+func applyMutation(
 	document jsontext.Value,
 	pointer jsontext.Pointer,
 	replacement jsontext.Value,
-	mode setMode,
+	mode mutationMode,
 ) (jsontext.Value, error) {
 	operation := "set"
 	switch mode {
-	case setIfAbsent:
+	case mutationIfAbsent:
 		operation = "set if absent"
-	case setInsert:
+	case mutationInsert:
 		operation = "insert"
-	case setReplace:
+	case mutationReplace:
 		operation = "replace"
+	case mutationDelete:
+		operation = "delete"
 	}
 
 	next, stop := iter.Pull(pointer.Tokens())
@@ -270,20 +287,24 @@ func rewriteAtPath(
 	document jsontext.Value,
 	next func() (string, bool),
 	replacement jsontext.Value,
-	mode setMode,
+	mode mutationMode,
 ) (updated jsontext.Value, changed bool, _ error) {
 	member, ok := next()
 	if !ok {
+		// An empty pointer selects the complete document,
+		// so no object traversal or ancestor reconstruction is necessary.
 		switch mode {
-		case setInsert:
+		case mutationInsert:
 			return nil, false, ErrExist
-		case setIfAbsent:
+		case mutationIfAbsent:
 			return document, false, nil
 		default:
 			return replacement.Clone(), true, nil
 		}
 	}
 
+	// SetIfAbsent returns the complete input when the target already exists,
+	// even though traversal may have started encoding object prefixes.
 	original := document
 	var ancestors []*objectRewriteFrame
 
@@ -309,6 +330,12 @@ func rewriteAtPath(
 		if !found {
 			return nil, false, ErrNotExist
 		}
+		// advanceTo leaves the selected name unwritten.
+		// This member is an ancestor, so preserve its name now.
+		// Unwinding supplies its transformed child value.
+		if err := frame.encoder.WriteToken(jsontext.String(member)); err != nil {
+			return nil, false, fmt.Errorf("write member %q: %w", member, err)
+		}
 
 		child, err := frame.decoder.ReadValue()
 		if err != nil {
@@ -329,7 +356,7 @@ func rewriteAtPath(
 		return nil, false, err
 	}
 	if !found {
-		if mode == setReplace {
+		if mode == mutationReplace || mode == mutationDelete {
 			return nil, false, ErrNotExist
 		}
 		if err := frame.encoder.WriteToken(jsontext.String(member)); err != nil {
@@ -340,16 +367,24 @@ func rewriteAtPath(
 		}
 	} else {
 		switch mode {
-		case setInsert:
+		case mutationInsert:
 			return nil, false, ErrExist
-		case setIfAbsent:
+		case mutationIfAbsent:
 			return original, false, nil
 		}
+		// advanceTo left the selected name unwritten.
+		// Replacement modes emit the name and new value;
+		// deletion emits neither part of the member.
 		if err := frame.decoder.SkipValue(); err != nil {
 			return nil, false, fmt.Errorf("skip member %q: %w", member, err)
 		}
-		if err := frame.encoder.WriteValue(replacement); err != nil {
-			return nil, false, fmt.Errorf("write member %q: %w", member, err)
+		if mode != mutationDelete {
+			if err := frame.encoder.WriteToken(jsontext.String(member)); err != nil {
+				return nil, false, fmt.Errorf("write member %q: %w", member, err)
+			}
+			if err := frame.encoder.WriteValue(replacement); err != nil {
+				return nil, false, fmt.Errorf("write member %q: %w", member, err)
+			}
 		}
 	}
 	updated, err = frame.finish()
@@ -405,34 +440,41 @@ func newObjectRewriteFrame(document jsontext.Value) (*objectRewriteFrame, error)
 }
 
 // advanceTo copies complete object members until member is found.
-// When it succeeds, it has copied the member name but leaves its value unread.
+// When it succeeds, it leaves both the member name and value unwritten,
+// with the decoder positioned before the value.
 func (f *objectRewriteFrame) advanceTo(member string) (bool, error) {
 	for f.decoder.PeekKind() != '}' {
 		name, err := f.decoder.ReadToken()
 		if err != nil {
 			return false, fmt.Errorf("read member name: %w", err)
 		}
+		nameString := name.String()
+		if nameString == member {
+			// Leave the selected name out of the encoded prefix.
+			// The caller decides whether to preserve it with a transformed value
+			// or omit the complete member for deletion.
+			return true, nil
+		}
 		if err := f.encoder.WriteToken(name); err != nil {
 			return false, fmt.Errorf("write member name: %w", err)
-		}
-		if name.String() == member {
-			return true, nil
 		}
 
 		// Read and write each unrelated value before the decoder advances
 		// and invalidates the raw JSON returned by ReadValue.
 		value, err := f.decoder.ReadValue()
 		if err != nil {
-			return false, fmt.Errorf("read member %q: %w", name.String(), err)
+			return false, fmt.Errorf("read member %q: %w", nameString, err)
 		}
 		if err := f.encoder.WriteValue(value); err != nil {
-			return false, fmt.Errorf("write member %q: %w", name.String(), err)
+			return false, fmt.Errorf("write member %q: %w", nameString, err)
 		}
 	}
 	return false, nil
 }
 
-// finish copies the members after the selected value and closes the object.
+// finish closes a frame after its selected member has been resolved.
+// The decoder must be positioned after the member's original value;
+// the encoder must already contain the chosen replacement or omission.
 func (f *objectRewriteFrame) finish() (jsontext.Value, error) {
 	for f.decoder.PeekKind() != '}' {
 		name, err := f.decoder.ReadToken()
@@ -442,13 +484,14 @@ func (f *objectRewriteFrame) finish() (jsontext.Value, error) {
 		if err := f.encoder.WriteToken(name); err != nil {
 			return nil, fmt.Errorf("write member name: %w", err)
 		}
+		nameString := name.String()
 
 		value, err := f.decoder.ReadValue()
 		if err != nil {
-			return nil, fmt.Errorf("read member %q: %w", name.String(), err)
+			return nil, fmt.Errorf("read member %q: %w", nameString, err)
 		}
 		if err := f.encoder.WriteValue(value); err != nil {
-			return nil, fmt.Errorf("write member %q: %w", name.String(), err)
+			return nil, fmt.Errorf("write member %q: %w", nameString, err)
 		}
 	}
 
@@ -492,6 +535,8 @@ func InsertAutoIncrement(
 	must.Bef(value.IsValid(), "invalid JSON mutation value")
 	value = value.Clone()
 
+	// Derive the member path inside Then so every replay uses the counter value
+	// read from that replay's document.
 	return Increment(counter).Then(func(id int64) Program[int64] {
 		member := object.AppendToken(strconv.FormatInt(id, 10))
 		return Block(
@@ -554,6 +599,7 @@ func lookupObjectMember(
 	if _, err := decoder.ReadToken(); err != nil {
 		return nil, false, err
 	}
+	// Scan only this object level and avoid decoding unrelated values.
 	for decoder.PeekKind() != '}' {
 		name, err := decoder.ReadToken()
 		if err != nil {
@@ -574,6 +620,8 @@ func lookupObjectMember(
 		if !ok {
 			return value, true, nil
 		}
+		// Lookup does not rebuild ancestors,
+		// so it can recurse into the selected value and return directly.
 		return lookupObjectMember(value, childMember, next)
 	}
 	return nil, false, nil

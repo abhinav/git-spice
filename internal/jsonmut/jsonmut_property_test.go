@@ -69,12 +69,16 @@ func testMutationMatchesReference(t *rapid.T) {
 	path := drawJSONPath(t, document)
 	replacement := jsonValueGenerator(maxGeneratedJSONDepth).
 		Draw(t, "replacement")
-	mode := rapid.SampledFrom([]referenceMutation{
+	modes := []referenceMutation{
 		referenceSet,
 		referenceSetIfAbsent,
 		referenceInsert,
 		referenceReplace,
-	}).Draw(t, "mode")
+	}
+	if len(path) > 0 {
+		modes = append(modes, referenceDelete)
+	}
+	mode := rapid.SampledFrom(modes).Draw(t, "mode")
 
 	documentJSON := marshalJSON(t, document)
 	original := documentJSON.Clone()
@@ -119,6 +123,7 @@ const (
 	referenceSetIfAbsent
 	referenceInsert
 	referenceReplace
+	referenceDelete
 )
 
 func (m referenceMutation) statement(
@@ -134,6 +139,8 @@ func (m referenceMutation) statement(
 		return jsonmut.Insert(path, value)
 	case referenceReplace:
 		return jsonmut.Replace(path, value)
+	case referenceDelete:
+		return jsonmut.Delete(path)
 	default:
 		panic("unknown reference mutation")
 	}
@@ -185,6 +192,8 @@ func referenceMutate(
 			return nil, referenceAlreadyExists
 		case referenceSetIfAbsent:
 			return document, referenceNoError
+		case referenceDelete:
+			panic("delete path must not be the document root")
 		default:
 			return replacement, referenceNoError
 		}
@@ -203,6 +212,11 @@ func referenceMutate(
 		case mode == referenceReplace && !exists:
 			return nil, referenceDoesNotExist
 		case mode == referenceSetIfAbsent && exists:
+			return document, referenceNoError
+		case mode == referenceDelete && !exists:
+			return nil, referenceDoesNotExist
+		case mode == referenceDelete:
+			delete(object, member)
 			return document, referenceNoError
 		default:
 			object[member] = replacement

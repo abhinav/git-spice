@@ -107,8 +107,12 @@ func (h *Handler) PublishDrafts(
 	); err != nil {
 		return fmt.Errorf("submit review: %w", err)
 	}
-	if err := h.Store.ClearReviewDrafts(ctx, req.Branch); err != nil {
-		return fmt.Errorf("clear draft comments: %w", err)
+	if err := h.Store.RemovePublishedReviewDrafts(
+		ctx,
+		req.Branch,
+		drafts,
+	); err != nil {
+		return fmt.Errorf("remove published draft comments: %w", err)
 	}
 
 	h.Log.Infof(
