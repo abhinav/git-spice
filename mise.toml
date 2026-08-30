@@ -122,6 +122,10 @@ depends = ["lint:*"]
 wait_for = ["generate"]
 description = "Run all lint checks"
 
+[tasks."lint:design-readme"]
+run = "./tools/update-adr-table.sh --diff"
+description = "Ensure the design decision table is up to date"
+
 [tasks."lint:golangci-lint"]
 run = "golangci-lint run"
 description = "Run golangci-lint"
