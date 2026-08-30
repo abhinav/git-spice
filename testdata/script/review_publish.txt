@@ -49,6 +49,10 @@ stderr '--approve and --request-changes'
 gs review list --draft-only
 stderr 'No draft comments'
 
+# Published draft IDs are not reused.
+gs review comment feature.go:3 -m 'One more thought.'
+stderr 'Drafted comment 3 on feature.go:3'
+
 -- repo/feature.go --
 package main
 
