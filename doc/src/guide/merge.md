@@ -296,6 +296,25 @@ text "feat5" color red
 {gray}# merges all branches into main{reset}
 ```
 
+### Native stack merges
+
+<!-- gs:version unreleased -->
+
+When the forge supports atomic stack merges,
+git-spice merges each eligible linear range as one operation.
+Every branch in the range must be fully restacked,
+and its remote base, head branch, and head commit must match
+before git-spice requests the merge.
+If the forge does not support the range operation,
+git-spice falls back to the usual bottom-up merge sequence.
+
+A divergent selection is split at each fork.
+The shared linear range is merged first,
+then each divergent path continues independently after repository sync.
+If an unselected branch diverges from a merged GitHub native stack,
+git-spice also runs repository sync after the range merge
+to retarget the surviving branch and its pull request.
+
 ## Custom merge processes
 
 git-spice uses the Forge's merge APIs to merge CRs.
