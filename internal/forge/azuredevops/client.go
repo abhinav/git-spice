@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
+	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/core"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/identity"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/location"
@@ -15,9 +16,32 @@ import (
 // azureDevOpsClient wraps the Azure DevOps SDK clients.
 type azureDevOpsClient struct {
 	connection     *azuredevops.Connection
-	gitClient      git.Client
+	gitClient      gitClient
 	identityClient identity.Client
 	currentUserID  func(context.Context) (string, error)
+}
+
+//go:generate go tool mockgen -destination=mocks_test.go -package=azuredevops -write_package_comment=false -typed -mock_names=gitClient=MockGitClient . gitClient
+
+type gitClient interface {
+	CreatePullRequest(context.Context, git.CreatePullRequestArgs) (*git.GitPullRequest, error)
+	CreatePullRequestLabel(context.Context, git.CreatePullRequestLabelArgs) (*core.WebApiTagDefinition, error)
+	CreatePullRequestReviewer(context.Context, git.CreatePullRequestReviewerArgs) (*git.IdentityRefWithVote, error)
+	CreateThread(context.Context, git.CreateThreadArgs) (*git.GitPullRequestCommentThread, error)
+	CreateUnmaterializedPullRequestReviewer(context.Context, git.CreateUnmaterializedPullRequestReviewerArgs) (*git.IdentityRefWithVote, error)
+	DeleteComment(context.Context, git.DeleteCommentArgs) error
+	GetComment(context.Context, git.GetCommentArgs) (*git.Comment, error)
+	GetItem(context.Context, git.GetItemArgs) (*git.GitItem, error)
+	GetItems(context.Context, git.GetItemsArgs) (*[]git.GitItem, error)
+	GetPullRequest(context.Context, git.GetPullRequestArgs) (*git.GitPullRequest, error)
+	GetPullRequestLabels(context.Context, git.GetPullRequestLabelsArgs) (*[]core.WebApiTagDefinition, error)
+	GetPullRequestReviewers(context.Context, git.GetPullRequestReviewersArgs) (*[]git.IdentityRefWithVote, error)
+	GetPullRequests(context.Context, git.GetPullRequestsArgs) (*[]git.GitPullRequest, error)
+	GetRefs(context.Context, git.GetRefsArgs) (*git.GetRefsResponseValue, error)
+	GetRepository(context.Context, git.GetRepositoryArgs) (*git.GitRepository, error)
+	GetThreads(context.Context, git.GetThreadsArgs) (*[]git.GitPullRequestCommentThread, error)
+	UpdateComment(context.Context, git.UpdateCommentArgs) (*git.Comment, error)
+	UpdatePullRequest(context.Context, git.UpdatePullRequestArgs) (*git.GitPullRequest, error)
 }
 
 func newAzureDevOpsClient(

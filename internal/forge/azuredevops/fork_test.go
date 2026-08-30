@@ -9,12 +9,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.uber.org/mock/gomock"
 )
 
 func TestRepository_SubmitChange_pushRepository(t *testing.T) {
 	var gotArgs git.CreatePullRequestArgs
-	stub := &stubGitClient{
-		getRepository: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().GetRepository(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.GetRepositoryArgs,
 		) (*git.GitRepository, error) {
@@ -22,15 +24,17 @@ func TestRepository_SubmitChange_pushRepository(t *testing.T) {
 			assert.Equal(t, "myfork", *args.RepositoryId)
 			return &git.GitRepository{Name: new("myfork")}, nil
 		},
-		createPullRequest: func(
+	)
+	client.EXPECT().CreatePullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.CreatePullRequestArgs,
 		) (*git.GitPullRequest, error) {
 			gotArgs = args
 			return &git.GitPullRequest{PullRequestId: new(42)}, nil
 		},
-	}
-	repo := newTestRepository(stub)
+	)
+	repo := newTestRepository(client)
 	pushRepository := &RepositoryID{
 		organization: "myorg",
 		project:      "forkproject",
@@ -52,24 +56,25 @@ func TestRepository_SubmitChange_pushRepository(t *testing.T) {
 
 func TestRepository_FindChangesByBranch_pushRepository(t *testing.T) {
 	var gotArgs git.GetPullRequestsArgs
-	stub := &stubGitClient{
-		getPullRequests: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().GetPullRequests(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.GetPullRequestsArgs,
 		) (*[]git.GitPullRequest, error) {
 			gotArgs = args
 			return new([]git.GitPullRequest), nil
 		},
-	}
-	repo := newTestRepository(stub)
+	)
+	repo := newTestRepository(client)
 	pushRepositoryID := uuid.MustParse("22222222-2222-2222-2222-222222222222")
 	pushRepository := &RepositoryID{
 		organization: "myorg",
 		project:      "forkproject",
 		repository:   "myfork",
 	}
-	repo.client.gitClient = &stubGitClient{
-		getRepository: func(
+	client.EXPECT().GetRepository(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.GetRepositoryArgs,
 		) (*git.GitRepository, error) {
@@ -77,8 +82,7 @@ func TestRepository_FindChangesByBranch_pushRepository(t *testing.T) {
 			assert.Equal(t, "myfork", *args.RepositoryId)
 			return &git.GitRepository{Id: &pushRepositoryID}, nil
 		},
-		getPullRequests: stub.getPullRequests,
-	}
+	)
 
 	_, err := repo.FindChangesByBranch(t.Context(), "feature", forge.FindChangesOptions{
 		PushRepository: pushRepository,

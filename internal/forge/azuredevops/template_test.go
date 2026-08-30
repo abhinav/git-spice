@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.uber.org/mock/gomock"
 )
 
 func TestForge_ChangeTemplatePaths_includesAdditionalTemplateDirectory(t *testing.T) {
@@ -30,8 +31,9 @@ func TestForge_ChangeTemplatePaths_includesAdditionalTemplateDirectory(t *testin
 func TestRepository_ListChangeTemplates(t *testing.T) {
 	emptyContent := ""
 	nonEmptyContent := "Template body\n"
-	stub := &stubGitClient{
-		getItems: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().GetItems(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+		func(
 			_ context.Context,
 			args git.GetItemsArgs,
 		) (*[]git.GitItem, error) {
@@ -55,7 +57,9 @@ func TestRepository_ListChangeTemplates(t *testing.T) {
 				{Path: new("/.azuredevops/pull_request_template/branches"), IsFolder: &isFolder},
 			}, nil
 		},
-		getItem: func(
+	)
+	client.EXPECT().GetItem(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+		func(
 			_ context.Context,
 			args git.GetItemArgs,
 		) (*git.GitItem, error) {
@@ -72,9 +76,9 @@ func TestRepository_ListChangeTemplates(t *testing.T) {
 				return nil, azdo.WrappedError{StatusCode: &statusCode}
 			}
 		},
-	}
+	)
 
-	repo := newTestRepository(stub)
+	repo := newTestRepository(client)
 
 	templates, err := repo.ListChangeTemplates(t.Context())
 	require.NoError(t, err)
@@ -91,8 +95,9 @@ func TestRepository_ListChangeTemplates(t *testing.T) {
 // (e.g. a timeout while listing other candidate paths).
 func TestRepository_ListChangeTemplates_partialFailure(t *testing.T) {
 	templateContent := "Template body\n"
-	stub := &stubGitClient{
-		getItem: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().GetItem(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+		func(
 			_ context.Context,
 			args git.GetItemArgs,
 		) (*git.GitItem, error) {
@@ -106,16 +111,18 @@ func TestRepository_ListChangeTemplates_partialFailure(t *testing.T) {
 				return nil, azdo.WrappedError{StatusCode: &statusCode}
 			}
 		},
-		getItems: func(
+	)
+	client.EXPECT().GetItems(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+		func(
 			_ context.Context,
 			_ git.GetItemsArgs,
 		) (*[]git.GitItem, error) {
 			statusCode := 404
 			return nil, azdo.WrappedError{StatusCode: &statusCode}
 		},
-	}
+	)
 
-	repo := newTestRepository(stub)
+	repo := newTestRepository(client)
 
 	templates, err := repo.ListChangeTemplates(t.Context())
 	require.NoError(t, err)

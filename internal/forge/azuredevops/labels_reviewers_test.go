@@ -9,27 +9,33 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.uber.org/mock/gomock"
 )
 
 func TestRepository_SubmitChange_addsLabelsAndReviewers(t *testing.T) {
 	var gotLabels []string
 	var gotReviewers []string
-	stub := &stubGitClient{
-		createPullRequest: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().CreatePullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			_ git.CreatePullRequestArgs,
 		) (*git.GitPullRequest, error) {
 			prID := 42
 			return &git.GitPullRequest{PullRequestId: &prID}, nil
 		},
-		createPullRequestLabel: func(
+	)
+	client.EXPECT().CreatePullRequestLabel(gomock.Any(), gomock.Any()).Times(2).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.CreatePullRequestLabelArgs,
 		) (*core.WebApiTagDefinition, error) {
 			gotLabels = append(gotLabels, *args.Label.Name)
 			return &core.WebApiTagDefinition{Name: args.Label.Name}, nil
 		},
-		createUnmaterializedPullRequestReviewer: func(
+	)
+	client.EXPECT().CreateUnmaterializedPullRequestReviewer(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.CreateUnmaterializedPullRequestReviewerArgs,
 		) (*git.IdentityRefWithVote, error) {
@@ -37,9 +43,9 @@ func TestRepository_SubmitChange_addsLabelsAndReviewers(t *testing.T) {
 			assert.Equal(t, 0, *args.Reviewer.Vote)
 			return args.Reviewer, nil
 		},
-	}
+	)
 
-	repo := newTestRepository(stub)
+	repo := newTestRepository(client)
 
 	_, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
 		Subject:   "Test PR",
@@ -57,24 +63,27 @@ func TestRepository_SubmitChange_addsLabelsAndReviewers(t *testing.T) {
 func TestRepository_EditChange_addsLabelsAndReviewers(t *testing.T) {
 	var gotLabels []string
 	var gotReviewers []string
-	stub := &stubGitClient{
-		createPullRequestLabel: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().CreatePullRequestLabel(gomock.Any(), gomock.Any()).Times(2).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.CreatePullRequestLabelArgs,
 		) (*core.WebApiTagDefinition, error) {
 			gotLabels = append(gotLabels, *args.Label.Name)
 			return &core.WebApiTagDefinition{Name: args.Label.Name}, nil
 		},
-		createUnmaterializedPullRequestReviewer: func(
+	)
+	client.EXPECT().CreateUnmaterializedPullRequestReviewer(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.CreateUnmaterializedPullRequestReviewerArgs,
 		) (*git.IdentityRefWithVote, error) {
 			gotReviewers = append(gotReviewers, *args.Reviewer.UniqueName)
 			return args.Reviewer, nil
 		},
-	}
+	)
 
-	repo := newTestRepository(stub)
+	repo := newTestRepository(client)
 
 	err := repo.EditChange(t.Context(), &PR{Number: 42}, forge.EditChangeOptions{
 		AddLabels:    []string{"label1", "label2"},
@@ -93,8 +102,9 @@ func TestRepository_FindChangeByID_fetchesLabelsAndReviewers(t *testing.T) {
 	baseRef := "refs/heads/main"
 	labelName := "label1"
 	reviewerName := "reviewer@example.com"
-	stub := &stubGitClient{
-		getPullRequest: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().GetPullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			_ git.GetPullRequestArgs,
 		) (*git.GitPullRequest, error) {
@@ -105,7 +115,9 @@ func TestRepository_FindChangeByID_fetchesLabelsAndReviewers(t *testing.T) {
 				TargetRefName: &baseRef,
 			}, nil
 		},
-		getPullRequestLabels: func(
+	)
+	client.EXPECT().GetPullRequestLabels(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			_ git.GetPullRequestLabelsArgs,
 		) (*[]core.WebApiTagDefinition, error) {
@@ -113,7 +125,9 @@ func TestRepository_FindChangeByID_fetchesLabelsAndReviewers(t *testing.T) {
 				{Name: &labelName},
 			}, nil
 		},
-		getPullRequestReviewers: func(
+	)
+	client.EXPECT().GetPullRequestReviewers(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			_ git.GetPullRequestReviewersArgs,
 		) (*[]git.IdentityRefWithVote, error) {
@@ -121,9 +135,9 @@ func TestRepository_FindChangeByID_fetchesLabelsAndReviewers(t *testing.T) {
 				{UniqueName: &reviewerName},
 			}, nil
 		},
-	}
+	)
 
-	repo := newTestRepository(stub)
+	repo := newTestRepository(client)
 
 	got, err := repo.FindChangeByID(t.Context(), &PR{Number: 42})
 	require.NoError(t, err)
@@ -139,8 +153,9 @@ func TestRepository_FindChangeByID_includesLabelsAndReviewers(t *testing.T) {
 	baseRef := "refs/heads/main"
 	labelName := "label1"
 	reviewerName := "reviewer@example.com"
-	stub := &stubGitClient{
-		getPullRequest: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().GetPullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			_ git.GetPullRequestArgs,
 		) (*git.GitPullRequest, error) {
@@ -157,9 +172,9 @@ func TestRepository_FindChangeByID_includesLabelsAndReviewers(t *testing.T) {
 				},
 			}, nil
 		},
-	}
+	)
 
-	repo := newTestRepository(stub)
+	repo := newTestRepository(client)
 
 	got, err := repo.FindChangeByID(t.Context(), &PR{Number: 42})
 	require.NoError(t, err)

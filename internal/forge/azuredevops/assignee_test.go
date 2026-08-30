@@ -10,13 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/silog"
+	"go.uber.org/mock/gomock"
 )
 
 func TestRepository_SubmitChange_ignoresAssignees(t *testing.T) {
 	var logBuffer bytes.Buffer
 	var gotArgs git.CreatePullRequestArgs
-	stub := &stubGitClient{
-		createPullRequest: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().CreatePullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.CreatePullRequestArgs,
 		) (*git.GitPullRequest, error) {
@@ -24,9 +26,9 @@ func TestRepository_SubmitChange_ignoresAssignees(t *testing.T) {
 			prID := 42
 			return &git.GitPullRequest{PullRequestId: &prID}, nil
 		},
-	}
+	)
 
-	repo := newTestRepository(stub)
+	repo := newTestRepository(client)
 	repo.log = silog.New(&logBuffer, nil)
 
 	_, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
@@ -45,9 +47,7 @@ func TestRepository_SubmitChange_ignoresAssignees(t *testing.T) {
 
 func TestRepository_EditChange_ignoresAssignees(t *testing.T) {
 	var logBuffer bytes.Buffer
-	stub := &stubGitClient{}
-
-	repo := newTestRepository(stub)
+	repo := newTestRepository(NewMockGitClient(gomock.NewController(t)))
 	repo.log = silog.New(&logBuffer, nil)
 
 	err := repo.EditChange(t.Context(), &PR{Number: 42}, forge.EditChangeOptions{
@@ -62,17 +62,18 @@ func TestRepository_EditChange_ignoresAssignees(t *testing.T) {
 func TestRepository_EditChange_ignoresAssigneesWithOtherUpdates(t *testing.T) {
 	var logBuffer bytes.Buffer
 	var gotArgs git.UpdatePullRequestArgs
-	stub := &stubGitClient{
-		updatePullRequest: func(
+	client := NewMockGitClient(gomock.NewController(t))
+	client.EXPECT().UpdatePullRequest(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(
 			_ context.Context,
 			args git.UpdatePullRequestArgs,
 		) (*git.GitPullRequest, error) {
 			gotArgs = args
 			return &git.GitPullRequest{}, nil
 		},
-	}
+	)
 
-	repo := newTestRepository(stub)
+	repo := newTestRepository(client)
 	repo.log = silog.New(&logBuffer, nil)
 
 	err := repo.EditChange(t.Context(), &PR{Number: 42}, forge.EditChangeOptions{
