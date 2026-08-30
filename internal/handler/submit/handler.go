@@ -236,19 +236,29 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		return err
 	}
 
+	resolvedUpstreams := make(map[string]string)
 	var branchesToComment []string
 	for _, branch := range req.Branches {
+		branchInfo, ok := graph.Lookup(branch)
+		if !ok {
+			return fmt.Errorf("submit branch %s: lookup branch: %w", branch, state.ErrNotExist)
+		}
+
 		// Shallow copy the options because submitBranch may modify them.
 		opts := *opts
 		status, err := h.submitBranch(
 			ctx,
 			graph,
 			branch,
-			&submitOptions{Options: &opts},
+			&submitOptions{
+				Options:      &opts,
+				upstreamBase: resolvedUpstreams[branchInfo.Base],
+			},
 		)
 		if err != nil {
 			return fmt.Errorf("submit branch %s: %w", branch, err)
 		}
+		resolvedUpstreams[branch] = status.upstreamBranch
 		if status.Submitted {
 			branchesToComment = append(branchesToComment, branch)
 		}
@@ -347,12 +357,15 @@ type submitStatus struct {
 	// If yes, comments will be added or updated
 	// based on the NavComment option.
 	Submitted bool
+
+	upstreamBranch string
 }
 
 type submitOptions struct {
 	*Options
 
-	Title, Body string
+	Title, Body  string
+	upstreamBase string
 }
 
 func (h *Handler) submitBranch(
@@ -405,6 +418,9 @@ func (h *Handler) submitBranch(
 	if err != nil {
 		return status, fmt.Errorf("resolve upstream branch: %w", err)
 	}
+	defer func() {
+		status.upstreamBranch = upstreamBranch
+	}()
 
 	// Similarly, if the branch's base has a different name upstream,
 	// use that name instead.
@@ -414,7 +430,7 @@ func (h *Handler) submitBranch(
 		if !ok {
 			return status, fmt.Errorf("lookup base branch: %w", state.ErrNotExist)
 		}
-		upstreamBase = cmp.Or(baseBranch.UpstreamBranch, branch.Base)
+		upstreamBase = cmp.Or(opts.upstreamBase, baseBranch.UpstreamBranch, branch.Base)
 	}
 
 	var existingChange *forge.FindChangeItem
