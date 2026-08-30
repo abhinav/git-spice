@@ -2,12 +2,14 @@ package azuredevops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/identity"
+	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/location"
 )
 
 // azureDevOpsClient wraps the Azure DevOps SDK clients.
@@ -15,6 +17,7 @@ type azureDevOpsClient struct {
 	connection     *azuredevops.Connection
 	gitClient      git.Client
 	identityClient identity.Client
+	currentUserID  func(context.Context) (string, error)
 }
 
 func newAzureDevOpsClient(
@@ -36,6 +39,7 @@ func newAzureDevOpsClientWithHTTPClient(
 	var (
 		gitClient      git.Client
 		identityClient identity.Client
+		locationClient location.Client
 	)
 	if httpClient == nil {
 		var err error
@@ -44,6 +48,7 @@ func newAzureDevOpsClientWithHTTPClient(
 			return nil, fmt.Errorf("create git client: %w", err)
 		}
 		identityClient, _ = identity.NewClient(ctx, connection)
+		locationClient = location.NewClient(ctx, connection)
 	} else {
 		client := azuredevops.NewClientWithOptions(
 			connection,
@@ -52,12 +57,25 @@ func newAzureDevOpsClientWithHTTPClient(
 		)
 		gitClient = &git.ClientImpl{Client: *client}
 		identityClient = &identity.ClientImpl{Client: *client}
+		locationClient = &location.ClientImpl{Client: *client}
 	}
 
 	return &azureDevOpsClient{
 		connection:     connection,
 		gitClient:      gitClient,
 		identityClient: identityClient,
+		currentUserID: func(ctx context.Context) (string, error) {
+			data, err := locationClient.GetConnectionData(
+				ctx, location.GetConnectionDataArgs{},
+			)
+			if err != nil {
+				return "", fmt.Errorf("get connection data: %w", err)
+			}
+			if data.AuthenticatedUser == nil || data.AuthenticatedUser.Id == nil {
+				return "", errors.New("connection data has no authenticated user")
+			}
+			return data.AuthenticatedUser.Id.String(), nil
+		},
 	}, nil
 }
 

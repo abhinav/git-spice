@@ -7,10 +7,46 @@ import (
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/core"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
+	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/webapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/silog"
 )
+
+func TestRepository_ListChangeComments_canUpdate(t *testing.T) {
+	currentUserID := "11111111-1111-1111-1111-111111111111"
+	otherUserID := "22222222-2222-2222-2222-222222222222"
+	stub := &stubGitClient{
+		getThreads: func(
+			context.Context,
+			git.GetThreadsArgs,
+		) (*[]git.GitPullRequestCommentThread, error) {
+			return &[]git.GitPullRequestCommentThread{{
+				Id: new(7),
+				Comments: &[]git.Comment{
+					{Id: new(1), Content: new("mine"), Author: &webapi.IdentityRef{Id: &currentUserID}},
+					{Id: new(2), Content: new("theirs"), Author: &webapi.IdentityRef{Id: &otherUserID}},
+				},
+			}}, nil
+		},
+	}
+	repo := newTestRepository(stub)
+	repo.client.currentUserID = func(context.Context) (string, error) {
+		return currentUserID, nil
+	}
+
+	var got []*forge.ListChangeCommentItem
+	for item, err := range repo.ListChangeComments(
+		t.Context(), &PR{Number: 42}, &forge.ListChangeCommentsOptions{CanUpdate: true},
+	) {
+		require.NoError(t, err)
+		got = append(got, item)
+	}
+
+	require.Len(t, got, 1)
+	assert.Equal(t, "mine", got[0].Body)
+}
 
 func TestRepository_PostChangeComment_threadStatus(t *testing.T) {
 	// Navigation comments should be posted
@@ -142,6 +178,10 @@ type stubGitClient struct {
 		context.Context,
 		git.GetPullRequestArgs,
 	) (*git.GitPullRequest, error)
+	getThreads func(
+		context.Context,
+		git.GetThreadsArgs,
+	) (*[]git.GitPullRequestCommentThread, error)
 	getPullRequests func(
 		context.Context,
 		git.GetPullRequestsArgs,
@@ -215,6 +255,13 @@ func (s *stubGitClient) GetPullRequest(
 	args git.GetPullRequestArgs,
 ) (*git.GitPullRequest, error) {
 	return s.getPullRequest(ctx, args)
+}
+
+func (s *stubGitClient) GetThreads(
+	ctx context.Context,
+	args git.GetThreadsArgs,
+) (*[]git.GitPullRequestCommentThread, error) {
+	return s.getThreads(ctx, args)
 }
 
 func (s *stubGitClient) GetPullRequests(

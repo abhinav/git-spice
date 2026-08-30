@@ -144,6 +144,15 @@ func (r *Repository) ListChangeComments(
 ) iter.Seq2[*forge.ListChangeCommentItem, error] {
 	return func(yield func(*forge.ListChangeCommentItem, error) bool) {
 		prID := mustPR(id).Number
+		var currentUserID string
+		if opts != nil && opts.CanUpdate {
+			var err error
+			currentUserID, err = r.client.currentUserID(ctx)
+			if err != nil {
+				yield(nil, fmt.Errorf("get current user: %w", err))
+				return
+			}
+		}
 
 		threads, err := r.client.gitClient.GetThreads(ctx, git.GetThreadsArgs{
 			Project:       new(r.project()),
@@ -207,10 +216,12 @@ func (r *Repository) ListChangeComments(
 						}
 					}
 
-					// Filter by can update.
-					// For Azure DevOps, we'd need to check if the current user
-					// is the author. For now, skip this filter.
-					// TODO: Implement CanUpdate filter.
+					if opts.CanUpdate &&
+						(comment.Author == nil ||
+							comment.Author.Id == nil ||
+							*comment.Author.Id != currentUserID) {
+						continue
+					}
 				}
 
 				item := &forge.ListChangeCommentItem{
