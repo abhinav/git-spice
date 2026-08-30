@@ -14,16 +14,16 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-type branchCommentSubmitStagedCmd struct {
+type reviewPublishCmd struct {
 	Body           string `placeholder:"BODY" help:"Overall review body."`
 	Approve        bool   `help:"Mark the review as approved."`
 	RequestChanges bool   `name:"request-changes" help:"Mark the review as requesting changes."`
-	Branch         string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch to submit staged comments for. Defaults to current branch."`
+	Branch         string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch whose draft comments to publish. Defaults to the current branch."`
 }
 
-func (*branchCommentSubmitStagedCmd) Help() string {
+func (*reviewPublishCmd) Help() string {
 	return text.Dedent(`
-		Submits all staged comments for the current branch
+		Publishes all draft comments for the current branch
 		as a single review on the change request.
 
 		Use --approve or --request-changes
@@ -34,7 +34,7 @@ func (*branchCommentSubmitStagedCmd) Help() string {
 	`)
 }
 
-func (cmd *branchCommentSubmitStagedCmd) Run(
+func (cmd *reviewPublishCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	wt *git.Worktree,
@@ -53,14 +53,14 @@ func (cmd *branchCommentSubmitStagedCmd) Run(
 
 	staged, err := store.LoadStagedComments(ctx, branch)
 	if err != nil {
-		return fmt.Errorf("load staged comments: %w", err)
+		return fmt.Errorf("load draft comments: %w", err)
 	}
 	if staged == nil {
 		staged = &state.StagedComments{}
 	}
 
 	if len(staged.Comments) == 0 {
-		log.Infof("No staged comments to submit.")
+		log.Infof("No draft comments to publish.")
 		return nil
 	}
 
@@ -90,7 +90,7 @@ func (cmd *branchCommentSubmitStagedCmd) Run(
 		)
 	}
 
-	// Staged roots use the selected branch's postimage coordinates. Parse the
+	// Draft roots use the selected branch's postimage coordinates. Parse the
 	// review diff once so every root can be checked before anything is sent.
 	diff, err := wt.DiffBranchBytes(ctx, b.Base, branch)
 	if err != nil {
@@ -121,7 +121,7 @@ func (cmd *branchCommentSubmitStagedCmd) Run(
 		if sc.ThreadID != "" {
 			threadID, err := reviewThreadID(threadIDs, sc.ThreadID)
 			if err != nil {
-				return fmt.Errorf("sc-%d: %w", sc.ID, err)
+				return fmt.Errorf("draft %d: %w", sc.ID, err)
 			}
 			comments = append(comments,
 				forge.SubmitReviewCommentRequest{
@@ -134,7 +134,7 @@ func (cmd *branchCommentSubmitStagedCmd) Run(
 
 		if !patch.ContainsLine(sc.File, sc.Line) {
 			return fmt.Errorf(
-				"sc-%d: review diff does not contain %s:%d",
+				"draft %d: review diff does not contain %s:%d",
 				sc.ID,
 				sc.File,
 				sc.Line,
@@ -172,11 +172,11 @@ func (cmd *branchCommentSubmitStagedCmd) Run(
 	if err := store.ClearStagedComments(
 		ctx, branch,
 	); err != nil {
-		return fmt.Errorf("clear staged comments: %w", err)
+		return fmt.Errorf("clear draft comments: %w", err)
 	}
 
 	log.Infof(
-		"Submitted %d comment(s) as review on %s.",
+		"Published %d comment(s) as review on %s.",
 		len(comments),
 		b.Change.ChangeID(),
 	)

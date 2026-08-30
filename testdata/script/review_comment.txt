@@ -1,4 +1,4 @@
-# Post an inline comment immediately with 'branch comment add'.
+# Draft and post a review comment or reply.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -24,8 +24,18 @@ gs bc -m 'Add handler' feature1
 gs branch submit --fill
 stderr 'Created #'
 
-# post an inline comment immediately
-gs branch comment add handler.go:5 -m 'This needs a context parameter.'
+# comments are drafts by default
+gs review comment handler.go:5 -m 'This needs a context parameter.'
+stderr 'Drafted comment 1'
+
+# --no-draft posts a comment immediately
+gs review comment handler.go:5 -m 'This needs a context parameter.' --no-draft
+stderr 'Posted comment'
+
+# replies follow the same draft convention
+gs review reply thread-2 -m 'Agreed.'
+stderr 'Drafted reply 2'
+gs review reply thread-2 -m 'Agreed.' --no-draft
 stderr 'Posted comment'
 
 -- repo/handler.go --

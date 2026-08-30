@@ -1,22 +1,21 @@
-Usage: gs branch (b) comment (cmt) list (ls) [flags]
+Usage: gs review list (ls) [flags]
 
-List comments on a change request
+List review comments
 
 Lists comments on the change request associated with the current branch.
 Use --branch to target a different branch.
 
-Staged comments that have not yet been submitted are shown with an 'sc-N'
-prefix.
+Draft comments are identified by a branch-local integer.
 
-Use --staged to show only staged comments. Use --unresolved to show only
+Use --draft-only to show only draft comments. Use --unresolved to show only
 unresolved comments.
 
 With --json, prints output to stdout as a stream of JSON objects.
 
 Flags:
-  -b, --branch=BRANCH    Branch to list comments for. Defaults to current
+  -b, --branch=BRANCH    Branch to list comments for. Defaults to the current
                          branch.
-      --staged           Show only staged comments.
+      --draft-only       Show only draft comments.
       --unresolved       Show only unresolved comments.
       --json             Write to stdout as a stream of JSON objects.
 

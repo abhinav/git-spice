@@ -1,4 +1,4 @@
-# List comments on a change request.
+# Edit a draft comment before publication.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -24,20 +24,17 @@ gs bc -m 'Add main' feature1
 gs branch submit --fill
 stderr 'Created #'
 
-# add an inline comment so there is something to list
-gs branch comment add main.go:3 -m 'Consider using a constant.'
-stderr 'Posted comment'
+# draft a comment
+gs review comment main.go:3 -m 'Original comment.'
+stderr 'Drafted comment 1'
 
-# list should show the comment
-gs branch comment list
-stderr 'Comments:'
-stderr 'main.go:3'
-stderr 'Consider using a constant'
+# edit the draft comment with -m
+gs review edit 1 -m 'Updated comment.'
+stderr 'Updated draft comment 1'
 
-# list on a branch with no CR should say so
-gs bc -m 'Another branch' feature2
-gs branch comment list
-stderr 'No change request'
+# verify the edit took effect by listing drafts
+gs review list --draft-only
+stderr 'Updated comment'
 
 -- repo/main.go --
 package main

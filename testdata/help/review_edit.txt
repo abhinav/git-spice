@@ -1,24 +1,20 @@
-Usage: gs branch (b) comment (cmt) edit <id> [flags]
+Usage: gs review edit <id> [flags]
 
-Edit a comment
+Edit a draft comment
 
-Edits the body of a comment.
+Edits a local draft comment.
 
-For staged comments (sc-N prefix), the comment is updated in the local staging
-area.
-
-For forge comments, the comment is updated on the remote forge.
+Use 'gs review list --draft-only' to find the branch-local draft ID.
 
 If no message is given with -m, an editor is opened with the current comment
 body pre-filled.
 
 Arguments:
-  <id>    Comment ID to edit. Use 'sc-N' for staged comments or a forge comment
-          ID.
+  <id>    Draft comment ID to edit.
 
 Flags:
   -m, --message=MSG      New comment body. Opens editor if not provided.
-  -b, --branch=BRANCH    Branch whose comments to edit. Defaults to current
+  -b, --branch=BRANCH    Branch containing the draft. Defaults to the current
                          branch.
 
 Global Flags:

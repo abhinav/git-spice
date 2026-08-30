@@ -1,0 +1,27 @@
+Usage: gs review comment <file-and-line> [flags]
+
+Draft or post a review comment
+
+Adds a review comment to the change request for the current branch. Provide the
+file and line number as file.go:42.
+
+Comments are saved as local drafts by default. Use --no-draft to post
+immediately.
+
+If no message is given with -m, an editor is opened.
+
+Arguments:
+  <file-and-line>    File and line in the form file.go:42.
+
+Flags:
+  -m, --message=MSG      Comment body. Opens editor if not provided.
+      --[no-]draft       Save the comment as a local draft instead of posting
+                         it.
+  -b, --branch=BRANCH    Branch to comment on. Defaults to the current branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

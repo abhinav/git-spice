@@ -1,4 +1,4 @@
-# Edit a staged comment before submission.
+# List comments on a change request.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -24,17 +24,20 @@ gs bc -m 'Add main' feature1
 gs branch submit --fill
 stderr 'Created #'
 
-# stage a comment
-gs branch comment stage main.go:3 -m 'Original comment.'
-stderr 'Staged comment sc-1'
+# add an inline comment so there is something to list
+gs review comment main.go:3 -m 'Consider using a constant.' --no-draft
+stderr 'Posted comment'
 
-# edit the staged comment with -m
-gs branch comment edit sc-1 -m 'Updated comment.'
-stderr 'Updated staged comment sc-1'
+# list should show the comment
+gs review list
+stderr 'Comments:'
+stderr 'main.go:3'
+stderr 'Consider using a constant'
 
-# verify the edit took effect by listing staged
-gs branch comment list --staged
-stderr 'Updated comment'
+# list on a branch with no CR should say so
+gs bc -m 'Another branch' feature2
+gs review list
+stderr 'No change request'
 
 -- repo/main.go --
 package main

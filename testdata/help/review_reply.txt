@@ -1,0 +1,26 @@
+Usage: gs review reply <thread-id> [flags]
+
+Draft or post a reply to a review thread
+
+Replies to a review thread on the change request for the current branch.
+
+Replies are saved as local drafts by default. Use --no-draft to post
+immediately.
+
+If no message is given with -m, an editor is opened.
+
+Arguments:
+  <thread-id>    Thread ID to reply to.
+
+Flags:
+  -m, --message=MSG      Reply body. Opens editor if not provided.
+      --[no-]draft       Save the reply as a local draft instead of posting it.
+  -b, --branch=BRANCH    Branch containing the thread. Defaults to the current
+                         branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
