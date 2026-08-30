@@ -210,6 +210,7 @@ func TestShamHub_FeedbackSubmissionStorage(t *testing.T) {
 	assert.Equal(t, "thread-2", reply.Comments[0].ThreadID)
 	assert.Equal(t, 4, reply.Comments[0].CommentID)
 	assert.Equal(t, "1111111111111111111111111111111111111111", sh.comments[3].CommitHash.String())
+	sh.changes[0].HeadHash = "1111111111111111111111111111111111111111"
 
 	threads, err := sh.handleListReviewThreads(t.Context(), &listReviewThreadsRequest{
 		Owner:  "alice",

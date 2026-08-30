@@ -11,6 +11,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/reviewdiff"
 )
 
 // ShamHub represents review threads in the same flat comment store as ordinary
@@ -276,6 +277,26 @@ func (sh *ShamHub) handleSubmitReview(
 	return sh.submitReview(submitter, req, rootCommitHash, time.Now())
 }
 
+// reviewRootCommitHash captures the change head selected when root creation
+// begins. That revision remains the thread's identity if the branch later moves.
+func (sh *ShamHub) reviewRootCommitHash(
+	ctx context.Context,
+	owner string,
+	repo string,
+	changeNumber int,
+	createsRoot bool,
+) (git.Hash, error) {
+	if !createsRoot {
+		return "", nil
+	}
+
+	head, err := sh.resolveReviewHead(ctx, owner, repo, changeNumber)
+	if err != nil {
+		return "", err
+	}
+	return head.Hash, nil
+}
+
 func submitReviewCreatesRoot(req *submitReviewRequest) bool {
 	for _, comment := range req.Comments {
 		if comment.ThreadID == "" {
@@ -292,52 +313,49 @@ type reviewHeadSnapshot struct {
 	Branch string
 }
 
-// reviewRootCommitHash captures the change head selected when root creation
-// begins. That revision remains the thread's identity if the branch later moves.
-func (sh *ShamHub) reviewRootCommitHash(
+// resolveReviewHead snapshots and resolves the current head of a change. Git
+// commands run after releasing the store lock because they may block.
+func (sh *ShamHub) resolveReviewHead(
 	ctx context.Context,
 	owner string,
 	repo string,
 	changeNumber int,
-	createsRoot bool,
-) (git.Hash, error) {
-	if !createsRoot {
-		return "", nil
-	}
-
+) (reviewHeadSnapshot, error) {
 	sh.mu.RLock()
 	var head reviewHeadSnapshot
+	found := false
 	for _, change := range sh.changes {
 		if change.Number != changeNumber ||
 			change.Base.Owner != owner ||
 			change.Base.Repo != repo {
 			continue
 		}
+		found = true
+		if change.Head != nil {
+			head.Owner = change.Head.Owner
+			head.Repo = change.Head.Repo
+			head.Branch = change.Head.Name
+		}
 		if change.HeadHash != "" {
 			head.Hash = git.Hash(change.HeadHash)
-			break
 		}
-		if change.Head == nil {
-			sh.mu.RUnlock()
-			return "", errors.New("change head is missing")
-		}
-		head.Owner = change.Head.Owner
-		head.Repo = change.Head.Repo
-		head.Branch = change.Head.Name
 		break
 	}
 	sh.mu.RUnlock()
 
-	if head.Hash != "" {
-		return head.Hash, nil
-	}
-	if head.Branch == "" {
-		return "", notFoundErrorf(
+	if !found {
+		return reviewHeadSnapshot{}, notFoundErrorf(
 			"change %d not found in %s/%s",
 			changeNumber,
 			owner,
 			repo,
 		)
+	}
+	if head.Hash != "" {
+		return head, nil
+	}
+	if head.Branch == "" {
+		return reviewHeadSnapshot{}, errors.New("change head is missing")
 	}
 	out, err := sh.gitCmd(
 		ctx,
@@ -347,9 +365,10 @@ func (sh *ShamHub) reviewRootCommitHash(
 		head.Branch,
 	).Output()
 	if err != nil {
-		return "", fmt.Errorf("resolve change head: %w", err)
+		return reviewHeadSnapshot{}, fmt.Errorf("resolve change head: %w", err)
 	}
-	return git.Hash(strings.TrimSpace(string(out))), nil
+	head.Hash = git.Hash(strings.TrimSpace(string(out)))
+	return head, nil
 }
 
 // submitReview records one validated feedback submission while the caller
@@ -638,25 +657,36 @@ func reviewRangeFromItem(item reviewCommentItem) forge.ReviewThreadRange {
 // handleListReviewThreads emits flat rows in storage order. Because roots are
 // stored first, the forge adapter can recover thread metadata from the first row.
 func (sh *ShamHub) handleListReviewThreads(
-	_ context.Context,
+	ctx context.Context,
 	req *listReviewThreadsRequest,
 ) (*listReviewThreadsResponse, error) {
-	sh.mu.RLock()
-	defer sh.mu.RUnlock()
-
-	if !sh.changeBelongsToRepository(req.Change, req.Owner, req.Repo) {
-		return nil, notFoundErrorf(
-			"change %d not found in %s/%s",
-			req.Change,
-			req.Owner,
-			req.Repo,
-		)
+	head, err := sh.resolveReviewHead(ctx, req.Owner, req.Repo, req.Change)
+	if err != nil {
+		return nil, err
 	}
 
-	var items []reviewCommentItem
+	sh.mu.RLock()
+	var comments []shamComment
 	for _, comment := range sh.comments {
 		if comment.Change != req.Change || comment.ThreadID == "" {
 			continue
+		}
+		comments = append(comments, comment)
+	}
+	sh.mu.RUnlock()
+
+	var items []reviewCommentItem
+	for _, comment := range comments {
+		outdated := comment.Outdated
+		if !outdated {
+			outdated, err = sh.reviewCommentOutdated(ctx, comment, head)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"compute review comment %d staleness: %w",
+					comment.ID,
+					err,
+				)
+			}
 		}
 		items = append(items, reviewCommentItem{
 			ID:         comment.ID,
@@ -670,11 +700,61 @@ func (sh *ShamHub) handleListReviewThreads(
 			Body:       comment.Body,
 			Author:     comment.Author,
 			Resolved:   comment.Resolved,
-			Outdated:   comment.Outdated,
+			Outdated:   outdated,
 			CreatedAt:  comment.CreatedAt,
 		})
 	}
 	return &listReviewThreadsResponse{Items: items}, nil
+}
+
+// reviewCommentOutdated reports whether a later change deleted any line in a
+// right-side root's inclusive range. A left-side or file-level root does not
+// identify old-side lines in the reviewed revision, so ShamHub does not infer
+// staleness for those anchors.
+func (sh *ShamHub) reviewCommentOutdated(
+	ctx context.Context,
+	comment shamComment,
+	head reviewHeadSnapshot,
+) (bool, error) {
+	reviewRange := reviewRangeFromCoordinates(
+		comment.Line,
+		comment.RangeStart,
+		comment.RangeEnd,
+	)
+	if comment.CommitHash == "" ||
+		comment.CommitHash == head.Hash ||
+		comment.Path == "" ||
+		comment.Side != forge.ReviewThreadSideRight ||
+		reviewRange.IsZero() {
+		return false, nil
+	}
+	if head.Owner == "" || head.Repo == "" {
+		return false, errors.New("change head repository is missing")
+	}
+
+	out, err := sh.gitCmd(
+		ctx,
+		head.Owner,
+		head.Repo,
+		"diff",
+		"--unified=0",
+		comment.CommitHash.String()+".."+head.Hash.String(),
+		"--",
+		comment.Path,
+	).Output()
+	if err != nil {
+		return false, fmt.Errorf("diff reviewed revision: %w", err)
+	}
+
+	patch, err := reviewdiff.Parse(out)
+	if err != nil {
+		return false, fmt.Errorf("parse reviewed revision diff: %w", err)
+	}
+	return patch.DeletesLineRange(
+		comment.Path,
+		reviewRange.StartLine,
+		reviewRange.EndLine,
+	), nil
 }
 
 // ListReviewerStates yields each reviewer's latest effective state in the
