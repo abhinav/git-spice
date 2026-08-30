@@ -27,13 +27,13 @@ gs branch submit --fill
 stderr 'Created #'
 
 # Two inline comments at different lines on the same head commit.
-gs branch comment add main.go:4 -m 'Comment on line 4.'
+gs review comment main.go:4 -m 'Comment on line 4.' --no-draft
 stderr 'Posted comment'
-gs branch comment add main.go:5 -m 'Comment on line 5.'
+gs review comment main.go:5 -m 'Comment on line 5.' --no-draft
 stderr 'Posted comment'
 
 # Both comments are fresh: neither is outdated yet.
-gs branch comment list
+gs review list
 ! stderr 'outdated'
 
 # Amend the file so line 4 changes but line 5 does not, then
@@ -45,7 +45,7 @@ gs branch submit --force
 
 # Comment 1 (on line 4) is now outdated; comment 2 (on line 5)
 # is not. The list output reflects this:
-gs branch comment list
+gs review list
 stderr 'Comment on line 4'
 stderr 'outdated'
 stderr 'Comment on line 5'
@@ -53,7 +53,7 @@ stderr 'Comment on line 5'
 # Sanity: the JSON list (used by the VSCode extension) reports
 # outdated as the per-comment status. Comment 1 outdated, comment
 # 2 still open.
-gs branch comment list --json
+gs review list --json
 stdout '"body":"Comment on line 4\."'
 stdout '"body":"Comment on line 5\."'
 stdout '"status":"outdated"'

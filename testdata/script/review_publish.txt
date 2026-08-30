@@ -1,0 +1,57 @@
+# Draft comments and publish them as a review.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a fake GitHub remote
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a file and submit it
+git add feature.go
+gs bc -m 'Add feature' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# draft a comment on the file
+gs review comment feature.go:3 -m 'Consider renaming this function.'
+stderr 'Drafted comment 1 on feature.go:3'
+
+# draft another comment
+gs review comment feature.go:7 -m 'Add error handling here.'
+stderr 'Drafted comment 2 on feature.go:7'
+
+# list draft comments
+gs review list --draft-only
+stderr 'feature.go:3'
+stderr 'feature.go:7'
+
+# publish draft comments as a review
+gs review publish
+stderr 'Published 2 comment'
+
+# draft comments should be cleared after publication
+gs review list --draft-only
+stderr 'No draft comments'
+
+-- repo/feature.go --
+package main
+
+func doWork() {
+	// does some work
+}
+
+func handleRequest() {
+	// handles a request
+}

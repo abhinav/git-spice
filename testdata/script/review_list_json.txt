@@ -25,11 +25,11 @@ gs branch submit --fill
 stderr 'Created #'
 
 # add an inline comment so there is something to list
-gs branch comment add main.go:3 -m 'Consider using a constant here because it would make the code much more maintainable and readable.'
+gs review comment main.go:3 -m 'Consider using a constant here because it would make the code much more maintainable and readable.' --no-draft
 stderr 'Posted comment'
 
 # --json should output NDJSON to stdout with forge comment
-gs branch comment list --json
+gs review list --json
 stdout '"kind":"forge"'
 stdout '"body":"Consider using a constant here because it would make the code much more maintainable and readable."'
 stdout '"path":"main.go"'
@@ -37,20 +37,20 @@ stdout '"line":3'
 stdout '"status":"open"'
 
 # text mode shows the full body without truncation
-gs branch comment list
+gs review list
 stderr 'Consider using a constant here because it would make the code much more maintainable and readable.'
 
-# stage a comment
-gs branch comment stage main.go:5 -m 'Add error handling here.'
-stderr 'Staged comment'
+# draft a comment
+gs review comment main.go:5 -m 'Add error handling here.'
+stderr 'Drafted comment'
 
-# --staged --json should include only staged comments
-gs branch comment list --staged --json
-cmpenvJSON stdout $WORK/golden/staged_only.json
+# --draft-only --json should include only draft comments
+gs review list --draft-only --json
+cmpenvJSON stdout $WORK/golden/draft_only.json
 
-# --json without --staged includes both staged and forge
-gs branch comment list --json
-stdout '"kind":"staged"'
+# --json without --draft-only includes both draft and forge comments
+gs review list --json
+stdout '"kind":"draft"'
 stdout '"kind":"forge"'
 
 -- repo/main.go --
@@ -60,5 +60,5 @@ func main() {
 	println("hello")
 }
 
--- golden/staged_only.json --
-{"kind":"staged","id":"sc-1","path":"main.go","line":5,"body":"Add error handling here."}
+-- golden/draft_only.json --
+{"kind":"draft","id":"1","path":"main.go","line":5,"body":"Add error handling here."}

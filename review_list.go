@@ -20,23 +20,22 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-type branchCommentListCmd struct {
-	Branch     string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch to list comments for. Defaults to current branch."`
-	Staged     bool   `help:"Show only staged comments."`
+type reviewListCmd struct {
+	Branch     string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch to list comments for. Defaults to the current branch."`
+	DraftOnly  bool   `name:"draft-only" help:"Show only draft comments."`
 	Unresolved bool   `help:"Show only unresolved comments."`
 	JSON       bool   `name:"json" released:"unreleased" help:"Write to stdout as a stream of JSON objects."`
 }
 
-func (*branchCommentListCmd) Help() string {
+func (*reviewListCmd) Help() string {
 	return text.Dedent(`
 		Lists comments on the change request
 		associated with the current branch.
 		Use --branch to target a different branch.
 
-		Staged comments that have not yet been submitted
-		are shown with an 'sc-N' prefix.
+		Draft comments are identified by a branch-local integer.
 
-		Use --staged to show only staged comments.
+		Use --draft-only to show only draft comments.
 		Use --unresolved to show only unresolved comments.
 
 		With --json, prints output to stdout
@@ -44,7 +43,7 @@ func (*branchCommentListCmd) Help() string {
 	`)
 }
 
-func (cmd *branchCommentListCmd) Run(
+func (cmd *reviewListCmd) Run(
 	ctx context.Context,
 	kctx *kong.Context,
 	log *silog.Logger,
@@ -73,7 +72,7 @@ func (cmd *branchCommentListCmd) Run(
 	return cmd.writeText(log, branch, staged, forgeComments)
 }
 
-func (cmd *branchCommentListCmd) resolveBranch(
+func (cmd *reviewListCmd) resolveBranch(
 	ctx context.Context, wt *git.Worktree,
 ) (string, error) {
 	if cmd.Branch != "" {
@@ -86,7 +85,7 @@ func (cmd *branchCommentListCmd) resolveBranch(
 	return branch, nil
 }
 
-func (cmd *branchCommentListCmd) loadComments(
+func (cmd *reviewListCmd) loadComments(
 	ctx context.Context,
 	log *silog.Logger,
 	svc *spice.Service,
@@ -99,7 +98,7 @@ func (cmd *branchCommentListCmd) loadComments(
 		return nil, nil, err
 	}
 
-	if cmd.Staged {
+	if cmd.DraftOnly {
 		return staged, nil, nil
 	}
 
@@ -120,9 +119,7 @@ func loadStagedComments(
 ) ([]*state.StagedComment, error) {
 	staged, err := store.LoadStagedComments(ctx, branch)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"load staged comments: %w", err,
-		)
+		return nil, fmt.Errorf("load draft comments: %w", err)
 	}
 	if staged == nil {
 		return nil, nil
@@ -197,7 +194,7 @@ type listedReviewComment struct {
 	Comment *forge.ReviewComment
 }
 
-func (cmd *branchCommentListCmd) filterForge(
+func (cmd *reviewListCmd) filterForge(
 	comments []*listedReviewComment,
 ) []*listedReviewComment {
 	if !cmd.Unresolved {
@@ -214,21 +211,21 @@ func (cmd *branchCommentListCmd) filterForge(
 }
 
 // writeText prints comments in human-readable format.
-func (cmd *branchCommentListCmd) writeText(
+func (cmd *reviewListCmd) writeText(
 	log *silog.Logger,
 	branch string,
 	staged []*state.StagedComment,
 	forgeComments []*listedReviewComment,
 ) error {
 	if len(staged) > 0 {
-		log.Infof("Staged comments:")
+		log.Infof("Draft comments:")
 		for _, c := range staged {
 			writeStagedText(log, c)
 		}
 	}
 
-	if cmd.Staged && len(staged) == 0 {
-		log.Infof("No staged comments for %s.", branch)
+	if cmd.DraftOnly && len(staged) == 0 {
+		log.Infof("No draft comments for %s.", branch)
 		return nil
 	}
 
@@ -252,7 +249,7 @@ func writeStagedText(
 	if c.ThreadID != "" {
 		location = "reply:" + c.ThreadID
 	}
-	log.Infof("  sc-%-4d %s", c.ID, location)
+	log.Infof("  %-4d %s", c.ID, location)
 	writeBodyIndented(log, c.Body)
 }
 
@@ -291,7 +288,7 @@ func commentStatus(c *listedReviewComment) string {
 }
 
 // writeJSON encodes comments as NDJSON to stdout.
-func (cmd *branchCommentListCmd) writeJSON(
+func (cmd *reviewListCmd) writeJSON(
 	w io.Writer,
 	staged []*state.StagedComment,
 	forgeComments []*listedReviewComment,
@@ -317,8 +314,8 @@ func (cmd *branchCommentListCmd) writeJSON(
 
 func stagedToJSON(c *state.StagedComment) jsonComment {
 	return jsonComment{
-		Kind:     "staged",
-		ID:       fmt.Sprintf("sc-%d", c.ID),
+		Kind:     "draft",
+		ID:       fmt.Sprintf("%d", c.ID),
 		Path:     c.File,
 		Line:     c.Line,
 		Body:     c.Body,
@@ -347,11 +344,11 @@ func forgeToJSON(c *listedReviewComment) jsonComment {
 // jsonComment is the JSON representation
 // of a comment for --json output.
 type jsonComment struct {
-	// Kind is "staged" or "forge".
+	// Kind is "draft" or "forge".
 	Kind string `json:"kind"`
 
 	// ID is the comment identifier.
-	// For staged comments: "sc-N".
+	// For draft comments: a branch-local integer encoded as a string.
 	// For forge comments: forge-specific ID.
 	ID string `json:"id"`
 
