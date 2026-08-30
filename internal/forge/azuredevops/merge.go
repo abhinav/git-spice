@@ -46,11 +46,15 @@ func (r *Repository) MergeChange(
 
 func mergeStrategy(method forge.MergeMethod) *git.GitPullRequestMergeStrategy {
 	switch method {
+	case forge.MergeMethodDefault:
+		return nil
+	case forge.MergeMethodMerge:
+		return &git.GitPullRequestMergeStrategyValues.NoFastForward
 	case forge.MergeMethodSquash:
 		return &git.GitPullRequestMergeStrategyValues.Squash
 	case forge.MergeMethodRebase:
 		return &git.GitPullRequestMergeStrategyValues.Rebase
 	default:
-		return &git.GitPullRequestMergeStrategyValues.NoFastForward
+		return nil
 	}
 }
