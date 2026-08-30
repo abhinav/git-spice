@@ -3,11 +3,48 @@ package github
 import (
 	"testing"
 
+	"github.com/alecthomas/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git/giturl"
 )
+
+func TestOptions_Stacks(t *testing.T) {
+	tests := []struct {
+		name string
+		give any
+		want bool
+	}{
+		{name: "Default", want: true},
+		{name: "Enabled", give: "true", want: true},
+		{name: "Disabled", give: "false", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var opts Options
+			parser, err := kong.New(
+				&opts,
+				kong.Resolvers(kong.ResolverFunc(func(
+					_ *kong.Context,
+					_ *kong.Path,
+					flag *kong.Flag,
+				) (any, error) {
+					if flag.Tag.Get("config") == "forge.github.stacks" {
+						return tt.give, nil
+					}
+					return nil, nil
+				})),
+			)
+			require.NoError(t, err)
+
+			_, err = parser.Parse(nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, opts.Stacks)
+		})
+	}
+}
 
 func TestURLs(t *testing.T) {
 	tests := []struct {

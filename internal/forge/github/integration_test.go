@@ -100,6 +100,9 @@ func TestIntegration(t *testing.T) {
 
 	githubForge := github.Forge{
 		Log: silogtest.New(t),
+		Options: github.Options{
+			Stacks: true,
+		},
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
@@ -509,7 +512,9 @@ func TestIntegration_DivergentStackMerge(t *testing.T) {
 
 	gatewayClient := newGateway(t, httpClient)
 	repo, err := github.NewRepository(
-		t.Context(), new(github.Forge), cfg.Owner, cfg.Repo,
+		t.Context(), &github.Forge{
+			Options: github.Options{Stacks: true},
+		}, cfg.Owner, cfg.Repo,
 		silogtest.New(t), gatewayClient, "",
 	)
 	require.NoError(t, err)

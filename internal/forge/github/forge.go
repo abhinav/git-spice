@@ -35,6 +35,12 @@ type Options struct {
 	// Token is a fixed token used to authenticate with GitHub.
 	// This may be used to skip the login flow.
 	Token string `name:"github-token" hidden:"" env:"GITHUB_TOKEN" help:"GitHub API token"`
+
+	// Stacks controls whether GitHub native stack operations are used.
+	// The default is `on`.
+	// The `off` value makes stack updates and range merges return
+	// [forge.ErrUnsupported] before accessing GitHub.
+	Stacks bool `name:"github-stacks" hidden:"" config:"forge.github.stacks" default:"true" help:"Whether to use GitHub native stack operations. One of 'true' and 'false'."`
 }
 
 // Definition configures GitHub forge instances.
