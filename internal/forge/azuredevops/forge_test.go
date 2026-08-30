@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	rootforge "go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
@@ -125,6 +126,23 @@ func TestForge_ParseRepositoryPath(t *testing.T) {
 			assert.Equal(t, tt.wantRepo, azureRID.repository, "repository")
 		})
 	}
+}
+
+func TestInferFromRemoteURL_legacyOrganizationURL(t *testing.T) {
+	remoteURL, err := giturl.Parse(
+		"https://myorg.visualstudio.com/myproject/_git/myrepo",
+	)
+	require.NoError(t, err)
+
+	var registry rootforge.Registry
+	registry.Register(&Definition{})
+	_, id, ok := rootforge.InferFromRemoteURL(&registry, remoteURL)
+	require.True(t, ok)
+
+	rid := id.(*RepositoryID)
+	assert.Equal(t, "myorg", rid.organization)
+	assert.Equal(t, "myproject", rid.project)
+	assert.Equal(t, "myrepo", rid.repository)
 }
 
 func TestForge_ParseRepositoryPath_CustomURL(t *testing.T) {

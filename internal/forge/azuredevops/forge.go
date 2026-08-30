@@ -54,6 +54,21 @@ func (d *Definition) BaseURL() string {
 	return cmp.Or(d.Options.URL, DefaultURL)
 }
 
+// MatchesRemoteURL reports whether the remote belongs to Azure DevOps.
+func (d *Definition) MatchesRemoteURL(remoteURL *giturl.URL) bool {
+	if d.Options.URL != "" {
+		return forge.ValidateRemoteURL(d.Options.URL, remoteURL) == nil
+	}
+	if remoteURL == nil {
+		return false
+	}
+
+	host := strings.ToLower(remoteURL.Hostname)
+	return host == "dev.azure.com" ||
+		strings.HasSuffix(host, ".dev.azure.com") ||
+		legacyOrganization(remoteURL) != ""
+}
+
 // CLIPlugin returns the CLI plugin for the Azure DevOps Forge.
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
@@ -64,9 +79,10 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 	}
 
 	return &Forge{
-		Options: d.Options,
-		baseURL: d.BaseURL(),
-		Log:     d.Log,
+		Options:            d.Options,
+		baseURL:            d.BaseURL(),
+		legacyOrganization: legacyOrganization(remoteURL),
+		Log:                d.Log,
 	}, nil
 }
 
@@ -74,8 +90,9 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 type Forge struct {
 	changeMetadataCodec
 
-	Options Options
-	baseURL string
+	Options            Options
+	baseURL            string
+	legacyOrganization string
 
 	// Log specifies the logger to use.
 	Log *silog.Logger
@@ -113,6 +130,9 @@ func (*Forge) ID() string { return "azuredevops" }
 //   - /{org}/{project}/_git/{repo} (from HTTPS remote URLs)
 //   - /v3/{org}/{project}/{repo} (from SSH remote URLs)
 func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
+	if f.legacyOrganization != "" {
+		path = "/" + f.legacyOrganization + "/" + strings.TrimPrefix(path, "/")
+	}
 	org, project, repo, err := extractRepoInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
@@ -124,6 +144,18 @@ func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 		project:      project,
 		repository:   repo,
 	}, nil
+}
+
+func legacyOrganization(remoteURL *giturl.URL) string {
+	if remoteURL == nil {
+		return ""
+	}
+	host := strings.ToLower(remoteURL.Hostname)
+	organization, ok := strings.CutSuffix(host, ".visualstudio.com")
+	if !ok || organization == "" || strings.Contains(organization, ".") {
+		return ""
+	}
+	return organization
 }
 
 // OpenRepository opens the Azure DevOps repository
