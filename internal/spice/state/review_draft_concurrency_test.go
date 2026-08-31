@@ -11,6 +11,7 @@ import (
 	"go.abhg.dev/gs/internal/review"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/spice/state/statetest"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
@@ -159,6 +160,14 @@ func newConcurrentReviewDraftStores(
 		stores[i], err = state.OpenStore(ctx, db, silogtest.New(t))
 		require.NoError(t, err)
 	}
+	require.NoError(t, statetest.UpdateBranch(
+		ctx,
+		stores[0],
+		&statetest.UpdateRequest{
+			Upserts: []state.UpsertRequest{{Name: "feat", Base: "main"}},
+			Message: "track feat",
+		},
+	))
 	return stores, pausingRepo
 }
 
