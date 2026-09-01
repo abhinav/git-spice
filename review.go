@@ -49,20 +49,17 @@ func (*reviewCmd) AfterApply(kctx *kong.Context) error {
 		}),
 		kctx.BindToProvider(func(
 			log *silog.Logger,
-			wt *git.Worktree,
 			store *state.Store,
 			gitRepo *git.Repository,
 		) (ReviewDraftHandler, error) {
 			return &review.DraftHandler{
-				Log:      log,
-				Worktree: wt,
-				Store:    store,
-				Editor:   newReviewCommentEditor(gitRepo),
+				Log:    log,
+				Store:  store,
+				Editor: newReviewCommentEditor(gitRepo),
 			}, nil
 		}),
 		kctx.BindToProvider(func(
 			log *silog.Logger,
-			wt *git.Worktree,
 			svc *spice.Service,
 			remoteRepo *remoteRepository,
 		) (ReviewThreadHandler, error) {
@@ -73,13 +70,13 @@ func (*reviewCmd) AfterApply(kctx *kong.Context) error {
 			resolver, ok := remoteRepo.Repository.(forge.ReviewThreadResolver)
 			if !ok {
 				return nil, fmt.Errorf(
-					"review thread resolution: %w",
+					"forge %q does not support review thread resolution: %w",
+					remoteRepo.Repository.Forge().ID(),
 					forge.ErrUnsupported,
 				)
 			}
 			return &review.ThreadHandler{
 				Log:        log,
-				Worktree:   wt,
 				Service:    svc,
 				Repository: repository,
 				Resolver:   resolver,
@@ -116,7 +113,11 @@ func requireReviewRepository(
 ) (forge.ReviewRepository, error) {
 	reviewRepository, ok := repository.(forge.ReviewRepository)
 	if !ok {
-		return nil, fmt.Errorf("review comments: %w", forge.ErrUnsupported)
+		return nil, fmt.Errorf(
+			"forge %q does not support review comments: %w",
+			repository.Forge().ID(),
+			forge.ErrUnsupported,
+		)
 	}
 	return reviewRepository, nil
 }

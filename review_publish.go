@@ -2,16 +2,18 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type reviewPublishCmd struct {
 	Body           string `placeholder:"BODY" help:"Overall review body."`
-	Approve        bool   `help:"Mark the review as approved."`
-	RequestChanges bool   `name:"request-changes" help:"Mark the review as requesting changes."`
+	Approve        bool   `xor:"review-disposition" help:"Mark the review as approved."`
+	RequestChanges bool   `name:"request-changes" xor:"review-disposition" help:"Mark the review as requesting changes."`
 	Branch         string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch whose draft comments to publish. Defaults to the current branch."`
 }
 
@@ -30,8 +32,17 @@ func (*reviewPublishCmd) Help() string {
 
 func (cmd *reviewPublishCmd) Run(
 	ctx context.Context,
+	wt *git.Worktree,
 	handler ReviewHandler,
 ) error {
+	if cmd.Branch == "" {
+		branch, err := wt.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		cmd.Branch = branch
+	}
+
 	disposition := forge.ReviewDispositionNone
 	if cmd.Approve {
 		disposition = forge.ReviewDispositionApprove

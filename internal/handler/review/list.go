@@ -2,16 +2,17 @@ package review
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/spice/state"
 )
 
 // LoadRequest selects review comments to load.
 type LoadRequest struct {
 	// Branch identifies the reviewed branch.
-	// The current branch is used when Branch is empty.
-	Branch string
+	Branch string // required
 
 	// DraftOnly omits comments already published to the forge.
 	DraftOnly bool
@@ -46,29 +47,27 @@ func (h *Handler) LoadReviewData(
 	ctx context.Context,
 	req *LoadRequest,
 ) (*LoadResult, error) {
-	branch, err := resolveBranch(ctx, h.Worktree, req.Branch)
-	if err != nil {
-		return nil, err
-	}
-
-	drafts, err := h.Store.LoadReviewDrafts(ctx, branch)
+	drafts, err := h.Store.LoadReviewDrafts(ctx, req.Branch)
 	if err != nil {
 		return nil, fmt.Errorf("load draft comments: %w", err)
 	}
 	result := &LoadResult{
-		Branch: branch,
+		Branch: req.Branch,
 		Drafts: drafts,
 	}
 	if req.DraftOnly {
 		return result, nil
 	}
 
-	change, err := lookupBranch(ctx, h.Service, branch)
+	change, err := h.Service.LookupBranch(ctx, req.Branch)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, state.ErrNotExist) {
+			return nil, fmt.Errorf("branch not tracked: %s", req.Branch)
+		}
+		return nil, fmt.Errorf("get branch: %w", err)
 	}
 	if change.Change == nil {
-		h.Log.Infof("No change request found for %s.", branch)
+		h.Log.Infof("No change request found for %s.", req.Branch)
 		return result, nil
 	}
 

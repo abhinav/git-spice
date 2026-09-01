@@ -1470,7 +1470,7 @@ This command requires at least Git 2.45.
 ### git-spice review comment {#gs-review-comment}
 
 ```
-gs review comment <anchor> [flags]
+gs review comment <file[:line[-end]]> [flags]
 ```
 
 Draft or post a review comment
@@ -1490,7 +1490,7 @@ If no message is given with -m, an editor is opened.
 
 **Arguments**
 
-* `anchor`: Comment anchor: file.go, file.go:42, or file.go:42-50.
+* `file[:line[-end]]`: Comment anchor: file.go, file.go:42, or file.go:42-50.
 
 **Flags**
 

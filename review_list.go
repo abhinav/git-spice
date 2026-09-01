@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/text"
@@ -43,8 +44,17 @@ func (cmd *reviewListCmd) Run(
 	ctx context.Context,
 	kctx *kong.Context,
 	log *silog.Logger,
+	wt *git.Worktree,
 	handler ReviewHandler,
 ) error {
+	if cmd.Branch == "" {
+		branch, err := wt.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		cmd.Branch = branch
+	}
+
 	response, err := handler.LoadReviewData(ctx, &review.LoadRequest{
 		Branch:     cmd.Branch,
 		DraftOnly:  cmd.DraftOnly,
@@ -93,13 +103,13 @@ func writeReviewListText(
 
 func writeReviewDraftText(log *silog.Logger, draft review.Draft) {
 	location := ""
-	if replyTo, ok := draft.ReplyTo(); ok {
-		location = "reply:" + replyTo
-	} else if anchor, ok := draft.Anchor(); ok {
-		location = anchor.String()
+	if draft.ReplyTo != "" {
+		location = "reply:" + draft.ReplyTo
+	} else {
+		location = draft.Anchor.String()
 	}
-	log.Infof("  %-4s %s", draft.ID(), location)
-	writeReviewBody(log, draft.Body())
+	log.Infof("  %-4s %s", draft.ID, location)
+	writeReviewBody(log, draft.Body)
 }
 
 func writeForgeReviewCommentText(
@@ -169,28 +179,24 @@ func writeReviewListJSON(
 func reviewDraftToJSON(draft review.Draft) jsonComment {
 	comment := jsonComment{
 		Kind: "draft",
-		ID:   draft.ID().String(),
-		Body: draft.Body(),
+		ID:   draft.ID.String(),
+		Body: draft.Body,
 	}
-	if replyTo, ok := draft.ReplyTo(); ok {
-		comment.ThreadID = replyTo
+	if draft.ReplyTo != "" {
+		comment.ThreadID = draft.ReplyTo
 		return comment
 	}
 
-	anchor, ok := draft.Anchor()
-	if !ok {
-		return comment
-	}
-	comment.Path = anchor.Path()
-	comment.Line = anchor.StartLine()
-	if anchor.IsFile() {
+	comment.Path = draft.Anchor.Path
+	comment.Line = draft.Anchor.StartLine
+	if draft.Anchor.IsFile() {
 		comment.Scope = "file"
 	} else {
 		comment.Scope = "line"
-		if !anchor.IsLine() {
+		if !draft.Anchor.IsLine() {
 			comment.Range = &jsonCommentRange{
-				Start: anchor.StartLine(),
-				End:   anchor.EndLine(),
+				Start: draft.Anchor.StartLine,
+				End:   draft.Anchor.EndLine,
 			}
 		}
 	}

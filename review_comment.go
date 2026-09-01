@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
+	"fmt"
 
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type reviewCommentCmd struct {
-	Anchor  review.Anchor `arg:"" help:"Comment anchor: file.go, file.go:42, or file.go:42-50."`
+	Anchor  review.Anchor `arg:"" name:"file[:line[-end]]" help:"Comment anchor: file.go, file.go:42, or file.go:42-50."`
 	Message string        `short:"m" placeholder:"MSG" help:"Comment body. Opens editor if not provided."`
 	Draft   bool          `negatable:"" default:"true" help:"Save the comment as a local draft instead of posting it."`
 	Branch  string        `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch to comment on. Defaults to the current branch."`
@@ -33,9 +35,18 @@ func (*reviewCommentCmd) Help() string {
 
 func (cmd *reviewCommentCmd) Run(
 	ctx context.Context,
+	wt *git.Worktree,
 	handler ReviewHandler,
 	drafts ReviewDraftHandler,
 ) error {
+	if cmd.Branch == "" {
+		branch, err := wt.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		cmd.Branch = branch
+	}
+
 	req := &review.CommentRequest{
 		Branch:  cmd.Branch,
 		Anchor:  cmd.Anchor,

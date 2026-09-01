@@ -2,14 +2,17 @@ package review
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/spice/state"
 )
 
 // SetThreadResolutionRequest identifies a thread and its desired state.
 type SetThreadResolutionRequest struct {
 	// Branch identifies the reviewed branch.
-	// The current branch is used when Branch is empty.
-	Branch string
+	Branch string // required
 
 	// ThreadID is the command-line representation of the forge thread ID.
 	ThreadID string // required
@@ -23,22 +26,39 @@ func (h *ThreadHandler) SetThreadResolution(
 	ctx context.Context,
 	req *SetThreadResolutionRequest,
 ) error {
-	branch, err := resolveBranch(ctx, h.Worktree, req.Branch)
+	change, err := h.Service.LookupBranch(ctx, req.Branch)
 	if err != nil {
-		return err
+		if errors.Is(err, state.ErrNotExist) {
+			return fmt.Errorf("branch not tracked: %s", req.Branch)
+		}
+		return fmt.Errorf("get branch: %w", err)
 	}
-	change, err := lookupReviewChange(ctx, h.Service, branch)
-	if err != nil {
-		return err
+	if change.Change == nil {
+		return fmt.Errorf(
+			"no change request for %s; "+
+				"submit the branch first with "+
+				"'gs branch submit'",
+			req.Branch,
+		)
 	}
-	threadID, err := findReviewThreadID(
+
+	// ReviewThreadID is opaque.
+	// Recover the forge-owned value whose String form the command accepted.
+	var threadID forge.ReviewThreadID
+	for thread, err := range h.Repository.ListReviewThreads(
 		ctx,
-		h.Repository,
 		change.Change.ChangeID(),
-		req.ThreadID,
-	)
-	if err != nil {
-		return err
+	) {
+		if err != nil {
+			return fmt.Errorf("list review threads: %w", err)
+		}
+		if thread.ID.String() == req.ThreadID {
+			threadID = thread.ID
+			break
+		}
+	}
+	if threadID == nil {
+		return fmt.Errorf("review thread %q not found", req.ThreadID)
 	}
 
 	if req.Resolved {

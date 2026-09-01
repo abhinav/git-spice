@@ -3,8 +3,6 @@ package review
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -36,16 +34,14 @@ type Handler struct {
 
 // DraftHandler coordinates workflows that only access local drafts.
 type DraftHandler struct {
-	Log      *silog.Logger // required
-	Worktree Worktree      // required
-	Store    Store         // required
-	Editor   CommentEditor // required
+	Log    *silog.Logger // required
+	Store  Store         // required
+	Editor CommentEditor // required
 }
 
 // ThreadHandler coordinates review-thread resolution changes.
 type ThreadHandler struct {
 	Log        *silog.Logger              // required
-	Worktree   Worktree                   // required
 	Service    Service                    // required
 	Repository forge.ReviewRepository     // required
 	Resolver   forge.ReviewThreadResolver // required
@@ -53,7 +49,6 @@ type ThreadHandler struct {
 
 // Worktree provides the Git operations used by review workflows.
 type Worktree interface {
-	CurrentBranch(context.Context) (string, error)
 	OpenBranchDiff(context.Context, string, string) (io.ReadCloser, error)
 }
 
@@ -84,73 +79,3 @@ type CommentEditor func(
 
 //go:generate mockgen -destination=mocks_test.go -package=review -typed . Worktree,Service,Store
 //go:generate mockgen -destination=forge_mocks_test.go -package=review -typed go.abhg.dev/gs/internal/forge ReviewRepository,ReviewThreadResolver
-
-func resolveBranch(
-	ctx context.Context,
-	worktree Worktree,
-	branch string,
-) (string, error) {
-	if branch != "" {
-		return branch, nil
-	}
-
-	branch, err := worktree.CurrentBranch(ctx)
-	if err != nil {
-		return "", fmt.Errorf("get current branch: %w", err)
-	}
-	return branch, nil
-}
-
-func lookupReviewChange(
-	ctx context.Context,
-	service Service,
-	branch string,
-) (*spice.LookupBranchResponse, error) {
-	change, err := lookupBranch(ctx, service, branch)
-	if err != nil {
-		return nil, err
-	}
-	if change.Change == nil {
-		return nil, fmt.Errorf(
-			"no change request for %s; "+
-				"submit the branch first with "+
-				"'gs branch submit'",
-			branch,
-		)
-	}
-	return change, nil
-}
-
-func lookupBranch(
-	ctx context.Context,
-	service Service,
-	branch string,
-) (*spice.LookupBranchResponse, error) {
-	change, err := service.LookupBranch(ctx, branch)
-	if err != nil {
-		if errors.Is(err, state.ErrNotExist) {
-			return nil, fmt.Errorf("branch not tracked: %s", branch)
-		}
-		return nil, fmt.Errorf("get branch: %w", err)
-	}
-	return change, nil
-}
-
-func findReviewThreadID(
-	ctx context.Context,
-	repository forge.ReviewRepository,
-	changeID forge.ChangeID,
-	want string,
-) (forge.ReviewThreadID, error) {
-	// ReviewThreadID is intentionally opaque.
-	// Recover the provider-owned value whose String form the CLI accepted.
-	for thread, err := range repository.ListReviewThreads(ctx, changeID) {
-		if err != nil {
-			return nil, fmt.Errorf("list review threads: %w", err)
-		}
-		if thread.ID.String() == want {
-			return thread.ID, nil
-		}
-	}
-	return nil, fmt.Errorf("review thread %q not found", want)
-}

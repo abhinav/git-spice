@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -23,8 +25,17 @@ func (*reviewResolveCmd) Help() string {
 
 func (cmd *reviewResolveCmd) Run(
 	ctx context.Context,
+	wt *git.Worktree,
 	handler ReviewThreadHandler,
 ) error {
+	if cmd.Branch == "" {
+		branch, err := wt.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		cmd.Branch = branch
+	}
+
 	return handler.SetThreadResolution(ctx, &review.SetThreadResolutionRequest{
 		Branch:   cmd.Branch,
 		ThreadID: cmd.ThreadID,
@@ -48,8 +59,17 @@ func (*reviewReopenCmd) Help() string {
 
 func (cmd *reviewReopenCmd) Run(
 	ctx context.Context,
+	wt *git.Worktree,
 	handler ReviewThreadHandler,
 ) error {
+	if cmd.Branch == "" {
+		branch, err := wt.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		cmd.Branch = branch
+	}
+
 	return handler.SetThreadResolution(ctx, &review.SetThreadResolutionRequest{
 		Branch:   cmd.Branch,
 		ThreadID: cmd.ThreadID,
