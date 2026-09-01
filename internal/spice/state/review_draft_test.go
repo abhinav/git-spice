@@ -21,34 +21,40 @@ func TestReviewDrafts(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	anchor, err := review.NewLineAnchor("main.go", 42)
-	require.NoError(t, err)
 	comment, err := store.AddReviewDraft(
 		ctx,
 		"feature",
-		review.NewCommentDraft(0, anchor, "comment body"),
+		review.Draft{
+			ID:   0,
+			Body: "comment body",
+			Anchor: review.Anchor{
+				Path:      "main.go",
+				StartLine: 42,
+				EndLine:   42,
+			},
+		},
 	)
 	require.NoError(t, err)
-	assert.Equal(t, review.DraftID(1), comment.ID())
+	assert.Equal(t, review.DraftID(1), comment.ID)
 
 	reply, err := store.AddReviewDraft(
 		ctx,
 		"feature",
-		review.NewReplyDraft(0, "thread-7", "reply body"),
+		review.Draft{ID: 0, Body: "reply body", ReplyTo: "thread-7"},
 	)
 	require.NoError(t, err)
-	assert.Equal(t, review.DraftID(2), reply.ID())
+	assert.Equal(t, review.DraftID(2), reply.ID)
 
 	require.NoError(t, store.UpdateReviewDraftBody(
 		ctx,
 		"feature",
-		comment.ID(),
+		comment.ID,
 		"updated body",
 	))
 	drafts, err := store.LoadReviewDrafts(ctx, "feature")
 	require.NoError(t, err)
 	require.Len(t, drafts, 2)
-	assert.Equal(t, "updated body", drafts[0].Body())
+	assert.Equal(t, "updated body", drafts[0].Body)
 	assert.Equal(t, reply, drafts[1])
 
 	require.NoError(t, store.ClearReviewDrafts(ctx, "feature"))

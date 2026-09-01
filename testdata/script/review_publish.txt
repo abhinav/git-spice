@@ -41,6 +41,10 @@ stderr 'feature.go:7'
 gs review publish
 stderr 'Published 2 comment'
 
+# review dispositions are mutually exclusive
+! gs review publish --approve --request-changes
+stderr '--approve and --request-changes'
+
 # draft comments should be cleared after publication
 gs review list --draft-only
 stderr 'No draft comments'

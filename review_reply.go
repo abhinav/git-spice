@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -28,9 +30,18 @@ func (*reviewReplyCmd) Help() string {
 
 func (cmd *reviewReplyCmd) Run(
 	ctx context.Context,
+	wt *git.Worktree,
 	handler ReviewHandler,
 	drafts ReviewDraftHandler,
 ) error {
+	if cmd.Branch == "" {
+		branch, err := wt.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		cmd.Branch = branch
+	}
+
 	req := &review.ReplyRequest{
 		Branch:   cmd.Branch,
 		ThreadID: cmd.ThreadID,

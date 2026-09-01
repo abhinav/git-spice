@@ -9,13 +9,13 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/review"
 	"go.abhg.dev/gs/internal/reviewdiff"
+	"go.abhg.dev/gs/internal/spice/state"
 )
 
 // CommentRequest describes a new root review comment.
 type CommentRequest struct {
 	// Branch identifies the reviewed branch.
-	// The current branch is used when Branch is empty.
-	Branch string
+	Branch string // required
 
 	// Anchor identifies the reviewed file or lines.
 	Anchor Anchor // required
@@ -29,22 +29,18 @@ func (h *DraftHandler) SaveCommentDraft(
 	ctx context.Context,
 	req *CommentRequest,
 ) error {
-	branch, err := resolveBranch(ctx, h.Worktree, req.Branch)
-	if err != nil {
-		return err
-	}
 	if !req.Anchor.IsLine() {
 		return errors.New("draft comments require a single-line file:line anchor")
 	}
 
-	body, err := editCommentBody(ctx, h.Editor, req.Message, "")
+	body, err := h.commentBody(ctx, req.Message)
 	if err != nil {
 		return err
 	}
 	draft, err := h.Store.AddReviewDraft(
 		ctx,
-		branch,
-		review.NewCommentDraft(0, req.Anchor, body),
+		req.Branch,
+		review.Draft{ID: 0, Body: body, Anchor: req.Anchor},
 	)
 	if err != nil {
 		return fmt.Errorf("save draft comment: %w", err)
@@ -52,7 +48,7 @@ func (h *DraftHandler) SaveCommentDraft(
 
 	h.Log.Infof(
 		"Drafted comment %s on %s.",
-		draft.ID(),
+		draft.ID,
 		req.Anchor,
 	)
 	return nil
@@ -63,33 +59,40 @@ func (h *Handler) PostComment(
 	ctx context.Context,
 	req *CommentRequest,
 ) error {
-	branch, err := resolveBranch(ctx, h.Worktree, req.Branch)
-	if err != nil {
-		return err
-	}
-	body, err := editCommentBody(ctx, h.Editor, req.Message, "")
+	body, err := h.commentBody(ctx, req.Message)
 	if err != nil {
 		return err
 	}
 
-	change, err := lookupReviewChange(ctx, h.Service, branch)
+	change, err := h.Service.LookupBranch(ctx, req.Branch)
+	if err != nil {
+		if errors.Is(err, state.ErrNotExist) {
+			return fmt.Errorf("branch not tracked: %s", req.Branch)
+		}
+		return fmt.Errorf("get branch: %w", err)
+	}
+	if change.Change == nil {
+		return fmt.Errorf(
+			"no change request for %s; "+
+				"submit the branch first with "+
+				"'gs branch submit'",
+			req.Branch,
+		)
+	}
+	patch, err := h.loadPatch(ctx, change.Base, req.Branch)
 	if err != nil {
 		return err
 	}
-	patch, err := h.loadPatch(ctx, change.Base, branch)
-	if err != nil {
-		return err
-	}
-	if req.Anchor.IsFile() && !patch.ContainsFile(req.Anchor.Path()) {
+	if req.Anchor.IsFile() && !patch.ContainsFile(req.Anchor.Path) {
 		return fmt.Errorf(
 			"review diff does not contain file %q",
-			req.Anchor.Path(),
+			req.Anchor.Path,
 		)
 	}
 	if !req.Anchor.IsFile() && !patch.ContainsLineRange(
-		req.Anchor.Path(),
-		req.Anchor.StartLine(),
-		req.Anchor.EndLine(),
+		req.Anchor.Path,
+		req.Anchor.StartLine,
+		req.Anchor.EndLine,
 	) {
 		return fmt.Errorf(
 			"review diff does not contain %s",
@@ -101,10 +104,13 @@ func (h *Handler) PostComment(
 		ctx,
 		change.Change.ChangeID(),
 		forge.SubmitReviewCommentRequest{
-			Path:  req.Anchor.Path(),
-			Range: forgeRange(req.Anchor),
-			Body:  body,
-			Side:  forge.ReviewThreadSideRight,
+			Path: req.Anchor.Path,
+			Range: forge.ReviewThreadRange{
+				StartLine: req.Anchor.StartLine,
+				EndLine:   req.Anchor.EndLine,
+			},
+			Body: body,
+			Side: forge.ReviewThreadSideRight,
 		},
 	)
 }
@@ -112,8 +118,7 @@ func (h *Handler) PostComment(
 // ReplyRequest describes a reply to an existing review thread.
 type ReplyRequest struct {
 	// Branch identifies the reviewed branch.
-	// The current branch is used when Branch is empty.
-	Branch string
+	Branch string // required
 
 	// ThreadID is the command-line representation of the forge thread ID.
 	ThreadID string // required
@@ -127,18 +132,14 @@ func (h *DraftHandler) SaveReplyDraft(
 	ctx context.Context,
 	req *ReplyRequest,
 ) error {
-	branch, err := resolveBranch(ctx, h.Worktree, req.Branch)
-	if err != nil {
-		return err
-	}
-	body, err := editCommentBody(ctx, h.Editor, req.Message, "")
+	body, err := h.commentBody(ctx, req.Message)
 	if err != nil {
 		return err
 	}
 	draft, err := h.Store.AddReviewDraft(
 		ctx,
-		branch,
-		review.NewReplyDraft(0, req.ThreadID, body),
+		req.Branch,
+		review.Draft{ID: 0, Body: body, ReplyTo: req.ThreadID},
 	)
 	if err != nil {
 		return fmt.Errorf("save draft reply: %w", err)
@@ -146,7 +147,7 @@ func (h *DraftHandler) SaveReplyDraft(
 
 	h.Log.Infof(
 		"Drafted reply %s to thread %s.",
-		draft.ID(),
+		draft.ID,
 		req.ThreadID,
 	)
 	return nil
@@ -157,26 +158,44 @@ func (h *Handler) PostReply(
 	ctx context.Context,
 	req *ReplyRequest,
 ) error {
-	branch, err := resolveBranch(ctx, h.Worktree, req.Branch)
+	body, err := h.commentBody(ctx, req.Message)
 	if err != nil {
 		return err
 	}
-	body, err := editCommentBody(ctx, h.Editor, req.Message, "")
+
+	change, err := h.Service.LookupBranch(ctx, req.Branch)
 	if err != nil {
-		return err
+		if errors.Is(err, state.ErrNotExist) {
+			return fmt.Errorf("branch not tracked: %s", req.Branch)
+		}
+		return fmt.Errorf("get branch: %w", err)
 	}
-	change, err := lookupReviewChange(ctx, h.Service, branch)
-	if err != nil {
-		return err
+	if change.Change == nil {
+		return fmt.Errorf(
+			"no change request for %s; "+
+				"submit the branch first with "+
+				"'gs branch submit'",
+			req.Branch,
+		)
 	}
-	threadID, err := findReviewThreadID(
+
+	// ReviewThreadID is opaque.
+	// Recover the forge-owned value whose String form the command accepted.
+	var threadID forge.ReviewThreadID
+	for thread, err := range h.Repository.ListReviewThreads(
 		ctx,
-		h.Repository,
 		change.Change.ChangeID(),
-		req.ThreadID,
-	)
-	if err != nil {
-		return err
+	) {
+		if err != nil {
+			return fmt.Errorf("list review threads: %w", err)
+		}
+		if thread.ID.String() == req.ThreadID {
+			threadID = thread.ID
+			break
+		}
+	}
+	if threadID == nil {
+		return fmt.Errorf("review thread %q not found", req.ThreadID)
 	}
 
 	return h.postComment(
@@ -189,16 +208,12 @@ func (h *Handler) PostReply(
 	)
 }
 
-func editCommentBody(
-	ctx context.Context,
-	editor CommentEditor,
-	message string,
-	initial string,
-) (string, error) {
-	body := message
+// commentBody returns a supplied comment body or opens an empty editor.
+// Whitespace-only input is rejected before any draft or forge mutation.
+func (h *Handler) commentBody(ctx context.Context, body string) (string, error) {
 	if body == "" {
 		var err error
-		body, err = editor(ctx, initial)
+		body, err = h.Editor(ctx, "")
 		if err != nil {
 			return "", err
 		}
@@ -209,6 +224,27 @@ func editCommentBody(
 	return body, nil
 }
 
+// commentBody returns a supplied draft body or opens an empty editor.
+// Whitespace-only input is rejected before the draft is persisted.
+func (h *DraftHandler) commentBody(
+	ctx context.Context,
+	body string,
+) (string, error) {
+	if body == "" {
+		var err error
+		body, err = h.Editor(ctx, "")
+		if err != nil {
+			return "", err
+		}
+	}
+	if strings.TrimSpace(body) == "" {
+		return "", errors.New("empty comment body, aborting")
+	}
+	return body, nil
+}
+
+// loadPatch parses the selected branch's review diff.
+// Closing the diff reader also reports failures from the Git process.
 func (h *Handler) loadPatch(
 	ctx context.Context,
 	base, branch string,
@@ -225,6 +261,7 @@ func (h *Handler) loadPatch(
 	return patch, nil
 }
 
+// postComment submits one comment-only review and reports its new thread ID.
 func (h *Handler) postComment(
 	ctx context.Context,
 	changeID forge.ChangeID,
@@ -253,11 +290,4 @@ func (h *Handler) postComment(
 		changeID,
 	)
 	return nil
-}
-
-func forgeRange(anchor Anchor) forge.ReviewThreadRange {
-	return forge.ReviewThreadRange{
-		StartLine: anchor.StartLine(),
-		EndLine:   anchor.EndLine(),
-	}
 }

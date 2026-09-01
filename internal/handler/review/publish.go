@@ -2,16 +2,17 @@ package review
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/spice/state"
 )
 
 // PublishDraftsRequest describes a review assembled from local drafts.
 type PublishDraftsRequest struct {
 	// Branch identifies the branch whose drafts will be published.
-	// The current branch is used when Branch is empty.
-	Branch string
+	Branch string // required
 
 	// Body is the optional overall review body.
 	Body string
@@ -25,12 +26,7 @@ func (h *Handler) PublishDrafts(
 	ctx context.Context,
 	req *PublishDraftsRequest,
 ) error {
-	branch, err := resolveBranch(ctx, h.Worktree, req.Branch)
-	if err != nil {
-		return err
-	}
-
-	drafts, err := h.Store.LoadReviewDrafts(ctx, branch)
+	drafts, err := h.Store.LoadReviewDrafts(ctx, req.Branch)
 	if err != nil {
 		return fmt.Errorf("load draft comments: %w", err)
 	}
@@ -39,11 +35,22 @@ func (h *Handler) PublishDrafts(
 		return nil
 	}
 
-	change, err := lookupReviewChange(ctx, h.Service, branch)
+	change, err := h.Service.LookupBranch(ctx, req.Branch)
 	if err != nil {
-		return err
+		if errors.Is(err, state.ErrNotExist) {
+			return fmt.Errorf("branch not tracked: %s", req.Branch)
+		}
+		return fmt.Errorf("get branch: %w", err)
 	}
-	patch, err := h.loadPatch(ctx, change.Base, branch)
+	if change.Change == nil {
+		return fmt.Errorf(
+			"no change request for %s; "+
+				"submit the branch first with "+
+				"'gs branch submit'",
+			req.Branch,
+		)
+	}
+	patch, err := h.loadPatch(ctx, change.Base, req.Branch)
 	if err != nil {
 		return err
 	}
@@ -59,31 +66,33 @@ func (h *Handler) PublishDrafts(
 
 	comments := make([]forge.SubmitReviewCommentRequest, 0, len(drafts))
 	for _, draft := range drafts {
-		if replyTo, ok := draft.ReplyTo(); ok {
+		if draft.ReplyTo != "" {
 			comments = append(comments, forge.SubmitReviewCommentRequest{
-				Body:    draft.Body(),
-				ReplyTo: threadIDs[replyTo],
+				Body:    draft.Body,
+				ReplyTo: threadIDs[draft.ReplyTo],
 			})
 			continue
 		}
 
-		anchor, _ := draft.Anchor()
 		if !patch.ContainsLineRange(
-			anchor.Path(),
-			anchor.StartLine(),
-			anchor.EndLine(),
+			draft.Anchor.Path,
+			draft.Anchor.StartLine,
+			draft.Anchor.EndLine,
 		) {
 			return fmt.Errorf(
 				"draft %s: review diff does not contain %s",
-				draft.ID(),
-				anchor,
+				draft.ID,
+				draft.Anchor,
 			)
 		}
 		comments = append(comments, forge.SubmitReviewCommentRequest{
-			Path:  anchor.Path(),
-			Range: forgeRange(anchor),
-			Body:  draft.Body(),
-			Side:  forge.ReviewThreadSideRight,
+			Path: draft.Anchor.Path,
+			Range: forge.ReviewThreadRange{
+				StartLine: draft.Anchor.StartLine,
+				EndLine:   draft.Anchor.EndLine,
+			},
+			Body: draft.Body,
+			Side: forge.ReviewThreadSideRight,
 		})
 	}
 
@@ -98,7 +107,7 @@ func (h *Handler) PublishDrafts(
 	); err != nil {
 		return fmt.Errorf("submit review: %w", err)
 	}
-	if err := h.Store.ClearReviewDrafts(ctx, branch); err != nil {
+	if err := h.Store.ClearReviewDrafts(ctx, req.Branch); err != nil {
 		return fmt.Errorf("clear draft comments: %w", err)
 	}
 
@@ -110,6 +119,8 @@ func (h *Handler) PublishDrafts(
 	return nil
 }
 
+// resolveDraftThreadIDs recovers opaque forge IDs for every drafted reply.
+// One traversal resolves all targets before the review is submitted.
 func resolveDraftThreadIDs(
 	ctx context.Context,
 	repository forge.ReviewRepository,
@@ -118,8 +129,8 @@ func resolveDraftThreadIDs(
 ) (map[string]forge.ReviewThreadID, error) {
 	wanted := make(map[string]struct{})
 	for _, draft := range drafts {
-		if replyTo, ok := draft.ReplyTo(); ok {
-			wanted[replyTo] = struct{}{}
+		if draft.ReplyTo != "" {
+			wanted[draft.ReplyTo] = struct{}{}
 		}
 	}
 	if len(wanted) == 0 {
@@ -144,15 +155,14 @@ func resolveDraftThreadIDs(
 	}
 
 	for _, draft := range drafts {
-		replyTo, isReply := draft.ReplyTo()
-		if !isReply {
+		if draft.ReplyTo == "" {
 			continue
 		}
-		if _, ok := wanted[replyTo]; ok {
+		if _, ok := wanted[draft.ReplyTo]; ok {
 			return nil, fmt.Errorf(
 				"draft %s: review thread %q not found",
-				draft.ID(),
-				replyTo,
+				draft.ID,
+				draft.ReplyTo,
 			)
 		}
 	}

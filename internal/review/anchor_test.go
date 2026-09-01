@@ -14,12 +14,41 @@ func TestAnchorUnmarshalText(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    string
+		want    review.Anchor
 		wantErr string
 	}{
-		{name: "File", input: "main.go", want: "main.go"},
-		{name: "Line", input: "main.go:42", want: "main.go:42"},
-		{name: "Range", input: "main.go:42-50", want: "main.go:42-50"},
+		{
+			name:  "File",
+			input: "main.go",
+			want:  review.Anchor{Path: "main.go"},
+		},
+		{
+			name:  "Line",
+			input: "main.go:42",
+			want: review.Anchor{
+				Path:      "main.go",
+				StartLine: 42,
+				EndLine:   42,
+			},
+		},
+		{
+			name:  "Range",
+			input: "main.go:42-50",
+			want: review.Anchor{
+				Path:      "main.go",
+				StartLine: 42,
+				EndLine:   50,
+			},
+		},
+		{
+			name:  "ColonInPath",
+			input: "path:main.go:42",
+			want: review.Anchor{
+				Path:      "path:main.go",
+				StartLine: 42,
+				EndLine:   42,
+			},
+		},
 		{name: "Empty", wantErr: "comment anchor is required"},
 		{name: "EmptyPath", input: ":42", wantErr: "path is required"},
 		{name: "InvalidLine", input: "main.go:nope", wantErr: "invalid line number"},
@@ -38,7 +67,8 @@ func TestAnchorUnmarshalText(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, got.String())
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.input, got.String())
 		})
 	}
 }

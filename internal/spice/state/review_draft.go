@@ -40,7 +40,7 @@ func (s *Store) AddReviewDraft(
 		state = &reviewDraftState{NextID: 1}
 	}
 
-	draft = draft.WithID(state.NextID)
+	draft.ID = state.NextID
 	state.NextID++
 	state.Drafts = append(state.Drafts, storeReviewDraft(draft))
 	if err := s.saveReviewDraftState(ctx, branch, state); err != nil {
@@ -87,11 +87,24 @@ func (s *Store) LoadReviewDrafts(
 
 	drafts := make([]review.Draft, len(state.Drafts))
 	for i, stored := range state.Drafts {
-		draft, err := loadReviewDraft(stored)
-		if err != nil {
-			return nil, fmt.Errorf("load draft %d: %w", stored.ID, err)
+		if stored.ThreadID != "" {
+			drafts[i] = review.Draft{
+				ID:      stored.ID,
+				Body:    stored.Body,
+				ReplyTo: stored.ThreadID,
+			}
+			continue
 		}
-		drafts[i] = draft
+
+		drafts[i] = review.Draft{
+			ID:   stored.ID,
+			Body: stored.Body,
+			Anchor: review.Anchor{
+				Path:      stored.File,
+				StartLine: stored.Line,
+				EndLine:   stored.Line,
+			},
+		}
 	}
 	return drafts, nil
 }
@@ -140,34 +153,17 @@ func (s *Store) saveReviewDraftState(
 
 func storeReviewDraft(draft review.Draft) storedReviewDraft {
 	stored := storedReviewDraft{
-		ID:   draft.ID(),
-		Body: draft.Body(),
+		ID:   draft.ID,
+		Body: draft.Body,
 	}
-	if replyTo, ok := draft.ReplyTo(); ok {
-		stored.ThreadID = replyTo
+	if draft.ReplyTo != "" {
+		stored.ThreadID = draft.ReplyTo
 		return stored
 	}
 
-	anchor, _ := draft.Anchor()
-	stored.File = anchor.Path()
-	stored.Line = anchor.StartLine()
+	stored.File = draft.Anchor.Path
+	stored.Line = draft.Anchor.StartLine
 	return stored
-}
-
-func loadReviewDraft(stored storedReviewDraft) (review.Draft, error) {
-	if stored.ThreadID != "" {
-		return review.NewReplyDraft(
-			stored.ID,
-			stored.ThreadID,
-			stored.Body,
-		), nil
-	}
-
-	anchor, err := review.NewLineAnchor(stored.File, stored.Line)
-	if err != nil {
-		return review.Draft{}, fmt.Errorf("decode anchor: %w", err)
-	}
-	return review.NewCommentDraft(stored.ID, anchor, stored.Body), nil
 }
 
 func reviewDraftsJSON(branch string) string {

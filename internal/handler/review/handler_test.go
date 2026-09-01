@@ -18,31 +18,27 @@ import (
 
 func TestDraftHandler_SaveCommentDraft(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	worktree := NewMockWorktree(ctrl)
 	store := NewMockStore(ctrl)
 	handler := &DraftHandler{
-		Log:      silog.Nop(),
-		Worktree: worktree,
-		Store:    store,
+		Log:   silog.Nop(),
+		Store: store,
 		Editor: func(context.Context, string) (string, error) {
 			t.Fatal("editor should not open when a message is supplied")
 			return "", nil
 		},
 	}
-	anchor, err := reviewmodel.NewLineAnchor("review.go", 3)
-	require.NoError(t, err)
-	wantDraft := reviewmodel.NewCommentDraft(0, anchor, "Use a constant.")
+	anchor := reviewmodel.Anchor{Path: "review.go", StartLine: 3, EndLine: 3}
+	wantDraft := reviewmodel.Draft{ID: 0, Body: "Use a constant.", Anchor: anchor}
+	wantSavedDraft := wantDraft
+	wantSavedDraft.ID = 1
 
-	worktree.
-		EXPECT().
-		CurrentBranch(gomock.Any()).
-		Return("feature", nil)
 	store.
 		EXPECT().
 		AddReviewDraft(gomock.Any(), "feature", wantDraft).
-		Return(wantDraft.WithID(1), nil)
+		Return(wantSavedDraft, nil)
 
-	err = handler.SaveCommentDraft(t.Context(), &CommentRequest{
+	err := handler.SaveCommentDraft(t.Context(), &CommentRequest{
+		Branch:  "feature",
 		Anchor:  anchor,
 		Message: "Use a constant.",
 	})
@@ -53,19 +49,24 @@ func TestDraftHandler_SaveReplyDraft(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	store := NewMockStore(ctrl)
 	handler := &DraftHandler{
-		Log:      silog.Nop(),
-		Worktree: NewMockWorktree(ctrl),
-		Store:    store,
+		Log:   silog.Nop(),
+		Store: store,
 		Editor: func(context.Context, string) (string, error) {
 			return "That makes sense.", nil
 		},
 	}
-	wantDraft := reviewmodel.NewReplyDraft(0, "thread-1", "That makes sense.")
+	wantDraft := reviewmodel.Draft{
+		ID:      0,
+		Body:    "That makes sense.",
+		ReplyTo: "thread-1",
+	}
+	wantSavedDraft := wantDraft
+	wantSavedDraft.ID = 2
 
 	store.
 		EXPECT().
 		AddReviewDraft(gomock.Any(), "feature", wantDraft).
-		Return(wantDraft.WithID(2), nil)
+		Return(wantSavedDraft, nil)
 
 	err := handler.SaveReplyDraft(t.Context(), &ReplyRequest{
 		Branch:   "feature",
@@ -90,8 +91,7 @@ func TestHandler_PostComment(t *testing.T) {
 			return "", nil
 		},
 	}
-	anchor, err := reviewmodel.NewLineAnchor("review.go", 3)
-	require.NoError(t, err)
+	anchor := reviewmodel.Anchor{Path: "review.go", StartLine: 3, EndLine: 3}
 
 	service.
 		EXPECT().
@@ -133,7 +133,7 @@ func TestHandler_PostComment(t *testing.T) {
 			},
 		}, nil)
 
-	err = handler.PostComment(t.Context(), &CommentRequest{
+	err := handler.PostComment(t.Context(), &CommentRequest{
 		Branch:  "feature",
 		Anchor:  anchor,
 		Message: "Use a constant.",
@@ -195,29 +195,27 @@ func TestDraftHandler_ReplaceDraftBody(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	store := NewMockStore(ctrl)
 	handler := &DraftHandler{
-		Log:      silog.Nop(),
-		Worktree: NewMockWorktree(ctrl),
-		Store:    store,
+		Log:   silog.Nop(),
+		Store: store,
 		Editor: func(context.Context, string) (string, error) {
 			t.Fatal("editor should not open when a message is supplied")
 			return "", nil
 		},
 	}
-	anchor, err := reviewmodel.NewLineAnchor("review.go", 3)
-	require.NoError(t, err)
+	anchor := reviewmodel.Anchor{Path: "review.go", StartLine: 3, EndLine: 3}
 
 	store.
 		EXPECT().
 		LoadReviewDrafts(gomock.Any(), "feature").
 		Return([]Draft{
-			reviewmodel.NewCommentDraft(2, anchor, "Old body."),
+			{ID: 2, Body: "Old body.", Anchor: anchor},
 		}, nil)
 	store.
 		EXPECT().
 		UpdateReviewDraftBody(gomock.Any(), "feature", DraftID(2), "New body.").
 		Return(nil)
 
-	err = handler.ReplaceDraftBody(
+	err := handler.ReplaceDraftBody(
 		t.Context(),
 		&ReplaceDraftBodyRequest{
 			Branch:  "feature",
@@ -241,9 +239,12 @@ func TestHandler_LoadReviewData(t *testing.T) {
 		Repository: repository,
 		Editor:     nil,
 	}
-	anchor, err := reviewmodel.NewLineAnchor("review.go", 3)
-	require.NoError(t, err)
-	draft := reviewmodel.NewCommentDraft(1, anchor, "Use a constant.")
+	anchor := reviewmodel.Anchor{Path: "review.go", StartLine: 3, EndLine: 3}
+	draft := reviewmodel.Draft{
+		ID:     1,
+		Body:   "Use a constant.",
+		Anchor: anchor,
+	}
 	resolved := false
 	thread := &forge.ReviewThread{
 		ID:       testThreadID("thread-1"),
@@ -300,11 +301,10 @@ func TestHandler_PublishDrafts(t *testing.T) {
 		Repository: repository,
 		Editor:     nil,
 	}
-	anchor, err := reviewmodel.NewLineAnchor("review.go", 3)
-	require.NoError(t, err)
+	anchor := reviewmodel.Anchor{Path: "review.go", StartLine: 3, EndLine: 3}
 	drafts := []Draft{
-		reviewmodel.NewCommentDraft(1, anchor, "Use a constant."),
-		reviewmodel.NewReplyDraft(2, "thread-1", "Updated."),
+		{ID: 1, Body: "Use a constant.", Anchor: anchor},
+		{ID: 2, Body: "Updated.", ReplyTo: "thread-1"},
 	}
 	threadID := testThreadID("thread-1")
 
@@ -359,7 +359,7 @@ func TestHandler_PublishDrafts(t *testing.T) {
 		ClearReviewDrafts(gomock.Any(), "feature").
 		Return(nil)
 
-	err = handler.PublishDrafts(t.Context(), &PublishDraftsRequest{
+	err := handler.PublishDrafts(t.Context(), &PublishDraftsRequest{
 		Branch:      "feature",
 		Body:        "Review body.",
 		Disposition: forge.ReviewDispositionApprove,
@@ -374,7 +374,6 @@ func TestThreadHandler_SetThreadResolution(t *testing.T) {
 	resolver := NewMockReviewThreadResolver(ctrl)
 	handler := &ThreadHandler{
 		Log:        silog.Nop(),
-		Worktree:   NewMockWorktree(ctrl),
 		Service:    service,
 		Repository: repository,
 		Resolver:   resolver,
