@@ -1,6 +1,7 @@
 package reviewdiff_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestPatchContains(t *testing.T) {
-	patch, err := reviewdiff.Parse([]byte(`diff --git a/main.go b/main.go
+	patch, err := reviewdiff.Parse(strings.NewReader(`diff --git a/main.go b/main.go
 --- a/main.go
 +++ b/main.go
 @@ -1,4 +1,5 @@
@@ -61,7 +62,7 @@ new mode 100755
 }
 
 func TestPatchDeletes(t *testing.T) {
-	patch, err := reviewdiff.Parse([]byte(`diff --git a/main.go b/main.go
+	patch, err := reviewdiff.Parse(strings.NewReader(`diff --git a/main.go b/main.go
 --- a/main.go
 +++ b/main.go
 @@ -2,5 +2,4 @@ package main
@@ -95,7 +96,7 @@ rename to new.go
 }
 
 func TestParseError(t *testing.T) {
-	_, err := reviewdiff.Parse([]byte(`detached fragment
+	_, err := reviewdiff.Parse(strings.NewReader(`detached fragment
 @@ -1 +1 @@
 `))
 	require.Error(t, err)
