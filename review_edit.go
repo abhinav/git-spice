@@ -5,15 +5,14 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type reviewEditCmd struct {
-	ID      int    `arg:"" help:"Draft comment ID to edit."`
-	Message string `short:"m" placeholder:"MSG" help:"New comment body. Opens editor if not provided."`
-	Branch  string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch containing the draft. Defaults to the current branch."`
+	ID      review.DraftID `arg:"" help:"Draft comment ID to edit."`
+	Message string         `short:"m" placeholder:"MSG" help:"New comment body. Opens editor if not provided."`
+	Branch  string         `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch containing the draft. Defaults to the current branch."`
 }
 
 func (*reviewEditCmd) Help() string {
@@ -30,49 +29,20 @@ func (*reviewEditCmd) Help() string {
 
 func (cmd *reviewEditCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
 	wt *git.Worktree,
-	store *state.Store,
-	repo *git.Repository,
+	handler ReviewDraftHandler,
 ) error {
-	branch, err := reviewBranch(ctx, wt, cmd.Branch)
-	if err != nil {
-		return err
-	}
-
-	staged, err := store.LoadStagedComments(ctx, branch)
-	if err != nil {
-		return fmt.Errorf("load draft comments: %w", err)
-	}
-	if staged == nil {
-		staged = &state.StagedComments{}
-	}
-
-	idx := -1
-	for i, comment := range staged.Comments {
-		if comment.ID == cmd.ID {
-			idx = i
-			break
+	if cmd.Branch == "" {
+		branch, err := wt.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
 		}
-	}
-	if idx < 0 {
-		return fmt.Errorf("draft comment %d not found", cmd.ID)
+		cmd.Branch = branch
 	}
 
-	body, err := reviewCommentBody(
-		ctx,
-		repo,
-		cmd.Message,
-		staged.Comments[idx].Body,
-	)
-	if err != nil {
-		return err
-	}
-	staged.Comments[idx].Body = body
-	if err := store.SaveStagedComments(ctx, branch, staged); err != nil {
-		return fmt.Errorf("save draft comments: %w", err)
-	}
-
-	log.Infof("Updated draft comment %d.", cmd.ID)
-	return nil
+	return handler.ReplaceDraftBody(ctx, &review.ReplaceDraftBodyRequest{
+		Branch:  cmd.Branch,
+		ID:      cmd.ID,
+		Message: cmd.Message,
+	})
 }

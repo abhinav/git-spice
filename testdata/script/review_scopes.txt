@@ -47,7 +47,7 @@ cmp stdout $WORK/golden/reviews.yaml
 
 # Missing anchor is rejected.
 ! gs review comment -m 'oops' --no-draft
-stderr 'comment anchor is required'
+stderr 'expected "<file\[:line\[-end\]\]>"'
 
 -- repo/main.go --
 package main

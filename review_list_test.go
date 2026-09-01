@@ -7,25 +7,27 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/handler/review"
 )
 
 func TestReviewListJSONUnsupportedThreadState(t *testing.T) {
 	var stdout bytes.Buffer
-	err := new(reviewListCmd).writeJSON(
+	err := writeReviewListJSON(
 		&stdout,
-		nil,
-		[]*listedReviewComment{
-			{
-				Thread: &forge.ReviewThread{
-					ID:    testReviewThreadID("thread-1"),
-					Path:  "review.go",
-					Range: forge.ReviewThreadLine(3),
-					Side:  forge.ReviewThreadSideRight,
-				},
-				Comment: &forge.ReviewComment{
-					ID:     testReviewCommentID("comment-1"),
-					Body:   "Consider a constant.",
-					Author: "reviewer",
+		&review.LoadResult{
+			Comments: []review.ListedComment{
+				{
+					Thread: forge.ReviewThread{
+						ID:    testReviewThreadID("thread-1"),
+						Path:  "review.go",
+						Range: forge.ReviewThreadLine(3),
+						Side:  forge.ReviewThreadSideRight,
+					},
+					Comment: forge.ReviewComment{
+						ID:     testReviewCommentID("comment-1"),
+						Body:   "Consider a constant.",
+						Author: "reviewer",
+					},
 				},
 			},
 		},
