@@ -267,8 +267,26 @@ func (g *GitBackend) update(
 	setBlobs []git.Hash,
 	prevCommit, prevTree git.Hash,
 ) error {
-	writesByPath := make(map[string]git.Hash, len(req.Sets))
-	deletes := make(map[string]struct{}, len(req.Deletes))
+	writesByPath := make(map[string]git.Hash, len(req.Sets)+len(req.Moves))
+	deletes := make(map[string]struct{}, len(req.Deletes)+len(req.Moves))
+	for _, move := range req.Moves {
+		var blob git.Hash
+		if prevTree != "" {
+			var err error
+			blob, err = g.repo.HashAt(ctx, prevTree.String(), move.From)
+			if err != nil && !errors.Is(err, git.ErrNotExist) {
+				return fmt.Errorf("read moved value %q: %w", move.From, err)
+			}
+		}
+		if blob == "" {
+			deletes[move.To] = struct{}{}
+		} else {
+			writesByPath[move.To] = blob
+			delete(deletes, move.To)
+		}
+		delete(writesByPath, move.From)
+		deletes[move.From] = struct{}{}
+	}
 	for i, set := range req.Sets {
 		writesByPath[set.Key] = setBlobs[i]
 		delete(deletes, set.Key)

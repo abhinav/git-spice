@@ -95,6 +95,38 @@ func testStorageBackend(t *testing.T, backend Backend) {
 		assert.ErrorIs(t, err, ErrConflict)
 	})
 
+	t.Run("Move", func(t *testing.T) {
+		defer func() {
+			assert.NoError(t, db.Clear(ctx, "clear"))
+		}()
+
+		require.NoError(t, db.Set(ctx, "old", "value", "set old"))
+		require.NoError(t, db.Update(ctx, UpdateRequest{
+			Moves:   []MoveRequest{{From: "old", To: "new"}},
+			Message: "move value",
+		}))
+
+		var got string
+		assert.ErrorIs(t, db.Get(ctx, "old", &got), ErrNotExist)
+		require.NoError(t, db.Get(ctx, "new", &got))
+		assert.Equal(t, "value", got)
+	})
+
+	t.Run("Move/Absent", func(t *testing.T) {
+		defer func() {
+			assert.NoError(t, db.Clear(ctx, "clear"))
+		}()
+
+		require.NoError(t, db.Set(ctx, "new", "stale", "set stale value"))
+		require.NoError(t, db.Update(ctx, UpdateRequest{
+			Moves:   []MoveRequest{{From: "old", To: "new"}},
+			Message: "move absent value",
+		}))
+
+		var got string
+		assert.ErrorIs(t, db.Get(ctx, "new", &got), ErrNotExist)
+	})
+
 	t.Run("SetNested", func(t *testing.T) {
 		defer func() {
 			assert.NoError(t, db.Clear(ctx, "clear"))

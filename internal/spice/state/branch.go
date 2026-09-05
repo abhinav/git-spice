@@ -178,19 +178,21 @@ func (s *Store) listBranches(ctx context.Context) iter.Seq2[string, error] {
 type BranchTx struct {
 	store *Store
 
-	states map[string]*branchState // cached states with changes
-	sets   map[string]struct{}     // branches to set
-	dels   map[string]struct{}     // branches to delete
+	states  map[string]*branchState // cached states with changes
+	sets    map[string]struct{}     // branches to set
+	dels    map[string]struct{}     // branches to delete
+	renames map[string]string       // old branch name to new branch name
 }
 
 // BeginBranchTx starts a new transaction for updating the branch graph.
 // Changes are not persisted until Commit is called.
 func (s *Store) BeginBranchTx() *BranchTx {
 	return &BranchTx{
-		store:  s,
-		states: make(map[string]*branchState),
-		sets:   make(map[string]struct{}),
-		dels:   make(map[string]struct{}),
+		store:   s,
+		states:  make(map[string]*branchState),
+		sets:    make(map[string]struct{}),
+		dels:    make(map[string]struct{}),
+		renames: make(map[string]string),
 	}
 }
 
@@ -351,12 +353,51 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 	return nil
 }
 
+// Rename changes a tracked branch name while preserving its stored state.
+func (tx *BranchTx) Rename(
+	ctx context.Context,
+	oldName, newName string,
+) error {
+	if oldName == "" || newName == "" {
+		return errors.New("old and new branch names are required")
+	}
+	if oldName == tx.store.trunk || newName == tx.store.trunk {
+		return ErrTrunk
+	}
+
+	oldState, err := tx.state(ctx, oldName)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.state(ctx, newName); err == nil {
+		return fmt.Errorf("branch %v is already tracked", newName)
+	} else if !errors.Is(err, ErrNotExist) {
+		return err
+	}
+
+	newState := *oldState
+	tx.states[newName] = &newState
+	delete(tx.states, oldName)
+	tx.dels[oldName] = struct{}{}
+
+	if _, modified := tx.sets[oldName]; modified {
+		// The persisted source does not include earlier transaction changes.
+		// Write the changed state under its new name instead of moving it.
+		tx.sets[newName] = struct{}{}
+	} else {
+		tx.renames[oldName] = newName
+	}
+	delete(tx.sets, oldName)
+	return nil
+}
+
 // Commit persists all planned changes to the store.
 // If there are no changes, this is a no-op.
 func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 	req := updateBranchesRequest{
 		Sets:    make([]setBranchStateRequest, 0, len(tx.sets)),
 		Deletes: slices.Collect(maps.Keys(tx.dels)),
+		Renames: maps.Clone(tx.renames),
 		Message: msg,
 	}
 
@@ -376,6 +417,7 @@ func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 	clear(tx.sets)
 	clear(tx.dels)
 	clear(tx.states)
+	clear(tx.renames)
 	return nil
 }
 
@@ -402,9 +444,24 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 		// seen prevents underlying branches from being listed twice.
 		seen := make(map[string]struct{})
 
+		// A renamed branch is visible under its destination name even when
+		// its persisted state can move without being rewritten.
+		for _, branch := range tx.renames {
+			if _, deleted := tx.dels[branch]; deleted {
+				continue
+			}
+			if !yield(branch, nil) {
+				return
+			}
+			seen[branch] = struct{}{}
+		}
+
 		// Entries in tx.sets take precedence unless they are deleted.
 		for branch := range tx.sets {
 			if _, ok := tx.dels[branch]; ok {
+				continue
+			}
+			if _, ok := seen[branch]; ok {
 				continue
 			}
 
@@ -495,17 +552,18 @@ type setBranchStateRequest struct {
 }
 
 // updateBranchesRequest is a request to update the state of multiple branches.
-// The request can set the state of branches, delete branches, or both.
+// The request can set, delete, or rename branches in one transaction.
 // A message is recorded with the update.
 type updateBranchesRequest struct {
 	Sets    []setBranchStateRequest
 	Deletes []string
+	Renames map[string]string
 	Message string // required
 }
 
 // updateBranches atomically updates the state of multiple branches in the store.
 func (s *Store) updateBranches(ctx context.Context, req updateBranchesRequest) error {
-	if len(req.Sets) == 0 && len(req.Deletes) == 0 {
+	if len(req.Sets) == 0 && len(req.Deletes) == 0 && len(req.Renames) == 0 {
 		return nil
 	}
 
@@ -521,13 +579,24 @@ func (s *Store) updateBranches(ctx context.Context, req updateBranchesRequest) e
 		}
 	}
 
-	dels := make([]string, len(req.Deletes))
-	for idx, del := range req.Deletes {
-		dels[idx] = branchKey(del)
+	var dels []string
+	for _, del := range req.Deletes {
+		if _, renamed := req.Renames[del]; !renamed {
+			dels = append(dels, branchKey(del))
+		}
+	}
+
+	var moves []storage.MoveRequest
+	for _, oldName := range slices.Sorted(maps.Keys(req.Renames)) {
+		moves = append(moves, storage.MoveRequest{
+			From: branchKey(oldName),
+			To:   branchKey(req.Renames[oldName]),
+		})
 	}
 
 	updReq := storage.UpdateRequest{
 		Sets:    sets,
+		Moves:   moves,
 		Deletes: dels,
 		Message: req.Message,
 	}
