@@ -79,6 +79,44 @@ func (c *MockDBClearCall) DoAndReturn(f func(context.Context, string) error) *Mo
 	return c
 }
 
+// CompareAndSwap mocks base method.
+func (m *MockDB) CompareAndSwap(ctx context.Context, snapshot storage.Snapshot, req storage.UpdateRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompareAndSwap", ctx, snapshot, req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CompareAndSwap indicates an expected call of CompareAndSwap.
+func (mr *MockDBMockRecorder) CompareAndSwap(ctx, snapshot, req any) *MockDBCompareAndSwapCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareAndSwap", reflect.TypeOf((*MockDB)(nil).CompareAndSwap), ctx, snapshot, req)
+	return &MockDBCompareAndSwapCall{Call: call}
+}
+
+// MockDBCompareAndSwapCall wrap *gomock.Call
+type MockDBCompareAndSwapCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockDBCompareAndSwapCall) Return(arg0 error) *MockDBCompareAndSwapCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockDBCompareAndSwapCall) Do(f func(context.Context, storage.Snapshot, storage.UpdateRequest) error) *MockDBCompareAndSwapCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockDBCompareAndSwapCall) DoAndReturn(f func(context.Context, storage.Snapshot, storage.UpdateRequest) error) *MockDBCompareAndSwapCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // Delete mocks base method.
 func (m *MockDB) Delete(ctx context.Context, k, msg string) error {
 	m.ctrl.T.Helper()
@@ -118,17 +156,17 @@ func (c *MockDBDeleteCall) DoAndReturn(f func(context.Context, string, string) e
 }
 
 // Get mocks base method.
-func (m *MockDB) Get(ctx context.Context, k string, v any) error {
+func (m *MockDB) Get(ctx context.Context, key string, dst any) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, k, v)
+	ret := m.ctrl.Call(m, "Get", ctx, key, dst)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockDBMockRecorder) Get(ctx, k, v any) *MockDBGetCall {
+func (mr *MockDBMockRecorder) Get(ctx, key, dst any) *MockDBGetCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDB)(nil).Get), ctx, k, v)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDB)(nil).Get), ctx, key, dst)
 	return &MockDBGetCall{Call: call}
 }
 
@@ -228,6 +266,45 @@ func (c *MockDBSetCall) Do(f func(context.Context, string, any, string) error) *
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockDBSetCall) DoAndReturn(f func(context.Context, string, any, string) error) *MockDBSetCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// Snapshot mocks base method.
+func (m *MockDB) Snapshot(ctx context.Context) (storage.Snapshot, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Snapshot", ctx)
+	ret0, _ := ret[0].(storage.Snapshot)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Snapshot indicates an expected call of Snapshot.
+func (mr *MockDBMockRecorder) Snapshot(ctx any) *MockDBSnapshotCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshot", reflect.TypeOf((*MockDB)(nil).Snapshot), ctx)
+	return &MockDBSnapshotCall{Call: call}
+}
+
+// MockDBSnapshotCall wrap *gomock.Call
+type MockDBSnapshotCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockDBSnapshotCall) Return(arg0 storage.Snapshot, arg1 error) *MockDBSnapshotCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockDBSnapshotCall) Do(f func(context.Context) (storage.Snapshot, error)) *MockDBSnapshotCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockDBSnapshotCall) DoAndReturn(f func(context.Context) (storage.Snapshot, error)) *MockDBSnapshotCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

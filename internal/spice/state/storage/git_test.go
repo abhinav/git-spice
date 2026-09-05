@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	cryptorand "crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -45,6 +46,42 @@ func TestGitBackendUpdateNoChanges(t *testing.T) {
 
 	assert.Equal(t, start, end,
 		"there should be no changes in the repository")
+}
+
+func TestGitBackendUpdateNoChanges_concurrentUpdate(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	newBackend := func(repo GitRepository) *GitBackend {
+		return NewGitBackend(GitConfig{
+			Repo:        repo,
+			Ref:         "refs/data",
+			AuthorName:  "Test Author",
+			AuthorEmail: "test@example.com",
+			Log:         silogtest.New(t),
+		})
+	}
+	concurrent := NewDB(newBackend(repo))
+	require.NoError(t, concurrent.Set(ctx, "foo", "bar", "initial set"))
+
+	racingRepo := &updateTreeHookRepository{
+		GitRepository: repo,
+		BeforeUpdate: func(ctx context.Context, call int) error {
+			return concurrent.Set(
+				ctx,
+				fmt.Sprintf("concurrent/%d", call),
+				call,
+				"concurrent update",
+			)
+		},
+	}
+	db := NewDB(newBackend(racingRepo))
+
+	require.NoError(t, db.Set(ctx, "foo", "bar", "keep desired value"))
+	assert.Equal(t, 1, racingRepo.calls)
 }
 
 func TestGitBackend_ConcurrentOperations(t *testing.T) {
@@ -252,4 +289,21 @@ func TestGitBackend_SpecialCharacterKeys(t *testing.T) {
 				"Keys list should contain %q", expectedKey)
 		}
 	})
+}
+
+type updateTreeHookRepository struct {
+	GitRepository
+	BeforeUpdate func(context.Context, int) error
+	calls        int
+}
+
+func (r *updateTreeHookRepository) UpdateTree(
+	ctx context.Context,
+	req git.UpdateTreeRequest,
+) (git.Hash, error) {
+	r.calls++
+	if err := r.BeforeUpdate(ctx, r.calls); err != nil {
+		return "", err
+	}
+	return r.GitRepository.UpdateTree(ctx, req)
 }

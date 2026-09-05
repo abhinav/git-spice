@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"iter"
+	"maps"
+	"slices"
 	"sync"
 
 	"go.abhg.dev/gs/internal/git"
@@ -78,15 +80,21 @@ func NewGitBackend(cfg GitConfig) *GitBackend {
 func (g *GitBackend) Keys(ctx context.Context, dir string) ([]string, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+	return g.keys(ctx, g.ref, dir)
+}
 
+func (g *GitBackend) keys(
+	ctx context.Context,
+	treeish, dir string,
+) ([]string, error) {
 	var (
 		treeHash git.Hash
 		err      error
 	)
 	if dir == "" {
-		treeHash, err = g.repo.PeelToTree(ctx, g.ref)
+		treeHash, err = g.repo.PeelToTree(ctx, treeish)
 	} else {
-		treeHash, err = g.repo.HashAt(ctx, g.ref, dir)
+		treeHash, err = g.repo.HashAt(ctx, treeish, dir)
 	}
 	if err != nil {
 		if errors.Is(err, git.ErrNotExist) {
@@ -116,21 +124,30 @@ func (g *GitBackend) Get(ctx context.Context, key string, v any) error {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	blobHash, err := g.repo.HashAt(ctx, g.ref, key)
+	return g.read(ctx, g.ref, key, v)
+}
+
+// Snapshot returns a read-only view of the current Git-backed store revision.
+func (g *GitBackend) Snapshot(ctx context.Context) (Snapshot, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	commit, err := g.repo.PeelToCommit(ctx, g.ref)
 	if err != nil {
-		return ErrNotExist
+		if errors.Is(err, git.ErrNotExist) {
+			return &gitSnapshot{backend: g}, nil
+		}
+		return nil, fmt.Errorf("get store commit: %w", err)
 	}
-
-	var buf bytes.Buffer
-	if err := g.repo.ReadObject(ctx, git.BlobType, blobHash, &buf); err != nil {
-		return fmt.Errorf("read object: %w", err)
+	tree, err := g.repo.PeelToTree(ctx, commit.String())
+	if err != nil {
+		return nil, fmt.Errorf("get tree for %v: %w", commit, err)
 	}
-
-	if err := json.UnmarshalRead(&buf, v); err != nil {
-		return fmt.Errorf("decode JSON: %w", err)
-	}
-
-	return nil
+	return &gitSnapshot{
+		backend: g,
+		commit:  commit,
+		tree:    tree,
+	}, nil
 }
 
 // Clear removes all keys from the store.
@@ -173,30 +190,44 @@ func (g *GitBackend) Clear(ctx context.Context, msg string) error {
 	return nil
 }
 
-// Update applies a batch of changes to the store.
+// CompareAndSwap applies req if snapshot still identifies the backing ref.
+func (g *GitBackend) CompareAndSwap(
+	ctx context.Context,
+	snapshot Snapshot,
+	req UpdateRequest,
+) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	snap, ok := snapshot.(*gitSnapshot)
+	if !ok || snap.backend != g {
+		return ErrInvalidSnapshot
+	}
+	current, err := g.repo.PeelToCommit(ctx, g.ref)
+	if err != nil {
+		if !errors.Is(err, git.ErrNotExist) {
+			return fmt.Errorf("get store commit: %w", err)
+		}
+		current = ""
+	}
+	if current != snap.commit {
+		return ErrConflict
+	}
+	setBlobs, err := g.writeSets(ctx, req.Sets)
+	if err != nil {
+		return err
+	}
+	return g.update(ctx, req, setBlobs, snap.commit, snap.tree)
+}
+
+// Update applies req to the current Git-backed store revision.
 func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	setBlobs := make([]git.Hash, len(req.Sets))
-	for i, set := range req.Sets {
-		must.NotBeBlankf(set.Key, "key must not be blank")
-
-		var buf bytes.Buffer
-		enc := jsontext.NewEncoder(
-			&buf,
-			jsontext.WithIndent("  "),
-		)
-		if err := json.MarshalEncode(enc, set.Value); err != nil {
-			return fmt.Errorf("encode JSON: %w", err)
-		}
-
-		blobHash, err := g.repo.WriteObject(ctx, git.BlobType, &buf)
-		if err != nil {
-			return fmt.Errorf("write object: %w", err)
-		}
-
-		setBlobs[i] = blobHash
+	setBlobs, err := g.writeSets(ctx, req.Sets)
+	if err != nil {
+		return err
 	}
 
 	var updateErr error
@@ -204,6 +235,9 @@ func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
 		var prevTree git.Hash
 		prevCommit, err := g.repo.PeelToCommit(ctx, g.ref)
 		if err != nil {
+			if !errors.Is(err, git.ErrNotExist) {
+				return fmt.Errorf("get store commit: %w", err)
+			}
 			prevCommit = ""
 			prevTree = ""
 		} else {
@@ -213,55 +247,152 @@ func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
 			}
 		}
 
-		writes := make([]git.BlobInfo, len(req.Sets))
-		for i, req := range req.Sets {
-			writes[i] = git.BlobInfo{
-				Mode: git.RegularMode,
-				Path: req.Key,
-				Hash: setBlobs[i],
-			}
-		}
-
-		newTree, err := g.repo.UpdateTree(ctx, git.UpdateTreeRequest{
-			Tree:    prevTree,
-			Writes:  writes,
-			Deletes: req.Deletes,
-		})
-		if err != nil {
-			return fmt.Errorf("update tree: %w", err)
-		}
-
-		// The tree didn't change, so we don't need to commit.
-		if prevTree == newTree {
+		err = g.update(ctx, req, setBlobs, prevCommit, prevTree)
+		if err == nil {
 			return nil
 		}
-
-		commitReq := git.CommitTreeRequest{
-			Tree:      newTree,
-			Message:   req.Message,
-			Author:    &g.sig,
-			Committer: &g.sig,
+		if !errors.Is(err, ErrConflict) {
+			return err
 		}
-		if prevCommit != "" {
-			commitReq.Parents = []git.Hash{prevCommit}
-		}
-		newCommit, err := g.repo.CommitTree(ctx, commitReq)
-		if err != nil {
-			return fmt.Errorf("commit: %w", err)
-		}
-
-		if err := g.repo.SetRef(ctx, git.SetRefRequest{
-			Ref:     g.ref,
-			Hash:    newCommit,
-			OldHash: prevCommit,
-		}); err != nil {
-			updateErr = err
-			g.log.Warn("could not update ref: retrying", "error", err)
-			continue
-		}
-
-		return nil
+		updateErr = err
+		g.log.Warn("could not update ref: retrying", "error", err)
 	}
 
 	return fmt.Errorf("set ref: %w", updateErr)
+}
+
+func (g *GitBackend) update(
+	ctx context.Context,
+	req UpdateRequest,
+	setBlobs []git.Hash,
+	prevCommit, prevTree git.Hash,
+) error {
+	writesByPath := make(map[string]git.Hash, len(req.Sets))
+	deletes := make(map[string]struct{}, len(req.Deletes))
+	for i, set := range req.Sets {
+		writesByPath[set.Key] = setBlobs[i]
+		delete(deletes, set.Key)
+	}
+	for _, key := range req.Deletes {
+		delete(writesByPath, key)
+		deletes[key] = struct{}{}
+	}
+
+	writes := make([]git.BlobInfo, 0, len(writesByPath))
+	for _, path := range slices.Sorted(maps.Keys(writesByPath)) {
+		writes = append(writes, git.BlobInfo{
+			Mode: git.RegularMode,
+			Path: path,
+			Hash: writesByPath[path],
+		})
+	}
+	newTree, err := g.repo.UpdateTree(ctx, git.UpdateTreeRequest{
+		Tree:    prevTree,
+		Writes:  writes,
+		Deletes: slices.Sorted(maps.Keys(deletes)),
+	})
+	if err != nil {
+		return fmt.Errorf("update tree: %w", err)
+	}
+	if prevTree == newTree {
+		return nil
+	}
+
+	commitReq := git.CommitTreeRequest{
+		Tree:      newTree,
+		Message:   req.Message,
+		Author:    &g.sig,
+		Committer: &g.sig,
+	}
+	if prevCommit != "" {
+		commitReq.Parents = []git.Hash{prevCommit}
+	}
+	newCommit, err := g.repo.CommitTree(ctx, commitReq)
+	if err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	if err := g.repo.SetRef(ctx, git.SetRefRequest{
+		Ref:     g.ref,
+		Hash:    newCommit,
+		OldHash: prevCommit,
+	}); err != nil {
+		return ErrConflict
+	}
+	return nil
+}
+
+func (g *GitBackend) read(
+	ctx context.Context,
+	commitish string,
+	key string,
+	dst any,
+) error {
+	blobHash, err := g.repo.HashAt(ctx, commitish, key)
+	if err != nil {
+		return ErrNotExist
+	}
+
+	var buf bytes.Buffer
+	if err := g.repo.ReadObject(ctx, git.BlobType, blobHash, &buf); err != nil {
+		return fmt.Errorf("read object: %w", err)
+	}
+	if err := json.UnmarshalRead(&buf, dst); err != nil {
+		return fmt.Errorf("decode JSON: %w", err)
+	}
+	return nil
+}
+
+func (g *GitBackend) writeSets(
+	ctx context.Context,
+	sets []SetRequest,
+) ([]git.Hash, error) {
+	blobs := make([]git.Hash, len(sets))
+	for i, set := range sets {
+		must.NotBeBlankf(set.Key, "key must not be blank")
+
+		var buf bytes.Buffer
+		enc := jsontext.NewEncoder(
+			&buf,
+			jsontext.WithIndent("  "),
+		)
+		if err := json.MarshalEncode(enc, set.Value); err != nil {
+			return nil, fmt.Errorf("encode JSON: %w", err)
+		}
+
+		blob, err := g.repo.WriteObject(ctx, git.BlobType, &buf)
+		if err != nil {
+			return nil, fmt.Errorf("write object: %w", err)
+		}
+		blobs[i] = blob
+	}
+	return blobs, nil
+}
+
+type gitSnapshot struct {
+	backend *GitBackend
+	commit  git.Hash
+	tree    git.Hash
+}
+
+var _ Snapshot = (*gitSnapshot)(nil)
+
+func (s *gitSnapshot) Get(
+	ctx context.Context,
+	key string,
+	dst any,
+) error {
+	if s.commit == "" {
+		return ErrNotExist
+	}
+	return s.backend.read(ctx, s.commit.String(), key, dst)
+}
+
+func (s *gitSnapshot) Keys(
+	ctx context.Context,
+	dir string,
+) ([]string, error) {
+	if s.commit == "" {
+		return nil, nil
+	}
+	return s.backend.keys(ctx, s.commit.String(), dir)
 }
