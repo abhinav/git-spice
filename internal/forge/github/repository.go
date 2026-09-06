@@ -22,6 +22,7 @@ type githubGateway interface {
 	AddPullRequestReviewThreadReply(context.Context, *github.AddPullRequestReviewThreadReplyInput) (*github.AddedPullRequestReviewComment, error)
 	AddPullRequestsToStack(context.Context, *github.AddPullRequestsToStackInput) error
 	AddPullRequestMetadata(context.Context, *github.PullRequestMetadataInput) error
+	AsyncMergeResult(context.Context, string, string, int, string) (*github.AsyncMergeResult, error)
 	ChangeStatuses(context.Context, []github.ID) ([]*github.ChangeStatus, error)
 	ChangeTemplates(context.Context, string, string) ([]*github.ChangeTemplate, error)
 	CheckPullRequestStacks(context.Context, string, string) error
@@ -38,7 +39,9 @@ type githubGateway interface {
 	LabelIDs(context.Context, string, string, []string) ([]github.ID, error)
 	MarkPullRequestReadyForReview(context.Context, github.ID) error
 	MergePullRequest(context.Context, *github.MergePullRequestInput) error
+	MergePullRequestAsync(context.Context, *github.MergePullRequestAsyncInput) (*github.AsyncMergeResult, error)
 	PullRequest(context.Context, string, string, int) (*github.PullRequest, error)
+	PullRequestsForMergeRange(context.Context, string, string, []int) ([]*github.MergeRangePullRequest, error)
 	PullRequestsForStackUpdate(context.Context, string, string, []int) ([]*github.StackUpdatePullRequest, error)
 	PullRequestComments(context.Context, github.ID, *github.PaginationOptions) iter.Seq2[*github.Comment, error]
 	PullRequestID(context.Context, string, string, int) (github.ID, error)

@@ -273,6 +273,45 @@ func (c *MockGithubGatewayAddPullRequestsToStackCall) DoAndReturn(f func(context
 	return c
 }
 
+// AsyncMergeResult mocks base method.
+func (m *MockGithubGateway) AsyncMergeResult(arg0 context.Context, arg1, arg2 string, arg3 int, arg4 string) (*github.AsyncMergeResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AsyncMergeResult", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(*github.AsyncMergeResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AsyncMergeResult indicates an expected call of AsyncMergeResult.
+func (mr *MockGithubGatewayMockRecorder) AsyncMergeResult(arg0, arg1, arg2, arg3, arg4 any) *MockGithubGatewayAsyncMergeResultCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncMergeResult", reflect.TypeOf((*MockGithubGateway)(nil).AsyncMergeResult), arg0, arg1, arg2, arg3, arg4)
+	return &MockGithubGatewayAsyncMergeResultCall{Call: call}
+}
+
+// MockGithubGatewayAsyncMergeResultCall wrap *gomock.Call
+type MockGithubGatewayAsyncMergeResultCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGithubGatewayAsyncMergeResultCall) Return(arg0 *github.AsyncMergeResult, arg1 error) *MockGithubGatewayAsyncMergeResultCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGithubGatewayAsyncMergeResultCall) Do(f func(context.Context, string, string, int, string) (*github.AsyncMergeResult, error)) *MockGithubGatewayAsyncMergeResultCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGithubGatewayAsyncMergeResultCall) DoAndReturn(f func(context.Context, string, string, int, string) (*github.AsyncMergeResult, error)) *MockGithubGatewayAsyncMergeResultCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ChangeStatuses mocks base method.
 func (m *MockGithubGateway) ChangeStatuses(arg0 context.Context, arg1 []github.ID) ([]*github.ChangeStatus, error) {
 	m.ctrl.T.Helper()
@@ -890,6 +929,45 @@ func (c *MockGithubGatewayMergePullRequestCall) DoAndReturn(f func(context.Conte
 	return c
 }
 
+// MergePullRequestAsync mocks base method.
+func (m *MockGithubGateway) MergePullRequestAsync(arg0 context.Context, arg1 *github.MergePullRequestAsyncInput) (*github.AsyncMergeResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MergePullRequestAsync", arg0, arg1)
+	ret0, _ := ret[0].(*github.AsyncMergeResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MergePullRequestAsync indicates an expected call of MergePullRequestAsync.
+func (mr *MockGithubGatewayMockRecorder) MergePullRequestAsync(arg0, arg1 any) *MockGithubGatewayMergePullRequestAsyncCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergePullRequestAsync", reflect.TypeOf((*MockGithubGateway)(nil).MergePullRequestAsync), arg0, arg1)
+	return &MockGithubGatewayMergePullRequestAsyncCall{Call: call}
+}
+
+// MockGithubGatewayMergePullRequestAsyncCall wrap *gomock.Call
+type MockGithubGatewayMergePullRequestAsyncCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGithubGatewayMergePullRequestAsyncCall) Return(arg0 *github.AsyncMergeResult, arg1 error) *MockGithubGatewayMergePullRequestAsyncCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGithubGatewayMergePullRequestAsyncCall) Do(f func(context.Context, *github.MergePullRequestAsyncInput) (*github.AsyncMergeResult, error)) *MockGithubGatewayMergePullRequestAsyncCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGithubGatewayMergePullRequestAsyncCall) DoAndReturn(f func(context.Context, *github.MergePullRequestAsyncInput) (*github.AsyncMergeResult, error)) *MockGithubGatewayMergePullRequestAsyncCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // PullRequest mocks base method.
 func (m *MockGithubGateway) PullRequest(arg0 context.Context, arg1, arg2 string, arg3 int) (*github.PullRequest, error) {
 	m.ctrl.T.Helper()
@@ -1156,6 +1234,45 @@ func (c *MockGithubGatewayPullRequestReviewThreadsCall) Do(f func(context.Contex
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGithubGatewayPullRequestReviewThreadsCall) DoAndReturn(f func(context.Context, github.ID, *github.PaginationOptions) iter.Seq2[*github.PullRequestReviewThread, error]) *MockGithubGatewayPullRequestReviewThreadsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// PullRequestsForMergeRange mocks base method.
+func (m *MockGithubGateway) PullRequestsForMergeRange(arg0 context.Context, arg1, arg2 string, arg3 []int) ([]*github.MergeRangePullRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PullRequestsForMergeRange", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]*github.MergeRangePullRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PullRequestsForMergeRange indicates an expected call of PullRequestsForMergeRange.
+func (mr *MockGithubGatewayMockRecorder) PullRequestsForMergeRange(arg0, arg1, arg2, arg3 any) *MockGithubGatewayPullRequestsForMergeRangeCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullRequestsForMergeRange", reflect.TypeOf((*MockGithubGateway)(nil).PullRequestsForMergeRange), arg0, arg1, arg2, arg3)
+	return &MockGithubGatewayPullRequestsForMergeRangeCall{Call: call}
+}
+
+// MockGithubGatewayPullRequestsForMergeRangeCall wrap *gomock.Call
+type MockGithubGatewayPullRequestsForMergeRangeCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGithubGatewayPullRequestsForMergeRangeCall) Return(arg0 []*github.MergeRangePullRequest, arg1 error) *MockGithubGatewayPullRequestsForMergeRangeCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGithubGatewayPullRequestsForMergeRangeCall) Do(f func(context.Context, string, string, []int) ([]*github.MergeRangePullRequest, error)) *MockGithubGatewayPullRequestsForMergeRangeCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGithubGatewayPullRequestsForMergeRangeCall) DoAndReturn(f func(context.Context, string, string, []int) ([]*github.MergeRangePullRequest, error)) *MockGithubGatewayPullRequestsForMergeRangeCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

@@ -103,11 +103,12 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL:     remoteURL,
-		PushRemoteURL: pushRemoteURL,
-		Forge:         &githubForge,
-		TestStacks:    true,
-		Sanitizers:    sanitizers,
+		RemoteURL:      remoteURL,
+		PushRemoteURL:  pushRemoteURL,
+		Forge:          &githubForge,
+		TestStacks:     true,
+		TestMergeRange: true,
+		Sanitizers:     sanitizers,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			token := forgetest.Token(t, remoteURL, "GITHUB_TOKEN")
 			httpClient.Transport = &oauth2.Transport{
@@ -440,6 +441,209 @@ func TestIntegration_stackReplacementWithMergedMember(t *testing.T) {
 		{Number: bottom.ID.(*github.PR).Number, State: githubgateway.PullRequestStateMerged},
 		{Number: top.ID.(*github.PR).Number, State: githubgateway.PullRequestStateOpen},
 	}, pullRequests[2].Stack.Members)
+}
+
+func TestIntegration_DivergentStackMerge(t *testing.T) {
+	cfg, sanitizers := testConfig(t)
+	remoteURL := "https://github.com/" + cfg.Owner + "/" + cfg.Repo
+
+	aBranch := fixturetest.New(_fixtures, "aBranch", func() string {
+		return "divergent-stack-a-" + randomString(8)
+	}).Get(t)
+	bBranch := fixturetest.New(_fixtures, "bBranch", func() string {
+		return "divergent-stack-b-" + randomString(8)
+	}).Get(t)
+	cBranch := fixturetest.New(_fixtures, "cBranch", func() string {
+		return "divergent-stack-c-" + randomString(8)
+	}).Get(t)
+	dBranch := fixturetest.New(_fixtures, "dBranch", func() string {
+		return "divergent-stack-d-" + randomString(8)
+	}).Get(t)
+
+	// Recording provisions a disposable remote branch graph and captures its
+	// API traffic. Replay begins below with the recorded branch names and HTTP
+	// fixture, without touching GitHub.
+	if forgetest.Update() {
+		testRepo := forgetest.NewRepositoryBuilder(t, remoteURL)
+		t.Cleanup(func() {
+			for _, branch := range []string{dBranch, cBranch, bBranch, aBranch} {
+				testRepo.DeleteRemoteBranch(branch)
+			}
+		})
+
+		// Build a divergent branch graph.
+		// A-B-C becomes the native stack;
+		// D remains an unstacked pull request based on B.
+		//
+		//     main
+		//       |
+		//       A
+		//       |
+		//       B
+		//      / \
+		//     C   D
+		testRepo.CheckoutBranch("main")
+		for _, branch := range []string{aBranch, bBranch, cBranch} {
+			testRepo.CreateBranch(branch)
+			testRepo.CheckoutBranch(branch)
+			testRepo.WriteFile(branch+".txt", "commit for "+branch)
+			testRepo.AddAllAndCommit("commit for " + branch)
+			testRepo.Push(branch)
+		}
+
+		testRepo.CheckoutBranch(bBranch)
+		testRepo.CreateBranch(dBranch)
+		testRepo.CheckoutBranch(dBranch)
+		testRepo.WriteFile(dBranch+".txt", "commit for "+dBranch)
+		testRepo.AddAllAndCommit("commit for " + dBranch)
+		testRepo.Push(dBranch)
+	}
+
+	rec := newRecorder(t, t.Name(), sanitizers)
+	httpClient := rec.GetDefaultClient()
+	token := forgetest.Token(t, remoteURL, "GITHUB_TOKEN")
+	httpClient.Transport = &oauth2.Transport{
+		Base:   httpClient.Transport,
+		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
+	}
+
+	gatewayClient := newGateway(t, httpClient)
+	repo, err := github.NewRepository(
+		t.Context(), new(github.Forge), cfg.Owner, cfg.Repo,
+		silogtest.New(t), gatewayClient, "",
+	)
+	require.NoError(t, err)
+	a, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Divergent native stack A " + aBranch,
+		Body:    "Divergent native stack integration test",
+		Base:    "main",
+		Head:    aBranch,
+	})
+	require.NoError(t, err, "create change A")
+	b, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Divergent native stack B " + bBranch,
+		Body:    "Divergent native stack integration test",
+		Base:    aBranch,
+		Head:    bBranch,
+	})
+	require.NoError(t, err, "create change B")
+	c, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Divergent native stack C " + cBranch,
+		Body:    "Divergent native stack integration test",
+		Base:    bBranch,
+		Head:    cBranch,
+	})
+	require.NoError(t, err, "create change C")
+	d, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Divergent native stack D " + dBranch,
+		Body:    "Divergent native stack integration test",
+		Base:    bBranch,
+		Head:    dBranch,
+	})
+	require.NoError(t, err, "create change D")
+
+	stackChanges := []forge.StackChange{
+		{Change: a.ID, BaseBranch: "main"},
+		{Change: b.ID, BaseChange: a.ID, BaseBranch: aBranch},
+		{Change: c.ID, BaseChange: b.ID, BaseBranch: bBranch},
+		{Change: d.ID, BaseChange: b.ID, BaseBranch: bBranch},
+	}
+	stackPlan, err := repo.PlanStackUpdate(t.Context(), stackChanges[:3])
+	require.NoError(t, err, "plan A-B-C native stack")
+	require.NoError(t, stackPlan.Execute(t.Context()), "register A-B-C as a native stack")
+
+	plans, err := repo.PlanMergeRanges(t.Context(), stackChanges)
+	require.NoError(t, err, "plan divergent native stack merge")
+	require.Len(t, plans, 2, "planned merge range count")
+	assert.Equal(t, []forge.ChangeID{a.ID, b.ID, c.ID}, plans[0].Changes())
+	assert.Equal(t, []forge.ChangeID{d.ID}, plans[1].Changes())
+
+	changeIDs := []forge.ChangeID{a.ID, b.ID, c.ID, d.ID}
+	beforeMerge, err := repo.ChangeStatuses(t.Context(), changeIDs)
+	require.NoError(t, err, "read change head hashes before merge")
+	require.Len(t, beforeMerge, len(changeIDs), "pre-merge status count")
+	dHeadHash := beforeMerge[3].HeadHash
+
+	operation, err := plans[0].Merge(t.Context(), forge.MergeRangeRequest{
+		Method: forge.MergeMethodSquash,
+		Changes: []forge.MergeRangeChange{
+			{
+				Change:   a.ID,
+				Base:     "main",
+				Head:     aBranch,
+				HeadHash: beforeMerge[0].HeadHash,
+			},
+			{
+				Change:   b.ID,
+				Base:     aBranch,
+				Head:     bBranch,
+				HeadHash: beforeMerge[1].HeadHash,
+			},
+			{
+				Change:   c.ID,
+				Base:     bBranch,
+				Head:     cBranch,
+				HeadHash: beforeMerge[2].HeadHash,
+			},
+		},
+	})
+	require.NoError(t, err, "start A-B-C squash merge")
+
+	status, err := operation.Status(t.Context())
+	require.NoError(t, err, "probe A-B-C merge operation")
+	assert.Equal(t, forge.MergeOperationPending, status,
+		"A-B-C merge operation status")
+
+	// This should be plenty of time--probably.
+	// Bump it up if this test is flaky during recording.
+	if forgetest.Update() {
+		select {
+		case <-time.After(5 * time.Second):
+
+		case <-t.Context().Done():
+			require.FailNow(t, "divergent stack test context canceled")
+		}
+	}
+
+	status, err = operation.Status(t.Context())
+	require.NoError(t, err, "probe A-B-C merge operation")
+	assert.Equal(t, forge.MergeOperationAccepted, status,
+		"A-B-C merge operation status")
+
+	mergedStatuses, err := repo.ChangeStatuses(t.Context(), changeIDs[:3])
+	require.NoError(t, err, "read A-B-C states after merge")
+	require.Len(t, mergedStatuses, 3, "A-B-C status count")
+	for _, status := range mergedStatuses {
+		assert.Equal(t, forge.ChangeMerged, status.State,
+			"change %d state", status)
+	}
+
+	dStatuses, err := repo.ChangeStatuses(t.Context(), []forge.ChangeID{d.ID})
+	require.NoError(t, err, "read change D state after A-B-C merge")
+	require.Len(t, dStatuses, 1, "change D status count")
+	assert.Equal(t, forge.ChangeOpen, dStatuses[0].State)
+	assert.Equal(t, dHeadHash, dStatuses[0].HeadHash)
+
+	dPullRequests, err := gatewayClient.PullRequestsForMergeRange(
+		t.Context(),
+		cfg.Owner,
+		cfg.Repo,
+		[]int{d.ID.(*github.PR).Number},
+	)
+	require.NoError(t, err, "read change D after A-B-C merge")
+	require.Len(t, dPullRequests, 1, "change D pull request count")
+	dPullRequest := dPullRequests[0]
+	require.NotNil(t, dPullRequest, "change D pull request")
+	assert.Equal(t, githubgateway.PullRequestStateOpen, dPullRequest.State)
+	assert.Equal(t, bBranch, dPullRequest.BaseRefName)
+	assert.Equal(t, dBranch, dPullRequest.HeadRefName)
+	assert.Equal(t, dHeadHash.String(), dPullRequest.HeadRefOID)
+	assert.Nil(t, dPullRequest.Stack)
+
+	mergeability, err := repo.ChangeMergeability(t.Context(), d.ID)
+	require.NoError(t, err, "read change D mergeability")
+	assert.Equal(t, forge.ChangeMergeabilityReady, mergeability.State,
+		"change D mergeability: %v", mergeability.Reason)
 }
 
 func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {

@@ -1,6 +1,7 @@
 package forge
 
 import (
+	"context"
 	"encoding"
 	"fmt"
 	"strings"
@@ -22,6 +23,81 @@ type MergeChangeOptions struct {
 	// Not all forges support this; unsupported forges
 	// ignore the field.
 	HeadHash git.Hash
+}
+
+// MergeRangeRequest gives the expected provider-facing state of a non-empty
+// linear path from its lowest change upward.
+// Each change after the first must target the previous change's head branch.
+// Together with each exact head commit, that alignment lets the forge reject a
+// stale or partially restacked path before requesting an atomic merge.
+type MergeRangeRequest struct {
+	// Changes lists the changes from bottom to top.
+	Changes []MergeRangeChange // required
+
+	// Method selects one merge strategy for the complete path.
+	// If zero, the forge uses its repository default.
+	Method MergeMethod
+}
+
+// MergeRangeChange identifies one change and the exact remote relationship it
+// must still have before the forge starts merging the path.
+type MergeRangeChange struct {
+	// Change identifies the change to merge.
+	Change ChangeID // required
+
+	// Base is the expected provider-facing base branch name for Change.
+	Base string // required
+
+	// Head is the expected provider-facing head branch name for Change.
+	Head string // required
+
+	// HeadHash is the exact expected head commit of Change.
+	HeadHash git.Hash // required
+}
+
+// MergeOperation reports asynchronous acceptance of a merge range.
+type MergeOperation interface {
+	// Status performs one provider status probe.
+	// Pending means the provider has not accepted the request yet.
+	// Accepted means the request was accepted for direct execution or queueing;
+	// callers must continue observing change states for final completion.
+	Status(context.Context) (MergeOperationStatus, error)
+}
+
+// MergeOperationStatus describes asynchronous merge request acceptance.
+// The zero value is invalid.
+type MergeOperationStatus int
+
+const (
+	// MergeOperationPending means the provider is still processing the request.
+	MergeOperationPending MergeOperationStatus = iota + 1
+
+	// MergeOperationAccepted means the provider accepted the request.
+	MergeOperationAccepted
+)
+
+// String returns the text form of the merge operation status.
+func (s MergeOperationStatus) String() string {
+	switch s {
+	case MergeOperationPending:
+		return "pending"
+	case MergeOperationAccepted:
+		return "accepted"
+	default:
+		return fmt.Sprintf("MergeOperationStatus(%d)", int(s))
+	}
+}
+
+// GoString returns a Go-syntax representation of the merge operation status.
+func (s MergeOperationStatus) GoString() string {
+	switch s {
+	case MergeOperationPending:
+		return "MergeOperationPending"
+	case MergeOperationAccepted:
+		return "MergeOperationAccepted"
+	default:
+		return fmt.Sprintf("MergeOperationStatus(%d)", int(s))
+	}
 }
 
 // MergeMethod names a forge-level strategy for merging a change request.

@@ -157,6 +157,13 @@ type IntegrationConfig struct {
 	// The scenario creates, extends, and reuses a native stack, so the selected
 	// fixture and remote repository must support those provider operations.
 	TestStacks bool // optional
+
+	// TestMergeRange enables the shared linear merge range integration scenario.
+	// OpenRepository must return a repository that implements
+	// [forge.StackRepository].
+	// The scenario verifies branch alignment, creates a native stack, starts an
+	// asynchronous merge, and waits for all changes to reach merged state.
+	TestMergeRange bool // optional
 }
 
 // RunIntegration runs integration tests with the given configuration.
@@ -335,6 +342,17 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 			stackRepository, ok := repo.(forge.StackRepository)
 			require.True(t, ok, "%T does not implement forge.StackRepository", repo)
 			suite.TestStacks(t, stackRepository)
+		})
+	}
+
+	if config.TestMergeRange {
+		t.Run("MergeRange", func(t *testing.T) {
+			t.Parallel()
+
+			repo := suite.OpenRepository(t)
+			stackRepository, ok := repo.(forge.StackRepository)
+			require.True(t, ok, "%T does not implement forge.StackRepository", repo)
+			suite.TestMergeRange(t, stackRepository)
 		})
 	}
 }
