@@ -2,11 +2,15 @@ package state
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
+	"maps"
 	"path"
 	"slices"
 
+	"go.abhg.dev/gs/internal/jsonmut"
 	"go.abhg.dev/gs/internal/review"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
@@ -14,64 +18,81 @@ import (
 const _reviewDraftsDir = "comments"
 
 type reviewDraftState struct {
-	NextID review.DraftID      `json:"nextID"`
-	Drafts []storedReviewDraft `json:"comments"`
+	LastID review.DraftID                       `json:"lastID"`
+	Drafts map[review.DraftID]storedReviewDraft `json:"drafts"`
 }
 
 type storedReviewDraft struct {
-	ID       review.DraftID `json:"id"`
-	File     string         `json:"file"`
-	Line     int            `json:"line"`
-	Body     string         `json:"body"`
-	ThreadID string         `json:"threadID,omitempty"`
+	File     string `json:"file"`
+	Line     int    `json:"line"`
+	Body     string `json:"body"`
+	ThreadID string `json:"threadID,omitempty"`
 }
 
-// AddReviewDraft assigns a branch-local ID and saves a review draft.
+// AddReviewDraft atomically assigns a branch-local ID and saves a draft.
 func (s *Store) AddReviewDraft(
 	ctx context.Context,
 	branch string,
 	draft review.Draft,
 ) (review.Draft, error) {
-	state, err := s.loadReviewDraftState(ctx, branch)
+	stored, err := json.Marshal(storeReviewDraft(draft))
 	if err != nil {
-		return review.Draft{}, err
+		return review.Draft{}, fmt.Errorf("encode review draft: %w", err)
 	}
-	if state == nil {
-		state = &reviewDraftState{NextID: 1}
+	id, err := storage.MutateJSON(
+		ctx,
+		s.db,
+		storage.JSONMutationRequest{
+			Key:       reviewDraftsJSON(branch),
+			IfMissing: jsontext.Value(`{}`),
+			Message:   fmt.Sprintf("%v: add review draft", branch),
+		},
+		jsonmut.InsertAutoIncrement(
+			"/lastID",
+			"/drafts",
+			jsontext.Value(stored),
+		),
+	)
+	if err != nil {
+		return review.Draft{}, fmt.Errorf("add review draft: %w", err)
 	}
-
-	draft.ID = state.NextID
-	state.NextID++
-	state.Drafts = append(state.Drafts, storeReviewDraft(draft))
-	if err := s.saveReviewDraftState(ctx, branch, state); err != nil {
-		return review.Draft{}, err
-	}
+	draft.ID = review.DraftID(id)
 	return draft, nil
 }
 
-// UpdateReviewDraftBody replaces the body of one branch-local draft.
+// UpdateReviewDraftBody atomically replaces one draft's body.
 func (s *Store) UpdateReviewDraftBody(
 	ctx context.Context,
 	branch string,
 	id review.DraftID,
 	body string,
 ) error {
-	state, err := s.loadReviewDraftState(ctx, branch)
+	bodyJSON, err := json.Marshal(body)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode review draft body: %w", err)
 	}
-	if state == nil {
+	err = storage.UpdateJSON(
+		ctx,
+		s.db,
+		storage.JSONMutationRequest{
+			Key:       reviewDraftsJSON(branch),
+			IfMissing: jsontext.Value(`{}`),
+			Message:   fmt.Sprintf("%v: update review draft", branch),
+		},
+		jsonmut.Replace(
+			jsontext.Pointer("/drafts").
+				AppendToken(id.String()).
+				AppendToken("body"),
+			jsontext.Value(bodyJSON),
+		),
+	)
+	if errors.Is(err, jsonmut.ErrNotExist) {
 		return fmt.Errorf("draft comment %d not found", id)
 	}
-
-	idx := slices.IndexFunc(state.Drafts, func(draft storedReviewDraft) bool {
-		return draft.ID == id
-	})
-	if idx < 0 {
-		return fmt.Errorf("draft comment %d not found", id)
+	if err != nil {
+		return fmt.Errorf("update review draft: %w", err)
 	}
-	state.Drafts[idx].Body = body
-	return s.saveReviewDraftState(ctx, branch, state)
+	return nil
 }
 
 // LoadReviewDrafts retrieves the unpublished review comments for branch.
@@ -85,11 +106,13 @@ func (s *Store) LoadReviewDrafts(
 		return nil, err
 	}
 
-	drafts := make([]review.Draft, len(state.Drafts))
-	for i, stored := range state.Drafts {
+	ids := slices.Sorted(maps.Keys(state.Drafts))
+	drafts := make([]review.Draft, len(ids))
+	for i, id := range ids {
+		stored := state.Drafts[id]
 		if stored.ThreadID != "" {
 			drafts[i] = review.Draft{
-				ID:      stored.ID,
+				ID:      id,
 				Body:    stored.Body,
 				ReplyTo: stored.ThreadID,
 			}
@@ -97,7 +120,7 @@ func (s *Store) LoadReviewDrafts(
 		}
 
 		drafts[i] = review.Draft{
-			ID:   stored.ID,
+			ID:   id,
 			Body: stored.Body,
 			Anchor: review.Anchor{
 				Path:      stored.File,
@@ -135,25 +158,8 @@ func (s *Store) loadReviewDraftState(
 	return &state, nil
 }
 
-func (s *Store) saveReviewDraftState(
-	ctx context.Context,
-	branch string,
-	state *reviewDraftState,
-) error {
-	if err := s.db.Set(
-		ctx,
-		reviewDraftsJSON(branch),
-		state,
-		fmt.Sprintf("%v: save review drafts", branch),
-	); err != nil {
-		return fmt.Errorf("set review drafts: %w", err)
-	}
-	return nil
-}
-
 func storeReviewDraft(draft review.Draft) storedReviewDraft {
 	stored := storedReviewDraft{
-		ID:   draft.ID,
 		Body: draft.Body,
 	}
 	if draft.ReplyTo != "" {
