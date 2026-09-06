@@ -2,12 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/handler/review"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -32,56 +30,25 @@ func (*reviewReplyCmd) Help() string {
 
 func (cmd *reviewReplyCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
 	wt *git.Worktree,
-	svc *spice.Service,
-	store *state.Store,
-	repo *git.Repository,
-	forgeRepo forge.Repository,
+	handler ReviewHandler,
+	drafts ReviewDraftHandler,
 ) error {
-	branch, err := reviewBranch(ctx, wt, cmd.Branch)
-	if err != nil {
-		return err
-	}
-	body, err := reviewCommentBody(ctx, repo, cmd.Message, "")
-	if err != nil {
-		return err
+	if cmd.Branch == "" {
+		branch, err := wt.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		cmd.Branch = branch
 	}
 
+	req := &review.ReplyRequest{
+		Branch:   cmd.Branch,
+		ThreadID: cmd.ThreadID,
+		Message:  cmd.Message,
+	}
 	if cmd.Draft {
-		return saveReviewDraft(ctx, log, store, branch, state.StagedComment{
-			Body:     body,
-			ThreadID: cmd.ThreadID,
-		})
+		return drafts.SaveReplyDraft(ctx, req)
 	}
-
-	b, reviewRepo, err := reviewRepositoryForBranch(
-		ctx, svc, forgeRepo, branch,
-	)
-	if err != nil {
-		return err
-	}
-	threadIDs, err := loadReviewThreadIDs(
-		ctx,
-		reviewRepo,
-		b.Change.ChangeID(),
-	)
-	if err != nil {
-		return err
-	}
-	threadID, err := reviewThreadID(threadIDs, cmd.ThreadID)
-	if err != nil {
-		return err
-	}
-
-	return postReviewComment(
-		ctx,
-		log,
-		reviewRepo,
-		b.Change.ChangeID(),
-		forge.SubmitReviewCommentRequest{
-			Body:    body,
-			ReplyTo: threadID,
-		},
-	)
+	return handler.PostReply(ctx, req)
 }

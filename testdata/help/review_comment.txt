@@ -1,4 +1,4 @@
-Usage: gs review comment [<anchor>] [flags]
+Usage: gs review comment <file[:line[-end]]> [flags]
 
 Draft or post a review comment
 
@@ -15,7 +15,7 @@ immediately.
 If no message is given with -m, an editor is opened.
 
 Arguments:
-  [<anchor>]    Comment anchor: file.go, file.go:42, or file.go:42-50.
+  <file[:line[-end]]>    Comment anchor: file.go, file.go:42, or file.go:42-50.
 
 Flags:
   -m, --message=MSG      Comment body. Opens editor if not provided.
