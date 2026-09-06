@@ -1,0 +1,52 @@
+# Configure whether review comments are drafted by default.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a fake GitHub remote
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a file and submit it
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# disabling the draft default posts comments and replies immediately
+git config spice.reviewComment.draft false
+gs review comment main.go:3 -m 'Posted by configuration.'
+stderr 'Posted comment'
+gs review reply thread-2 -m 'Posted reply by configuration.'
+stderr 'Posted comment'
+
+# --draft overrides the configuration
+gs review comment main.go:3 -m 'Explicit draft.' --draft
+stderr 'Drafted comment 1'
+gs review reply thread-2 -m 'Explicit draft reply.' --draft
+stderr 'Drafted reply 2'
+
+# --no-draft overrides the default configuration
+git config spice.reviewComment.draft true
+gs review comment main.go:3 -m 'Default draft.'
+stderr 'Drafted comment 3'
+gs review comment main.go:3 -m 'Explicit post.' --no-draft
+stderr 'Posted comment'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+}

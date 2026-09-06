@@ -1495,8 +1495,10 @@ If no message is given with -m, an editor is opened.
 **Flags**
 
 * `-m`, `--message=MSG`: Comment body. Opens editor if not provided.
-* `--[no-]draft`: Save the comment as a local draft instead of posting it.
+* `--[no-]draft` ([:material-wrench:{ .middle title="spice.reviewComment.draft" }](/cli/config.md#spicereviewcommentdraft)): Whether to save the comment as a local draft or post it.
 * `-b`, `--branch=BRANCH`: Branch to comment on. Defaults to the current branch.
+
+**Configuration**: [spice.reviewComment.draft](/cli/config.md#spicereviewcommentdraft)
 
 ### git-spice review reply {#gs-review-reply}
 
@@ -1521,8 +1523,10 @@ If no message is given with -m, an editor is opened.
 **Flags**
 
 * `-m`, `--message=MSG`: Reply body. Opens editor if not provided.
-* `--[no-]draft`: Save the reply as a local draft instead of posting it.
+* `--[no-]draft` ([:material-wrench:{ .middle title="spice.reviewComment.draft" }](/cli/config.md#spicereviewcommentdraft)): Whether to save the reply as a local draft or post it.
 * `-b`, `--branch=BRANCH`: Branch containing the thread. Defaults to the current branch.
+
+**Configuration**: [spice.reviewComment.draft](/cli/config.md#spicereviewcommentdraft)
 
 ### git-spice review publish {#gs-review-publish}
 

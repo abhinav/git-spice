@@ -730,6 +730,18 @@ If set to false, you can opt in to opening the editor with the `--edit` flag.
 - `true` (default)
 - `false`
 
+### spice.reviewComment.draft
+
+<!-- gs:version unreleased -->
+
+Whether $$gs review comment$$ and $$gs review reply$$ save comments as local
+drafts or post them immediately by default.
+
+**Accepted values:**
+
+- `true` (default): save comments and replies as local drafts
+- `false`: post comments and replies immediately
+
 ### spice.submit.draft
 
 <!-- gs:version v0.16.0 -->

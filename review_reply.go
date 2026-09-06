@@ -12,7 +12,7 @@ import (
 type reviewReplyCmd struct {
 	ThreadID string `arg:"" help:"Thread ID to reply to."`
 	Message  string `short:"m" placeholder:"MSG" help:"Reply body. Opens editor if not provided."`
-	Draft    bool   `negatable:"" default:"true" help:"Save the reply as a local draft instead of posting it."`
+	Draft    bool   `negatable:"" default:"true" config:"reviewComment.draft" help:"Whether to save the reply as a local draft or post it."`
 	Branch   string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch containing the thread. Defaults to the current branch."`
 }
 
