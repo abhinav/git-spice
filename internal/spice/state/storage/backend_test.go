@@ -63,6 +63,38 @@ func testStorageBackend(t *testing.T, backend Backend) {
 		assert.Equal(t, "baz", got)
 	})
 
+	t.Run("CompareAndSwap", func(t *testing.T) {
+		defer func() {
+			assert.NoError(t, db.Clear(ctx, "clear"))
+		}()
+
+		require.NoError(t, db.Set(ctx, "value", "old", "set value"))
+		snapshot, err := db.Snapshot(ctx)
+		require.NoError(t, err)
+		require.NoError(t, db.CompareAndSwap(
+			ctx,
+			snapshot,
+			UpdateRequest{
+				Sets:    []SetRequest{{Key: "value", Value: "new"}},
+				Message: "replace value",
+			},
+		))
+
+		var got string
+		require.NoError(t, db.Get(ctx, "value", &got))
+		assert.Equal(t, "new", got)
+
+		err = db.CompareAndSwap(
+			ctx,
+			snapshot,
+			UpdateRequest{
+				Sets:    []SetRequest{{Key: "value", Value: "stale"}},
+				Message: "stale update",
+			},
+		)
+		assert.ErrorIs(t, err, ErrConflict)
+	})
+
 	t.Run("SetNested", func(t *testing.T) {
 		defer func() {
 			assert.NoError(t, db.Clear(ctx, "clear"))

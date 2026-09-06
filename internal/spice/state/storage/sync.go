@@ -34,11 +34,29 @@ func (s *syncBackend) Get(ctx context.Context, key string, dst any) error {
 	return s.b.Get(ctx, key, dst)
 }
 
+func (s *syncBackend) Snapshot(ctx context.Context) (Snapshot, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.b.Snapshot(ctx)
+}
+
 func (s *syncBackend) Keys(ctx context.Context, dir string) ([]string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	return s.b.Keys(ctx, dir)
+}
+
+func (s *syncBackend) CompareAndSwap(
+	ctx context.Context,
+	snapshot Snapshot,
+	req UpdateRequest,
+) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.b.CompareAndSwap(ctx, snapshot, req)
 }
 
 func (s *syncBackend) Update(ctx context.Context, req UpdateRequest) error {

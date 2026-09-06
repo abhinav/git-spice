@@ -12,13 +12,10 @@ import (
 
 // DB provides a key-value store that holds JSON values.
 type DB interface {
-	Get(ctx context.Context, k string, v any) error
-	Keys(ctx context.Context, dir string) ([]string, error)
+	storage.Backend
 
 	Set(ctx context.Context, k string, v any, msg string) error
 	Delete(ctx context.Context, k, msg string) error
-	Update(ctx context.Context, req storage.UpdateRequest) error
-	Clear(ctx context.Context, msg string) error
 }
 
 var _ DB = (*storage.DB)(nil)
