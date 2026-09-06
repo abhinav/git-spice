@@ -348,6 +348,34 @@ func TestReplace_Missing(t *testing.T) {
 	assert.ErrorIs(t, err, jsonmut.ErrNotExist)
 }
 
+func TestDelete(t *testing.T) {
+	t.Parallel()
+
+	updated, _, err := jsonmut.Apply(
+		jsontext.Value(`{
+			"drafts": {
+				"7": {"body": "remove"},
+				"8": {"body": "keep"}
+			}
+		}`),
+		jsonmut.Delete("/drafts/7"),
+	)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{
+		"drafts": {"8": {"body": "keep"}}
+	}`, updated.String())
+}
+
+func TestDelete_missing(t *testing.T) {
+	t.Parallel()
+
+	_, _, err := jsonmut.Apply(
+		jsontext.Value(`{"drafts": {}}`),
+		jsonmut.Delete("/drafts/7"),
+	)
+	assert.ErrorIs(t, err, jsonmut.ErrNotExist)
+}
+
 func TestSet_missingParent(t *testing.T) {
 	t.Parallel()
 

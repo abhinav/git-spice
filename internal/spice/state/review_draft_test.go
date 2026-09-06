@@ -63,10 +63,30 @@ func TestReviewDrafts(t *testing.T) {
 	assert.Equal(t, "updated body", drafts[0].Body)
 	assert.Equal(t, reply, drafts[1])
 
-	require.NoError(t, store.ClearReviewDrafts(ctx, "feature"))
+	require.NoError(t, store.RemovePublishedReviewDrafts(
+		ctx,
+		"feature",
+		drafts,
+	))
 	drafts, err = store.LoadReviewDrafts(ctx, "feature")
 	require.NoError(t, err)
-	assert.Nil(t, drafts)
+	assert.Empty(t, drafts)
+
+	next, err := store.AddReviewDraft(
+		ctx,
+		"feature",
+		review.Draft{
+			ID:   0,
+			Body: "next body",
+			Anchor: review.Anchor{
+				Path:      "main.go",
+				StartLine: 42,
+				EndLine:   42,
+			},
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, review.DraftID(3), next.ID)
 }
 
 func TestReviewDraftsFollowBranchLifecycle(t *testing.T) {

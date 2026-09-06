@@ -356,7 +356,7 @@ func TestHandler_PublishDrafts(t *testing.T) {
 		Return(forge.SubmitReviewResult{}, nil)
 	store.
 		EXPECT().
-		ClearReviewDrafts(gomock.Any(), "feature").
+		RemovePublishedReviewDrafts(gomock.Any(), "feature", drafts).
 		Return(nil)
 
 	err := handler.PublishDrafts(t.Context(), &PublishDraftsRequest{

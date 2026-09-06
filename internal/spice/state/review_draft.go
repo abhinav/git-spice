@@ -97,6 +97,51 @@ func (s *Store) UpdateReviewDraftBody(
 	return nil
 }
 
+// RemovePublishedReviewDrafts removes unchanged drafts after publication.
+func (s *Store) RemovePublishedReviewDrafts(
+	ctx context.Context,
+	branch string,
+	published []review.Draft,
+) error {
+	statements := make([]jsonmut.Statement, 0, len(published))
+	for _, draft := range published {
+		stored := storeReviewDraft(draft)
+		path := jsontext.Pointer("/drafts").AppendToken(draft.ID.String())
+		statements = append(statements,
+			jsonmut.Decode[*storedReviewDraft](path).Then(
+				func(current *storedReviewDraft) jsonmut.Statement {
+					if current == nil || *current != stored {
+						return jsonmut.Block()
+					}
+					return jsonmut.Delete(path)
+				},
+			),
+		)
+	}
+
+	// Forge submission happens before this mutation starts.
+	// Replaying the program removes only values that still match the request,
+	// leaving drafts added or edited while submission was in flight intact.
+	err := storage.UpdateJSON(
+		ctx,
+		s.db,
+		storage.JSONMutationRequest{
+			Key:       reviewDraftsJSON(branch),
+			IfMissing: jsontext.Value(`{}`),
+			Requires:  []string{branchKey(branch)},
+			Message:   fmt.Sprintf("%v: remove published review drafts", branch),
+		},
+		jsonmut.Block(statements...),
+	)
+	if errors.Is(err, storage.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("remove published review drafts: %w", err)
+	}
+	return nil
+}
+
 // LoadReviewDrafts retrieves the unpublished review comments for branch.
 // It returns nil when the branch has no review drafts.
 func (s *Store) LoadReviewDrafts(
@@ -132,18 +177,6 @@ func (s *Store) LoadReviewDrafts(
 		}
 	}
 	return drafts, nil
-}
-
-// ClearReviewDrafts removes review draft state for branch.
-func (s *Store) ClearReviewDrafts(ctx context.Context, branch string) error {
-	if err := s.db.Delete(
-		ctx,
-		reviewDraftsJSON(branch),
-		fmt.Sprintf("%v: clear review drafts", branch),
-	); err != nil {
-		return fmt.Errorf("delete review drafts: %w", err)
-	}
-	return nil
 }
 
 func (s *Store) loadReviewDraftState(
