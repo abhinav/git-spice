@@ -21,7 +21,7 @@ func (s *integrationSuite) TestSubmitCombinedMetadata(t *testing.T) {
 	t.Logf("Creating branch: %s", branchName)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
@@ -65,7 +65,7 @@ func (s *integrationSuite) TestSubmitEditReviewers(t *testing.T) {
 		t.Logf("Creating branch: %s", branchName)
 
 		if Update() {
-			testRepo := newTestRepository(t, s.RemoteURL)
+			testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 			testRepo.CreateBranch(branchName)
 			testRepo.CheckoutBranch(branchName)
@@ -107,7 +107,7 @@ func (s *integrationSuite) TestSubmitEditReviewers(t *testing.T) {
 		t.Logf("Creating branch: %s", branchName)
 
 		if Update() {
-			testRepo := newTestRepository(t, s.RemoteURL)
+			testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 			testRepo.CreateBranch(branchName)
 			testRepo.CheckoutBranch(branchName)
@@ -161,7 +161,7 @@ func (s *integrationSuite) TestSubmitEditReviewers(t *testing.T) {
 			t.Logf("Creating branch: %s", branchName)
 
 			if Update() {
-				testRepo := newTestRepository(t, s.RemoteURL)
+				testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 				testRepo.CreateBranch(branchName)
 				testRepo.CheckoutBranch(branchName)
@@ -220,7 +220,7 @@ func (s *integrationSuite) TestSubmitEditAssignees(t *testing.T) {
 		t.Logf("Creating branch: %s", branchName)
 
 		if Update() {
-			testRepo := newTestRepository(t, s.RemoteURL)
+			testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 			testRepo.CreateBranch(branchName)
 			testRepo.CheckoutBranch(branchName)
@@ -270,7 +270,7 @@ func (s *integrationSuite) TestSubmitEditAssignees(t *testing.T) {
 		t.Logf("Creating branch: %s", branchName)
 
 		if Update() {
-			testRepo := newTestRepository(t, s.RemoteURL)
+			testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 			testRepo.CreateBranch(branchName)
 			testRepo.CheckoutBranch(branchName)
@@ -325,7 +325,7 @@ func (s *integrationSuite) TestSubmitEditAssignees(t *testing.T) {
 			t.Logf("Creating branch: %s", branchName)
 
 			if Update() {
-				testRepo := newTestRepository(t, s.RemoteURL)
+				testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 				testRepo.CreateBranch(branchName)
 				testRepo.CheckoutBranch(branchName)
@@ -375,7 +375,7 @@ func (s *integrationSuite) TestChangeComments(t *testing.T) {
 	t.Logf("Creating branch: %s", branchName)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
@@ -498,7 +498,7 @@ func (s *integrationSuite) TestCommentCountsByChange(t *testing.T) {
 	t.Logf("Creating branch: %s", branchName)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
@@ -536,6 +536,3 @@ func (s *integrationSuite) TestCommentCountsByChange(t *testing.T) {
 	assert.Equal(t, result.Total, result.Resolved+result.Unresolved,
 		"total should equal resolved + unresolved")
 }
-
-// testRepository manages a local Git repository clone for testing.
-// Only available in update mode.

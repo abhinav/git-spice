@@ -20,7 +20,7 @@ func (s *integrationSuite) TestSubmitEditChange(t *testing.T) {
 	branchName := branchFixture.Get(t)
 	t.Logf("Creating branch: %s", branchName)
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		// Create branch with random content
 		testRepo.CreateBranch(branchName)
@@ -120,7 +120,7 @@ func (s *integrationSuite) TestSubmitChangeBase(t *testing.T) {
 	t.Logf("Creating branch: %s with base: %s", branchName, baseName)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		// Push the base branch at current main position
 		testRepo.Push("main:" + baseName)
@@ -178,7 +178,7 @@ func (s *integrationSuite) TestSubmitChangeDraft(t *testing.T) {
 	t.Logf("Creating branch: %s", branchName)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)

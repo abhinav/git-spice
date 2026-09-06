@@ -8,22 +8,32 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/xec"
 )
 
-type testRepository struct {
+// RepositoryBuilder provisions commits and branches in a disposable clone of
+// a forge integration-test repository.
+//
+// RepositoryBuilder is available only while recording fixtures.
+// The test owns any remote state it creates:
+// callers must register cleanup for every branch they push.
+// Local state lives in the test's temporary directory and is removed by the
+// testing package.
+type RepositoryBuilder struct {
 	repo *git.Repository
 	work *git.Worktree
 	root string
 	t    *testing.T
 }
 
-func newTestRepository(t *testing.T, remoteURL string) *testRepository {
-	require.True(t, Update(), "testRepository only available in update mode")
+// NewRepositoryBuilder clones remoteURL and disables commit signing in the
+// clone so tests can commit without relying on user configuration.
+// It fails the test if fixture recording is disabled or setup fails.
+func NewRepositoryBuilder(t *testing.T, remoteURL string) *RepositoryBuilder {
+	require.True(t, Update(), "RepositoryBuilder only available in update mode")
 
 	repoDir := t.TempDir()
 	output := t.Output()
@@ -48,7 +58,7 @@ func newTestRepository(t *testing.T, remoteURL string) *testRepository {
 	})
 	require.NoError(t, err, "failed to open git worktree")
 
-	return &testRepository{
+	return &RepositoryBuilder{
 		repo: work.Repository(),
 		work: work,
 		root: repoDir,
@@ -56,7 +66,7 @@ func newTestRepository(t *testing.T, remoteURL string) *testRepository {
 	}
 }
 
-func (r *testRepository) ctx() context.Context {
+func (r *RepositoryBuilder) ctx() context.Context {
 	ctx := r.t.Context()
 	// If the context was canceled, ignore its cancellation.
 	if errors.Is(ctx.Err(), context.Canceled) {
@@ -65,8 +75,9 @@ func (r *testRepository) ctx() context.Context {
 	return ctx
 }
 
-// WriteFile writes a file to the repository with the given lines.
-func (r *testRepository) WriteFile(path string, lines ...string) {
+// WriteFile replaces the repository-relative path with the given lines.
+// It creates parent directories and terminates non-empty content with a newline.
+func (r *RepositoryBuilder) WriteFile(path string, lines ...string) {
 	content := strings.Join(lines, "\n")
 	if len(lines) > 0 {
 		content += "\n"
@@ -82,8 +93,10 @@ func (r *testRepository) WriteFile(path string, lines ...string) {
 	), "could not write file: %s", path)
 }
 
-// AddAllAndCommit stages all changes and creates a commit.
-func (r *testRepository) AddAllAndCommit(message string) git.Hash {
+// AddAllAndCommit stages the entire worktree and commits it with the shared
+// integration-test identity.
+// It returns the new commit's hash.
+func (r *RepositoryBuilder) AddAllAndCommit(message string) git.Hash {
 	output := r.t.Output()
 	cmd := xec.Command(r.t.Context(), silogtest.New(r.t), "git", "add", ".").
 		WithDir(r.root).
@@ -107,28 +120,28 @@ func (r *testRepository) AddAllAndCommit(message string) git.Hash {
 	return hash
 }
 
-// CreateBranch creates a new branch.
-func (r *testRepository) CreateBranch(name string) {
+// CreateBranch creates name at the current HEAD without checking it out.
+func (r *RepositoryBuilder) CreateBranch(name string) {
 	ctx := r.ctx()
 	require.NoError(r.t, r.repo.CreateBranch(ctx, git.CreateBranchRequest{
 		Name: name,
 	}), "could not create branch: %s", name)
 }
 
-// CheckoutBranch checks out an existing branch.
-func (r *testRepository) CheckoutBranch(name string) {
+// CheckoutBranch checks out an existing local branch.
+func (r *RepositoryBuilder) CheckoutBranch(name string) {
 	ctx := r.ctx()
 	require.NoError(r.t, r.work.CheckoutBranch(ctx, name),
 		"could not checkout branch: %s", name)
 }
 
-// Push pushes the given refspec to origin.
-func (r *testRepository) Push(refspec string) {
+// Push sends refspec to the clone's origin remote.
+func (r *RepositoryBuilder) Push(refspec string) {
 	r.PushTo("origin", refspec)
 }
 
-// AddRemote adds a remote to the test repository.
-func (r *testRepository) AddRemote(name, remoteURL string) {
+// AddRemote adds name with remoteURL to the clone.
+func (r *RepositoryBuilder) AddRemote(name, remoteURL string) {
 	output := r.t.Output()
 	cmd := xec.Command(
 		r.ctx(),
@@ -141,8 +154,8 @@ func (r *testRepository) AddRemote(name, remoteURL string) {
 	require.NoError(r.t, cmd.Run(), "could not add remote: %s", name)
 }
 
-// PushTo pushes the given refspec to a remote.
-func (r *testRepository) PushTo(remote, refspec string) {
+// PushTo sends refspec to the named remote.
+func (r *RepositoryBuilder) PushTo(remote, refspec string) {
 	ctx := r.ctx()
 	require.NoError(r.t, r.work.Push(ctx, git.PushOptions{
 		Remote:  remote,
@@ -150,28 +163,34 @@ func (r *testRepository) PushTo(remote, refspec string) {
 	}), "error pushing refspec %s to %s", refspec, remote)
 }
 
-// DeleteRemoteBranch deletes a remote branch.
-func (r *testRepository) DeleteRemoteBranch(name string) {
+// DeleteRemoteBranch attempts to delete name from the origin remote.
+// Cleanup failures are logged instead of failing the test.
+func (r *RepositoryBuilder) DeleteRemoteBranch(name string) {
 	r.DeleteRemoteBranchFrom("origin", name)
 }
 
-// DeleteRemoteBranchFrom deletes a branch from a remote.
-func (r *testRepository) DeleteRemoteBranchFrom(remote, name string) {
+// DeleteRemoteBranchFrom attempts to delete name from the named remote.
+// Cleanup failures are logged instead of failing the test.
+func (r *RepositoryBuilder) DeleteRemoteBranchFrom(remote, name string) {
 	ctx := r.ctx()
 	r.t.Logf("Deleting remote branch: %s/%s", remote, name)
-	assert.NoError(r.t, r.work.Push(ctx, git.PushOptions{
+	if err := r.work.Push(ctx, git.PushOptions{
 		Remote:  remote,
 		Refspec: git.Refspec(":" + name),
-	}), "error deleting branch")
+	}); err != nil {
+		r.t.Logf("Warning: failed to delete remote branch %s/%s: %v", remote, name, err)
+	}
 }
 
-// Repository returns the underlying git.Repository.
-func (r *testRepository) Repository() *git.Repository {
+// Repository returns the repository for the builder's temporary clone.
+// The value remains valid until the test completes.
+func (r *RepositoryBuilder) Repository() *git.Repository {
 	return r.repo
 }
 
-// Worktree returns the underlying git.Worktree.
-func (r *testRepository) Worktree() *git.Worktree {
+// Worktree returns the worktree for the builder's temporary clone.
+// The value remains valid until the test completes.
+func (r *RepositoryBuilder) Worktree() *git.Worktree {
 	return r.work
 }
 

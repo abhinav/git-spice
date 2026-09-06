@@ -138,7 +138,6 @@ type IntegrationConfig struct {
 	// SkipCommentCounts skips the CommentCountsByChange test.
 	// Set to true for forges that don't support comment resolution tracking.
 	SkipCommentCounts bool // optional
-
 	// ReviewThreads enables the shared review-thread scenario.
 	// Enable it only when OpenRepository returns a forge.ReviewRepository.
 	ReviewThreads bool // optional
@@ -151,6 +150,13 @@ type IntegrationConfig struct {
 	// ReviewThreadCommitHash indicates that review threads expose the change
 	// head against which the root comment was created.
 	ReviewThreadCommitHash bool // optional
+
+	// TestStacks enables the shared native stack integration scenario.
+	// OpenRepository must return a repository that implements
+	// [forge.StackRepository].
+	// The scenario creates, extends, and reuses a native stack, so the selected
+	// fixture and remote repository must support those provider operations.
+	TestStacks bool // optional
 }
 
 // RunIntegration runs integration tests with the given configuration.
@@ -313,12 +319,22 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 			suite.TestCommentCountsByChange(t)
 		})
 	}
-
 	if config.ReviewThreads {
 		t.Run("ReviewThreads", func(t *testing.T) {
 			t.Parallel()
 
 			suite.TestReviewThreads(t)
+		})
+	}
+
+	if config.TestStacks {
+		t.Run("Stacks", func(t *testing.T) {
+			t.Parallel()
+
+			repo := suite.OpenRepository(t)
+			stackRepository, ok := repo.(forge.StackRepository)
+			require.True(t, ok, "%T does not implement forge.StackRepository", repo)
+			suite.TestStacks(t, stackRepository)
 		})
 	}
 }

@@ -34,7 +34,7 @@ func (s *integrationSuite) TestReviewThreadsSingleAndReply(t *testing.T) {
 	// Update mode creates the Git state consumed by the live forge.
 	// Replay mode reuses the recorded branch name and HTTP interactions.
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
 		testRepo.WriteFile(
@@ -117,7 +117,7 @@ func (s *integrationSuite) TestReviewThreadsSingleAndReply(t *testing.T) {
 	}
 
 	if s.reviewThreadCommitHash && Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 		testRepo.CheckoutBranch(branchName)
 		testRepo.WriteFile("reply.go", "package review")
 		replyHash := testRepo.AddAllAndCommit("advance change before reply")
@@ -258,7 +258,7 @@ func (s *integrationSuite) TestReviewThreadsBatch(t *testing.T) {
 	// Update mode creates the Git state consumed by the live forge.
 	// Replay mode reuses the recorded branch name and HTTP interactions.
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
 		testRepo.WriteFile(
@@ -357,7 +357,7 @@ func (s *integrationSuite) TestReviewThreadsFile(t *testing.T) {
 	// Update mode creates the Git state consumed by the live forge.
 	// Replay mode reuses the recorded branch name and HTTP interactions.
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
 		testRepo.WriteFile(
@@ -448,7 +448,7 @@ func (s *integrationSuite) TestReviewThreadsReviewerStates(t *testing.T) {
 	// Update mode creates the Git state consumed by the live forge.
 	// Replay mode reuses the recorded branch name and HTTP interactions.
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
 		testRepo.WriteFile(

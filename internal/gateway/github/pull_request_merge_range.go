@@ -41,7 +41,7 @@ type MergeRangePullRequest struct {
 // membership in input order.
 // A nil result entry means that GitHub did not find the corresponding pull
 // request.
-// When Stack is non-nil, it includes all open members in base-up order.
+// When Stack is non-nil, it includes all members in base-up order.
 //
 // The result combines two API reads because GitHub exposes stack identity on
 // the pull request and ordered membership on a separate stack node.
@@ -174,7 +174,7 @@ func (c *Gateway) PullRequestsForMergeRange(
 		return pullRequests, nil
 	}
 
-	// Resolve the ordered open members for every unique stack ID in one query.
+	// Resolve the ordered members for every unique stack ID in one query.
 	// A node may disappear after the pull request query; in that case, leaving
 	// Stack nil preserves the best remote view this non-atomic operation obtained.
 	resolvedStacksByID, err := c.pullRequestStacksByID(ctx, stackIDsToResolve)

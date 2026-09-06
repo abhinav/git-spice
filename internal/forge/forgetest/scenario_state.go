@@ -31,7 +31,7 @@ func (s *integrationSuite) TestChangeStates(t *testing.T) {
 		openBranch, mergedBranch, closedBranch)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		// Create and push all three branches.
 		for _, branch := range []string{openBranch, mergedBranch, closedBranch} {
@@ -193,7 +193,7 @@ func (s *integrationSuite) TestChangeChecks(t *testing.T) {
 
 			branch := branchFixture.Get(t)
 			if Update() {
-				testRepo := newTestRepository(t, s.RemoteURL)
+				testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 				testRepo.CheckoutBranch("main")
 				testRepo.CreateBranch(branch)
 				testRepo.CheckoutBranch(branch)
@@ -271,7 +271,7 @@ func (s *integrationSuite) testChangeMergeabilityReady(t *testing.T) {
 	}).Get(t)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 		testRepo.CheckoutBranch("main")
 		testRepo.Push("main:" + baseName)
 		t.Cleanup(func() {
@@ -326,7 +326,7 @@ func (s *integrationSuite) testChangeMergeabilityConflicts(t *testing.T) {
 	}).Get(t)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 		testRepo.CheckoutBranch("main")
 		testRepo.Push("main:" + baseName)
 		t.Cleanup(func() {
@@ -387,7 +387,7 @@ func (s *integrationSuite) testChangeMergeabilityDraft(t *testing.T) {
 	}).Get(t)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 		testRepo.CheckoutBranch("main")
 		testRepo.Push("main:" + baseName)
 		t.Cleanup(func() {
