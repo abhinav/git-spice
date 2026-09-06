@@ -74,7 +74,14 @@ func (h *Handler) PublishDrafts(
 			continue
 		}
 
-		if !patch.ContainsLineRange(
+		if draft.Anchor.IsFile() && !patch.ContainsFile(draft.Anchor.Path) {
+			return fmt.Errorf(
+				"draft %s: review diff does not contain file %q",
+				draft.ID,
+				draft.Anchor.Path,
+			)
+		}
+		if !draft.Anchor.IsFile() && !patch.ContainsLineRange(
 			draft.Anchor.Path,
 			draft.Anchor.StartLine,
 			draft.Anchor.EndLine,

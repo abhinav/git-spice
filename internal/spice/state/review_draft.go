@@ -25,6 +25,7 @@ type reviewDraftState struct {
 type storedReviewDraft struct {
 	File     string `json:"file"`
 	Line     int    `json:"line"`
+	EndLine  int    `json:"endLine,omitempty"`
 	Body     string `json:"body"`
 	ThreadID string `json:"threadID,omitempty"`
 }
@@ -220,13 +221,17 @@ func (s *Store) LoadReviewDrafts(
 			continue
 		}
 
+		endLine := stored.EndLine
+		if stored.Line != 0 && endLine == 0 {
+			endLine = stored.Line
+		}
 		drafts[i] = review.Draft{
 			ID:   id,
 			Body: stored.Body,
 			Anchor: review.Anchor{
 				Path:      stored.File,
 				StartLine: stored.Line,
-				EndLine:   stored.Line,
+				EndLine:   endLine,
 			},
 		}
 	}
@@ -258,6 +263,7 @@ func storeReviewDraft(draft review.Draft) storedReviewDraft {
 
 	stored.File = draft.Anchor.Path
 	stored.Line = draft.Anchor.StartLine
+	stored.EndLine = draft.Anchor.EndLine
 	return stored
 }
 

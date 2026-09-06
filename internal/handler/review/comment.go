@@ -29,10 +29,6 @@ func (h *DraftHandler) SaveCommentDraft(
 	ctx context.Context,
 	req *CommentRequest,
 ) error {
-	if !req.Anchor.IsLine() {
-		return errors.New("draft comments require a single-line file:line anchor")
-	}
-
 	body, err := h.commentBody(ctx, req.Message)
 	if err != nil {
 		return err
