@@ -2,8 +2,8 @@
 package reviewdiff
 
 import (
-	"bytes"
 	"fmt"
+	"io"
 
 	"github.com/bluekeyes/go-gitdiff/gitdiff"
 )
@@ -19,8 +19,8 @@ type Patch struct {
 }
 
 // Parse parses a Git patch for review-comment queries.
-func Parse(src []byte) (*Patch, error) {
-	files, _, err := gitdiff.Parse(bytes.NewReader(src))
+func Parse(src io.Reader) (*Patch, error) {
+	files, _, err := gitdiff.Parse(src)
 	if err != nil {
 		return nil, fmt.Errorf("parse Git patch: %w", err)
 	}
