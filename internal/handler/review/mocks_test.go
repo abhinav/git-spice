@@ -208,6 +208,45 @@ func (c *MockStoreAddReviewDraftCall) DoAndReturn(f func(context.Context, string
 	return c
 }
 
+// DeleteReviewDrafts mocks base method.
+func (m *MockStore) DeleteReviewDrafts(arg0 context.Context, arg1 string, arg2 []review.DraftID) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteReviewDrafts", arg0, arg1, arg2)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteReviewDrafts indicates an expected call of DeleteReviewDrafts.
+func (mr *MockStoreMockRecorder) DeleteReviewDrafts(arg0, arg1, arg2 any) *MockStoreDeleteReviewDraftsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteReviewDrafts", reflect.TypeOf((*MockStore)(nil).DeleteReviewDrafts), arg0, arg1, arg2)
+	return &MockStoreDeleteReviewDraftsCall{Call: call}
+}
+
+// MockStoreDeleteReviewDraftsCall wrap *gomock.Call
+type MockStoreDeleteReviewDraftsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockStoreDeleteReviewDraftsCall) Return(arg0 int, arg1 error) *MockStoreDeleteReviewDraftsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockStoreDeleteReviewDraftsCall) Do(f func(context.Context, string, []review.DraftID) (int, error)) *MockStoreDeleteReviewDraftsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockStoreDeleteReviewDraftsCall) DoAndReturn(f func(context.Context, string, []review.DraftID) (int, error)) *MockStoreDeleteReviewDraftsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // LoadReviewDrafts mocks base method.
 func (m *MockStore) LoadReviewDrafts(arg0 context.Context, arg1 string) ([]review.Draft, error) {
 	m.ctrl.T.Helper()

@@ -1600,6 +1600,27 @@ with the current comment body pre-filled.
 * `-m`, `--message=MSG`: New comment body. Opens editor if not provided.
 * `-b`, `--branch=BRANCH`: Branch containing the draft. Defaults to the current branch.
 
+### git-spice review delete {#gs-review-delete}
+
+```
+gs review delete (rm) <draft> ... [flags]
+```
+
+Delete draft comments
+
+Deletes one or more local draft comments.
+
+Use 'gs review list --draft-only'
+to find the branch-local draft IDs.
+
+**Arguments**
+
+* `draft`: Draft comment IDs to delete.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Branch containing the drafts. Defaults to the current branch.
+
 ### git-spice review resolve {#gs-review-resolve}
 
 ```

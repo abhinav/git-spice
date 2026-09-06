@@ -64,6 +64,7 @@ var _ Service = (*spice.Service)(nil)
 // Store persists branch-local review drafts.
 type Store interface {
 	AddReviewDraft(context.Context, string, review.Draft) (review.Draft, error)
+	DeleteReviewDrafts(context.Context, string, []review.DraftID) (int, error)
 	LoadReviewDrafts(context.Context, string) ([]review.Draft, error)
 	RemovePublishedReviewDrafts(context.Context, string, []review.Draft) error
 	UpdateReviewDraftBody(context.Context, string, review.DraftID, string) error

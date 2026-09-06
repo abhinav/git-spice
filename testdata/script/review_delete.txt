@@ -1,0 +1,53 @@
+# Delete local draft comments.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a fake GitHub remote
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a file
+git add main.go
+gs bc -m 'Add main' feature1
+
+# draft two comments
+gs review comment main.go:3 -m 'First comment.'
+stderr 'Drafted comment 1'
+gs review comment main.go:4 -m 'Second comment.'
+stderr 'Drafted comment 2'
+
+# a missing ID leaves all drafts untouched
+! gs review delete 1 99
+stderr 'draft comment 99 not found'
+gs review list --draft-only
+stderr 'First comment'
+stderr 'Second comment'
+
+# delete both comments
+gs review delete 1 2
+stderr 'Deleted 2 draft comment'
+gs review list --draft-only
+stderr 'No draft comments'
+
+# deleted IDs are not reused
+gs review comment main.go:3 -m 'Third comment.'
+stderr 'Drafted comment 3'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+}
