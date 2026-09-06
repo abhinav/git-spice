@@ -69,6 +69,15 @@ Commit
   commit (c) fixup (f)     Fixup a commit below the current commit
   commit (c) pick (p)      Cherry-pick a commit
 
+Review
+  review comment      Draft or post a review comment
+  review reply        Draft or post a reply to a review thread
+  review publish      Publish draft comments as a review
+  review list (ls)    List review comments
+  review edit         Edit a draft comment
+  review resolve      Resolve a review thread
+  review reopen       Reopen a resolved review thread
+
 Rebase
   rebase (rb) continue (c)    Continue an interrupted operation
   rebase (rb) abort (a)       Abort an operation

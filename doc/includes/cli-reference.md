@@ -1465,6 +1465,183 @@ This command requires at least Git 2.45.
 
 **Configuration**: [spice.commitPick.restack](/cli/config.md#spicecommitpickrestack)
 
+## Review
+
+### git-spice review comment {#gs-review-comment}
+
+```
+gs review comment [<anchor>] [flags]
+```
+
+Draft or post a review comment
+
+Adds a review comment to the change request
+for the current branch.
+The anchor controls the comment scope:
+
+  file.go:42       anchored to that line
+  file.go:42-50    anchored to that line range
+  file.go          anchored to the file
+
+Comments are saved as local drafts by default.
+Use --no-draft to post immediately.
+
+If no message is given with -m, an editor is opened.
+
+**Arguments**
+
+* `anchor`: Comment anchor: file.go, file.go:42, or file.go:42-50.
+
+**Flags**
+
+* `-m`, `--message=MSG`: Comment body. Opens editor if not provided.
+* `--[no-]draft`: Save the comment as a local draft instead of posting it.
+* `-b`, `--branch=BRANCH`: Branch to comment on. Defaults to the current branch.
+
+### git-spice review reply {#gs-review-reply}
+
+```
+gs review reply <thread-id> [flags]
+```
+
+Draft or post a reply to a review thread
+
+Replies to a review thread on the change request
+for the current branch.
+
+Replies are saved as local drafts by default.
+Use --no-draft to post immediately.
+
+If no message is given with -m, an editor is opened.
+
+**Arguments**
+
+* `thread-id`: Thread ID to reply to.
+
+**Flags**
+
+* `-m`, `--message=MSG`: Reply body. Opens editor if not provided.
+* `--[no-]draft`: Save the reply as a local draft instead of posting it.
+* `-b`, `--branch=BRANCH`: Branch containing the thread. Defaults to the current branch.
+
+### git-spice review publish {#gs-review-publish}
+
+```
+gs review publish [flags]
+```
+
+Publish draft comments as a review
+
+Publishes all draft comments for the current branch
+as a single review on the change request.
+
+Use --approve or --request-changes
+to set the review event type.
+Defaults to a comment-only review.
+
+Use --body to add an overall review body.
+
+**Flags**
+
+* `--body=BODY`: Overall review body.
+* `--approve`: Mark the review as approved.
+* `--request-changes`: Mark the review as requesting changes.
+* `-b`, `--branch=BRANCH`: Branch whose draft comments to publish. Defaults to the current branch.
+
+### git-spice review list {#gs-review-list}
+
+```
+gs review list (ls) [flags]
+```
+
+List review comments
+
+Lists comments on the change request
+associated with the current branch.
+Use --branch to target a different branch.
+
+Draft comments are identified by a branch-local integer.
+
+Use --draft-only to show only draft comments.
+Use --unresolved to show only unresolved comments.
+
+With --json, prints output to stdout
+as a stream of JSON objects.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Branch to list comments for. Defaults to the current branch.
+* `--draft-only`: Show only draft comments.
+* `--unresolved`: Show only unresolved comments.
+* `--json`: Write to stdout as a stream of JSON objects. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+
+### git-spice review edit {#gs-review-edit}
+
+```
+gs review edit <id> [flags]
+```
+
+Edit a draft comment
+
+Edits a local draft comment.
+
+Use 'gs review list --draft-only'
+to find the branch-local draft ID.
+
+If no message is given with -m, an editor is opened
+with the current comment body pre-filled.
+
+**Arguments**
+
+* `id`: Draft comment ID to edit.
+
+**Flags**
+
+* `-m`, `--message=MSG`: New comment body. Opens editor if not provided.
+* `-b`, `--branch=BRANCH`: Branch containing the draft. Defaults to the current branch.
+
+### git-spice review resolve {#gs-review-resolve}
+
+```
+gs review resolve <thread-id> [flags]
+```
+
+Resolve a review thread
+
+Resolves a review thread on the change request
+for the current branch.
+
+The thread ID is shown in 'gs review list'.
+
+**Arguments**
+
+* `thread-id`: Thread ID to resolve.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Branch containing the thread. Defaults to the current branch.
+
+### git-spice review reopen {#gs-review-reopen}
+
+```
+gs review reopen <thread-id> [flags]
+```
+
+Reopen a resolved review thread
+
+Reopens a resolved review thread on the change request
+for the current branch.
+
+The thread ID is shown in 'gs review list'.
+
+**Arguments**
+
+* `thread-id`: Thread ID to reopen.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Branch containing the thread. Defaults to the current branch.
+
 ## Rebase
 
 ### git-spice rebase continue {#gs-rebase-continue}

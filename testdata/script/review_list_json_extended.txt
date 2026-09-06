@@ -1,0 +1,39 @@
+# Reports a complete range-thread record for editor integrations.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+gs repo init
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# Seed every supported state so one record exposes the complete JSON shape.
+shamhub review comment post --id 100 --author alice --path main.go --range 4:5 --side right --resolved --outdated alice/example 1 'Range comment.'
+stdout '100'
+
+gs review list --json
+cmpenvJSON stdout $WORK/golden/range.json
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+	println("world")
+}
+-- golden/range.json --
+{"kind":"forge","id":"100","scope":"line","path":"main.go","line":4,"range":{"start":4,"end":5},"side":"right","commitSHA":"4105957e3fefee17df99ae8581ed9c412dd150c2","body":"Range comment.","threadID":"thread-100","author":"alice","resolved":true,"stale":true,"status":"outdated","createdAt":"2024-04-05T16:40:32Z"}

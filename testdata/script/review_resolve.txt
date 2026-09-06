@@ -1,0 +1,47 @@
+# Resolve and reopen a review thread.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a fake GitHub remote
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a file and submit it
+git add util.go
+gs bc -m 'Add util' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# post an inline comment to create a thread
+gs review comment util.go:3 -m 'Rename this function.' --no-draft
+stderr 'Posted comment'
+
+# resolve and reopen the deterministic ShamHub thread
+gs review resolve thread-2
+stderr 'Resolved thread thread-2'
+gs review list
+stderr 'resolved'
+
+gs review reopen thread-2
+stderr 'Reopened thread thread-2'
+gs review list
+stderr 'open'
+
+-- repo/util.go --
+package main
+
+func doStuff() {
+	// stuff
+}
