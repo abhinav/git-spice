@@ -50,9 +50,13 @@ type Snapshot interface {
 }
 
 // UpdateRequest performs a batch of writes in one transaction.
+// Moves are applied before sets, and deletes are applied last.
 type UpdateRequest struct {
 	// Sets lists the keys to add or replace.
 	Sets []SetRequest
+
+	// Moves lists keys whose values move within the same transaction.
+	Moves []MoveRequest
 
 	// Deletes lists the keys to delete.
 	Deletes []string
@@ -68,6 +72,13 @@ type SetRequest struct {
 
 	// Value is serialized to JSON.
 	Value any
+}
+
+// MoveRequest transfers the optional value at From to To.
+// If From does not exist, To is deleted.
+type MoveRequest struct {
+	From string // required
+	To   string // required
 }
 
 // ErrNotExist indicates that an expected key does not exist.

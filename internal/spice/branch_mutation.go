@@ -2,7 +2,6 @@ package spice
 
 import (
 	"context"
-	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 
@@ -74,8 +73,7 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 // This handles both, renaming the branch in the repository,
 // and updating the internal state to reflect the new name.
 func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) error {
-	oldBranch, err := s.LookupBranch(ctx, oldName)
-	if err != nil {
+	if _, err := s.LookupBranch(ctx, oldName); err != nil {
 		return fmt.Errorf("lookup %v: %w", oldName, err)
 	}
 
@@ -90,33 +88,9 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 		return fmt.Errorf("list branches above %v: %w", oldName, err)
 	}
 
-	var (
-		changeForge    string
-		changeMetadata jsontext.Value
-	)
-	if md := oldBranch.Change; md != nil {
-		if codec, ok := s.forges.Lookup(md.ForgeID()); ok {
-			changeForge = codec.ID()
-			changeMetadata, err = codec.MarshalChangeMetadata(md)
-			if err != nil {
-				return fmt.Errorf("marshal change metadata: %w", err)
-			}
-		}
-	}
-
 	tx := s.store.BeginBranchTx()
-
-	// Create the new branch with the same base
-	// and other state as the old branch.
-	if err := tx.Upsert(ctx, state.UpsertRequest{
-		Name:           newName,
-		Base:           oldBranch.Base,
-		BaseHash:       oldBranch.BaseHash,
-		ChangeForge:    changeForge,
-		ChangeMetadata: changeMetadata,
-		UpstreamBranch: &oldBranch.UpstreamBranch,
-	}); err != nil {
-		return fmt.Errorf("create branch with name %v: %w", newName, err)
+	if err := tx.Rename(ctx, oldName, newName); err != nil {
+		return fmt.Errorf("rename tracked branch: %w", err)
 	}
 
 	// Point the branches above the old branch to the new branch.
@@ -128,11 +102,6 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 			return fmt.Errorf("update branch %v to point to %v: %w", above, newName, err)
 		}
 		s.log.Debug("Updating upstack branch to new name", "upstack", above)
-	}
-
-	// Delete the old branch.
-	if err := tx.Delete(ctx, oldName); err != nil {
-		return fmt.Errorf("delete branch %v: %w", oldName, err)
 	}
 
 	// If we get here, the change will be committed successfully.

@@ -84,6 +84,46 @@ func TestGitBackendUpdateNoChanges_concurrentUpdate(t *testing.T) {
 	assert.Equal(t, 1, racingRepo.calls)
 }
 
+func TestGitBackendMove_replaysConcurrentUpdate(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	newBackend := func(repo GitRepository) *GitBackend {
+		return NewGitBackend(GitConfig{
+			Repo:        repo,
+			Ref:         "refs/data",
+			AuthorName:  "Test Author",
+			AuthorEmail: "test@example.com",
+			Log:         silogtest.New(t),
+		})
+	}
+	concurrent := NewDB(newBackend(repo))
+	require.NoError(t, concurrent.Set(ctx, "old", "before", "set old"))
+
+	racingRepo := &updateTreeHookRepository{
+		GitRepository: repo,
+		BeforeUpdate: func(ctx context.Context, call int) error {
+			if call != 1 {
+				return nil
+			}
+			return concurrent.Set(ctx, "old", "after", "update old")
+		},
+	}
+	db := NewDB(newBackend(racingRepo))
+	require.NoError(t, db.Update(ctx, UpdateRequest{
+		Moves:   []MoveRequest{{From: "old", To: "new"}},
+		Message: "move value",
+	}))
+
+	var got string
+	assert.ErrorIs(t, db.Get(ctx, "old", &got), ErrNotExist)
+	require.NoError(t, db.Get(ctx, "new", &got))
+	assert.Equal(t, "after", got)
+}
+
 func TestGitBackend_ConcurrentOperations(t *testing.T) {
 	var seed [32]byte
 	if seedstr := os.Getenv("GIT_BACKEND_CONCURRENT_SEED"); seedstr != "" {

@@ -69,6 +69,14 @@ func (m MapBackend) Update(
 		values[i] = value
 	}
 
+	for _, move := range req.Moves {
+		if value, ok := m[move.From]; ok {
+			m[move.To] = bytes.Clone(value)
+		} else {
+			delete(m, move.To)
+		}
+		delete(m, move.From)
+	}
 	for i, set := range req.Sets {
 		m[set.Key] = values[i]
 	}
