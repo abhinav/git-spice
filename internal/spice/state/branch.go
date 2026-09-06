@@ -354,6 +354,7 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 }
 
 // Rename changes a tracked branch name while preserving its stored state.
+// Commit also moves state owned by the branch, such as review drafts.
 func (tx *BranchTx) Rename(
 	ctx context.Context,
 	oldName, newName string,
@@ -582,16 +583,28 @@ func (s *Store) updateBranches(ctx context.Context, req updateBranchesRequest) e
 	var dels []string
 	for _, del := range req.Deletes {
 		if _, renamed := req.Renames[del]; !renamed {
-			dels = append(dels, branchKey(del))
+			dels = append(
+				dels,
+				branchKey(del),
+				reviewDraftsJSON(del),
+			)
 		}
 	}
 
 	var moves []storage.MoveRequest
 	for _, oldName := range slices.Sorted(maps.Keys(req.Renames)) {
-		moves = append(moves, storage.MoveRequest{
-			From: branchKey(oldName),
-			To:   branchKey(req.Renames[oldName]),
-		})
+		newName := req.Renames[oldName]
+		moves = append(
+			moves,
+			storage.MoveRequest{
+				From: branchKey(oldName),
+				To:   branchKey(newName),
+			},
+			storage.MoveRequest{
+				From: reviewDraftsJSON(oldName),
+				To:   reviewDraftsJSON(newName),
+			},
+		)
 	}
 
 	updReq := storage.UpdateRequest{

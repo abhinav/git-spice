@@ -45,6 +45,7 @@ func (s *Store) AddReviewDraft(
 		storage.JSONMutationRequest{
 			Key:       reviewDraftsJSON(branch),
 			IfMissing: jsontext.Value(`{}`),
+			Requires:  []string{branchKey(branch)},
 			Message:   fmt.Sprintf("%v: add review draft", branch),
 		},
 		jsonmut.InsertAutoIncrement(
@@ -77,6 +78,7 @@ func (s *Store) UpdateReviewDraftBody(
 		storage.JSONMutationRequest{
 			Key:       reviewDraftsJSON(branch),
 			IfMissing: jsontext.Value(`{}`),
+			Requires:  []string{branchKey(branch)},
 			Message:   fmt.Sprintf("%v: update review draft", branch),
 		},
 		jsonmut.Replace(
