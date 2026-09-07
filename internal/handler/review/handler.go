@@ -34,9 +34,10 @@ type Handler struct {
 
 // DraftHandler coordinates workflows that only access local drafts.
 type DraftHandler struct {
-	Log    *silog.Logger // required
-	Store  Store         // required
-	Editor CommentEditor // required
+	Log     *silog.Logger // required
+	Service Service       // required
+	Store   Store         // required
+	Editor  CommentEditor // required
 }
 
 // ThreadHandler coordinates review-thread resolution changes.
@@ -50,6 +51,8 @@ type ThreadHandler struct {
 // Worktree provides the Git operations used by review workflows.
 type Worktree interface {
 	OpenBranchDiff(context.Context, string, string) (io.ReadCloser, error)
+	OpenCommitDiff(context.Context, string, string) (io.ReadCloser, error)
+	PeelToCommit(context.Context, string) (git.Hash, error)
 }
 
 var _ Worktree = (*git.Worktree)(nil)

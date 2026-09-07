@@ -66,7 +66,7 @@ func TestReviewDraftsPublishPreservesAddedDraft(t *testing.T) {
 	assert.Equal(t, []review.Draft{added}, drafts)
 }
 
-func TestReviewDraftsPublishPreservesEditedDraft(t *testing.T) {
+func TestReviewDraftsPublishRemovesEditedDraft(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
 	store, err := state.InitStore(ctx, state.InitStoreRequest{
@@ -108,9 +108,7 @@ func TestReviewDraftsPublishPreservesEditedDraft(t *testing.T) {
 	drafts, err := store.LoadReviewDrafts(ctx, "feat")
 	require.NoError(t, err)
 	require.NotNil(t, drafts)
-	edited := added
-	edited.Body = "First edited"
-	assert.Equal(t, []review.Draft{edited}, drafts)
+	assert.Empty(t, drafts)
 }
 
 func TestReviewDraftsPublishAfterBranchDeletion(t *testing.T) {

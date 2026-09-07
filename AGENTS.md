@@ -9,7 +9,7 @@ Read the relevant guide before editing that kind of code or prose:
 | Package boundaries, dependencies, constructors, APIs | `.agents/docs/design.md` |
 | Go implementation style and symbol ordering | `.agents/docs/style.md` |
 | Code comments and symbol documentation | `.agents/docs/comments.md` |
-| Command behavior, flags, output, generated CLI docs | `.agents/docs/cli.md` |
+| Command behavior, flags, user-facing logs and output, generated CLI docs | `.agents/docs/cli.md` |
 | Unit tests, test scripts, mocks, regression tests | `.agents/docs/testing.md` |
 | Documentation, changelog, release-facing prose | `.agents/docs/docs-and-release.md` |
 | Branches, commits, stacks, PR publishing boundaries | `.agents/docs/git-workflow.md` |

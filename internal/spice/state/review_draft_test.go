@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/review"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/storage"
@@ -31,8 +32,9 @@ func TestReviewDrafts(t *testing.T) {
 		ctx,
 		"feature",
 		review.Draft{
-			ID:   0,
-			Body: "comment body",
+			ID:         0,
+			Body:       "comment body",
+			CommitHash: git.Hash("1111111111111111111111111111111111111111"),
 			Anchor: review.Anchor{
 				Path:      "main.go",
 				StartLine: 42,
@@ -61,6 +63,7 @@ func TestReviewDrafts(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, drafts, 2)
 	assert.Equal(t, "updated body", drafts[0].Body)
+	assert.Equal(t, comment.CommitHash, drafts[0].CommitHash)
 	assert.Equal(t, reply, drafts[1])
 
 	require.NoError(t, store.RemovePublishedReviewDrafts(

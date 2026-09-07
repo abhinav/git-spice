@@ -14,6 +14,7 @@ import (
 	io "io"
 	reflect "reflect"
 
+	git "go.abhg.dev/gs/internal/git"
 	review "go.abhg.dev/gs/internal/review"
 	spice "go.abhg.dev/gs/internal/spice"
 	gomock "go.uber.org/mock/gomock"
@@ -78,6 +79,84 @@ func (c *MockWorktreeOpenBranchDiffCall) Do(f func(context.Context, string, stri
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockWorktreeOpenBranchDiffCall) DoAndReturn(f func(context.Context, string, string) (io.ReadCloser, error)) *MockWorktreeOpenBranchDiffCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// OpenCommitDiff mocks base method.
+func (m *MockWorktree) OpenCommitDiff(arg0 context.Context, arg1, arg2 string) (io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OpenCommitDiff", arg0, arg1, arg2)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OpenCommitDiff indicates an expected call of OpenCommitDiff.
+func (mr *MockWorktreeMockRecorder) OpenCommitDiff(arg0, arg1, arg2 any) *MockWorktreeOpenCommitDiffCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenCommitDiff", reflect.TypeOf((*MockWorktree)(nil).OpenCommitDiff), arg0, arg1, arg2)
+	return &MockWorktreeOpenCommitDiffCall{Call: call}
+}
+
+// MockWorktreeOpenCommitDiffCall wrap *gomock.Call
+type MockWorktreeOpenCommitDiffCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockWorktreeOpenCommitDiffCall) Return(arg0 io.ReadCloser, arg1 error) *MockWorktreeOpenCommitDiffCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockWorktreeOpenCommitDiffCall) Do(f func(context.Context, string, string) (io.ReadCloser, error)) *MockWorktreeOpenCommitDiffCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockWorktreeOpenCommitDiffCall) DoAndReturn(f func(context.Context, string, string) (io.ReadCloser, error)) *MockWorktreeOpenCommitDiffCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// PeelToCommit mocks base method.
+func (m *MockWorktree) PeelToCommit(arg0 context.Context, arg1 string) (git.Hash, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PeelToCommit", arg0, arg1)
+	ret0, _ := ret[0].(git.Hash)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PeelToCommit indicates an expected call of PeelToCommit.
+func (mr *MockWorktreeMockRecorder) PeelToCommit(arg0, arg1 any) *MockWorktreePeelToCommitCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PeelToCommit", reflect.TypeOf((*MockWorktree)(nil).PeelToCommit), arg0, arg1)
+	return &MockWorktreePeelToCommitCall{Call: call}
+}
+
+// MockWorktreePeelToCommitCall wrap *gomock.Call
+type MockWorktreePeelToCommitCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockWorktreePeelToCommitCall) Return(arg0 git.Hash, arg1 error) *MockWorktreePeelToCommitCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockWorktreePeelToCommitCall) Do(f func(context.Context, string) (git.Hash, error)) *MockWorktreePeelToCommitCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockWorktreePeelToCommitCall) DoAndReturn(f func(context.Context, string) (git.Hash, error)) *MockWorktreePeelToCommitCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

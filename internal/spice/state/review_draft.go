@@ -10,6 +10,7 @@ import (
 	"path"
 	"slices"
 
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/jsonmut"
 	"go.abhg.dev/gs/internal/review"
 	"go.abhg.dev/gs/internal/spice/state/storage"
@@ -23,11 +24,12 @@ type reviewDraftState struct {
 }
 
 type storedReviewDraft struct {
-	File     string `json:"file"`
-	Line     int    `json:"line"`
-	EndLine  int    `json:"endLine,omitempty"`
-	Body     string `json:"body"`
-	ThreadID string `json:"threadID,omitempty"`
+	File       string   `json:"file"`
+	Line       int      `json:"line"`
+	EndLine    int      `json:"endLine,omitempty"`
+	Body       string   `json:"body"`
+	ThreadID   string   `json:"threadID,omitempty"`
+	CommitHash git.Hash `json:"commitHash,omitempty"`
 }
 
 // AddReviewDraft atomically assigns a branch-local ID and saves a draft.
@@ -152,7 +154,7 @@ func (s *Store) UpdateReviewDraftBody(
 	return nil
 }
 
-// RemovePublishedReviewDrafts removes unchanged drafts after publication.
+// RemovePublishedReviewDrafts removes drafts by ID after publication.
 func (s *Store) RemovePublishedReviewDrafts(
 	ctx context.Context,
 	branch string,
@@ -160,23 +162,13 @@ func (s *Store) RemovePublishedReviewDrafts(
 ) error {
 	statements := make([]jsonmut.Statement, 0, len(published))
 	for _, draft := range published {
-		stored := storeReviewDraft(draft)
 		path := jsontext.Pointer("/drafts").AppendToken(draft.ID.String())
-		statements = append(statements,
-			jsonmut.Decode[*storedReviewDraft](path).Then(
-				func(current *storedReviewDraft) jsonmut.Statement {
-					if current == nil || *current != stored {
-						return jsonmut.Block()
-					}
-					return jsonmut.Delete(path)
-				},
-			),
-		)
+		statements = append(statements, jsonmut.DeleteIfPresent(path))
 	}
 
-	// Forge submission happens before this mutation starts.
-	// Replaying the program removes only values that still match the request,
-	// leaving drafts added or edited while submission was in flight intact.
+	// Forge submission happens before this mutation starts. Replaying the
+	// program removes the published IDs from the latest state, including drafts
+	// edited while submission was in flight.
 	err := storage.UpdateJSON(
 		ctx,
 		s.db,
@@ -214,9 +206,10 @@ func (s *Store) LoadReviewDrafts(
 		stored := state.Drafts[id]
 		if stored.ThreadID != "" {
 			drafts[i] = review.Draft{
-				ID:      id,
-				Body:    stored.Body,
-				ReplyTo: stored.ThreadID,
+				ID:         id,
+				Body:       stored.Body,
+				ReplyTo:    stored.ThreadID,
+				CommitHash: stored.CommitHash,
 			}
 			continue
 		}
@@ -226,8 +219,9 @@ func (s *Store) LoadReviewDrafts(
 			endLine = stored.Line
 		}
 		drafts[i] = review.Draft{
-			ID:   id,
-			Body: stored.Body,
+			ID:         id,
+			Body:       stored.Body,
+			CommitHash: stored.CommitHash,
 			Anchor: review.Anchor{
 				Path:      stored.File,
 				StartLine: stored.Line,
@@ -254,7 +248,8 @@ func (s *Store) loadReviewDraftState(
 
 func storeReviewDraft(draft review.Draft) storedReviewDraft {
 	stored := storedReviewDraft{
-		Body: draft.Body,
+		Body:       draft.Body,
+		CommitHash: draft.CommitHash,
 	}
 	if draft.ReplyTo != "" {
 		stored.ThreadID = draft.ReplyTo

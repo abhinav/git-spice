@@ -50,13 +50,15 @@ func (*reviewCmd) AfterApply(kctx *kong.Context) error {
 		}),
 		kctx.BindToProvider(func(
 			log *silog.Logger,
+			svc *spice.Service,
 			store *state.Store,
 			gitRepo *git.Repository,
 		) (ReviewDraftHandler, error) {
 			return &review.DraftHandler{
-				Log:    log,
-				Store:  store,
-				Editor: newReviewCommentEditor(gitRepo),
+				Log:     log,
+				Service: svc,
+				Store:   store,
+				Editor:  newReviewCommentEditor(gitRepo),
 			}, nil
 		}),
 		kctx.BindToProvider(func(

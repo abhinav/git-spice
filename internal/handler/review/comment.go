@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -29,6 +30,15 @@ func (h *DraftHandler) SaveCommentDraft(
 	ctx context.Context,
 	req *CommentRequest,
 ) error {
+	// Capture the anchor's source revision before the editor can leave this
+	// process waiting while another process advances the branch.
+	branch, err := h.Service.LookupBranch(ctx, req.Branch)
+	if err != nil {
+		if errors.Is(err, state.ErrNotExist) {
+			return fmt.Errorf("branch not tracked: %s", req.Branch)
+		}
+		return fmt.Errorf("get branch: %w", err)
+	}
 	body, err := h.commentBody(ctx, req.Message)
 	if err != nil {
 		return err
@@ -36,7 +46,12 @@ func (h *DraftHandler) SaveCommentDraft(
 	draft, err := h.Store.AddReviewDraft(
 		ctx,
 		req.Branch,
-		review.Draft{ID: 0, Body: body, Anchor: req.Anchor},
+		review.Draft{
+			ID:         0,
+			Body:       body,
+			Anchor:     req.Anchor,
+			CommitHash: branch.Head,
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("save draft comment: %w", err)
@@ -239,20 +254,30 @@ func (h *DraftHandler) commentBody(
 	return body, nil
 }
 
-// loadPatch parses the selected branch's review diff.
+// loadPatch parses the review diff ending at head.
 // Closing the diff reader also reports failures from the Git process.
 func (h *Handler) loadPatch(
 	ctx context.Context,
-	base, branch string,
+	base, head string,
 ) (*reviewdiff.Patch, error) {
-	diff, err := h.Worktree.OpenBranchDiff(ctx, base, branch)
+	diff, err := h.Worktree.OpenBranchDiff(ctx, base, head)
 	if err != nil {
 		return nil, fmt.Errorf("open diff: %w", err)
 	}
+	patch, err := parsePatch(diff)
+	if err != nil {
+		return nil, fmt.Errorf("parse diff: %w", err)
+	}
+	return patch, nil
+}
+
+// parsePatch consumes and closes a Git diff. Closing the reader waits for the
+// Git process, so a command failure is reported together with any parse error.
+func parsePatch(diff io.ReadCloser) (*reviewdiff.Patch, error) {
 	patch, err := reviewdiff.Parse(diff)
 	err = errors.Join(err, diff.Close())
 	if err != nil {
-		return nil, fmt.Errorf("parse diff: %w", err)
+		return nil, err
 	}
 	return patch, nil
 }

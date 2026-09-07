@@ -1,6 +1,10 @@
 package review
 
-import "strconv"
+import (
+	"strconv"
+
+	"go.abhg.dev/gs/internal/git"
+)
 
 // DraftID identifies a local review draft within one branch.
 type DraftID int
@@ -14,6 +18,11 @@ func (id DraftID) String() string {
 type Draft struct {
 	ID   DraftID // required
 	Body string  // required
+
+	// CommitHash identifies the branch revision containing Anchor.
+	// It is zero for replies and drafts created before source revisions were
+	// recorded.
+	CommitHash git.Hash
 
 	// Anchor identifies the location of a root comment.
 	// It is zero for a reply.
