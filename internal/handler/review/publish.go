@@ -6,6 +6,10 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/review"
+	"go.abhg.dev/gs/internal/reviewdiff"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
@@ -50,20 +54,47 @@ func (h *Handler) PublishDrafts(
 			req.Branch,
 		)
 	}
-	patch, err := h.loadPatch(ctx, change.Base, req.Branch)
+	changeID := change.Change.ChangeID()
+	reviewHead := change.Head
+	// Prefer the remote change head because forges interpret review coordinates
+	// against it. Status lookup is best-effort so review publication retains its
+	// pre-remapping behavior when the forge cannot report that revision.
+	statuses, err := h.Repository.ChangeStatuses(ctx, []forge.ChangeID{changeID})
+	if err != nil {
+		h.Log.Warnf("%v: remote head unavailable, using local branch head (%v): %v", changeID, reviewHead.Short(), err)
+	} else {
+		must.BeEqualf(len(statuses), 1, "expected one status for %v, got %d", changeID, len(statuses))
+		if statuses[0].HeadHash.IsZero() {
+			h.Log.Warnf("%v: remote head unavailable, using local branch head (%v)", changeID, reviewHead.Short())
+		} else {
+			reviewHead = statuses[0].HeadHash
+		}
+	}
+
+	patchHead := req.Branch
+	resolvedHead, err := h.Worktree.PeelToCommit(ctx, reviewHead.String())
+	if err != nil {
+		h.Log.Warnf("%v: head (%v) unavailable locally, using saved anchors: %v", changeID, reviewHead.Short(), err)
+	} else {
+		patchHead = resolvedHead.String()
+		if err := h.remapDraftAnchors(ctx, resolvedHead, drafts); err != nil {
+			return err
+		}
+	}
+
+	patch, err := h.loadPatch(ctx, change.Base, patchHead)
 	if err != nil {
 		return err
 	}
 	threadIDs, err := resolveDraftThreadIDs(
 		ctx,
 		h.Repository,
-		change.Change.ChangeID(),
+		changeID,
 		drafts,
 	)
 	if err != nil {
 		return err
 	}
-
 	comments := make([]forge.SubmitReviewCommentRequest, 0, len(drafts))
 	for _, draft := range drafts {
 		if draft.ReplyTo != "" {
@@ -74,29 +105,26 @@ func (h *Handler) PublishDrafts(
 			continue
 		}
 
-		if draft.Anchor.IsFile() && !patch.ContainsFile(draft.Anchor.Path) {
+		anchor := draft.Anchor
+		if anchor.IsFile() && !patch.ContainsFile(anchor.Path) {
 			return fmt.Errorf(
 				"draft %s: review diff does not contain file %q",
 				draft.ID,
-				draft.Anchor.Path,
+				anchor.Path,
 			)
 		}
-		if !draft.Anchor.IsFile() && !patch.ContainsLineRange(
-			draft.Anchor.Path,
-			draft.Anchor.StartLine,
-			draft.Anchor.EndLine,
-		) {
+		if !anchor.IsFile() && !patch.ContainsLineRange(anchor.Path, anchor.StartLine, anchor.EndLine) {
 			return fmt.Errorf(
 				"draft %s: review diff does not contain %s",
 				draft.ID,
-				draft.Anchor,
+				anchor,
 			)
 		}
 		comments = append(comments, forge.SubmitReviewCommentRequest{
-			Path: draft.Anchor.Path,
+			Path: anchor.Path,
 			Range: forge.ReviewThreadRange{
-				StartLine: draft.Anchor.StartLine,
-				EndLine:   draft.Anchor.EndLine,
+				StartLine: anchor.StartLine,
+				EndLine:   anchor.EndLine,
 			},
 			Body: draft.Body,
 			Side: forge.ReviewThreadSideRight,
@@ -105,7 +133,7 @@ func (h *Handler) PublishDrafts(
 
 	if _, err := h.Repository.SubmitReview(
 		ctx,
-		change.Change.ChangeID(),
+		changeID,
 		forge.SubmitReviewRequest{
 			Body:        req.Body,
 			Disposition: req.Disposition,
@@ -125,9 +153,104 @@ func (h *Handler) PublishDrafts(
 	h.Log.Infof(
 		"Published %d comment(s) as review on %s.",
 		len(comments),
-		change.Change.ChangeID(),
+		changeID,
 	)
 	return nil
+}
+
+// remapDraftAnchors follows root drafts from their recorded branch revisions
+// to head. Failures loading an individual source patch preserve saved
+// coordinates; a target known to have been deleted returns an error.
+func (h *Handler) remapDraftAnchors(
+	ctx context.Context,
+	head git.Hash,
+	drafts []review.Draft,
+) error {
+	// draftAnchorSource memoizes one source-to-head patch or its load failure.
+	type draftAnchorSource struct {
+		patch *reviewdiff.Patch
+		err   error
+	}
+
+	// Key entries by the commit hash recorded with each draft. Drafts created
+	// at the same branch revision then share a patch or its load failure.
+	sources := make(map[git.Hash]draftAnchorSource)
+	for idx, draft := range drafts {
+		if draft.ReplyTo != "" {
+			continue
+		}
+
+		if draft.CommitHash.IsZero() || draft.CommitHash == head {
+			// Unlikely that the commit hash wasn't recorded
+			// but easy enough to handle.
+			continue
+		}
+
+		source, ok := sources[draft.CommitHash]
+		if !ok {
+			source.patch, source.err = h.loadDraftAnchorPatch(ctx, draft.CommitHash, head)
+			sources[draft.CommitHash] = source
+		}
+		if source.err != nil {
+			h.Log.Warn(
+				"Draft head moved but patch was unavailable. Using saved anchor.",
+				"draftID", draft.ID,
+				"anchor", draft.Anchor,
+				"oldHead", draft.CommitHash.Short(),
+				"newHead", head.Short(),
+				"error", source.err,
+			)
+			continue
+		}
+
+		anchor, ok := source.patch.MapAnchor(draft.Anchor)
+		if !ok {
+			return fmt.Errorf(
+				"draft %s: comment target %s no longer exists after branch changes",
+				draft.ID,
+				draft.Anchor,
+			)
+		}
+
+		if anchor != draft.Anchor {
+			h.Log.Infof("Draft %d: anchor moved to %v", draft.ID, anchor)
+		}
+
+		draft.Anchor = anchor
+		drafts[idx] = draft
+	}
+	return nil
+}
+
+// loadDraftAnchorPatch parses the change from the commit hash recorded with a
+// draft to the branch's current head.
+func (h *Handler) loadDraftAnchorPatch(
+	ctx context.Context,
+	draftCommit git.Hash,
+	head git.Hash,
+) (*reviewdiff.Patch, error) {
+	source, err := h.Worktree.PeelToCommit(ctx, draftCommit.String())
+	if err != nil {
+		return nil, fmt.Errorf(
+			"resolve source commit %s: %w",
+			draftCommit.Short(),
+			err,
+		)
+	}
+
+	diff, err := h.Worktree.OpenCommitDiff(
+		ctx,
+		source.String(),
+		head.String(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("open commit diff: %w", err)
+	}
+	patch, err := parsePatch(diff)
+	if err != nil {
+		return nil, fmt.Errorf("parse commit diff: %w", err)
+	}
+	return patch, nil
 }
 
 // resolveDraftThreadIDs recovers opaque forge IDs for every drafted reply.

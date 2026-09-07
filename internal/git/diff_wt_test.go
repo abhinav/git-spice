@@ -72,3 +72,30 @@ func TestWorktree_OpenBranchDiff(t *testing.T) {
 		assert.ErrorContains(t, diff.Close(), "diff: git command failed")
 	})
 }
+
+func TestWorktree_OpenCommitDiff(t *testing.T) {
+	t.Parallel()
+
+	mockExecer := git.NewMockExecer(gomock.NewController(t))
+	_, wt := git.NewFakeRepository(t, "", mockExecer)
+
+	mockExecer.EXPECT().
+		Start(gomock.Any()).
+		DoAndReturn(func(cmd *exec.Cmd) error {
+			assert.Equal(t, []string{
+				"git", "diff", "--find-renames", "--unified=0", "old", "new",
+			}, cmd.Args)
+			_, err := io.WriteString(cmd.Stdout, "diff output\n")
+			return errors.Join(err, cmd.Stdout.(io.Closer).Close())
+		})
+	mockExecer.EXPECT().
+		Wait(gomock.Any()).
+		Return(nil)
+
+	diff, err := wt.OpenCommitDiff(t.Context(), "old", "new")
+	require.NoError(t, err)
+	got, err := io.ReadAll(diff)
+	require.NoError(t, err)
+	require.NoError(t, diff.Close())
+	assert.Equal(t, "diff output\n", string(got))
+}

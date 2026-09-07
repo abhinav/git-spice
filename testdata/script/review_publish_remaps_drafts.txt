@@ -1,0 +1,125 @@
+# Draft anchors follow their source lines when the branch changes before
+# publication.
+
+as 'Test <test@example.com>'
+at '2026-09-06T13:57:13Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature.go
+gs bc -m 'Add feature' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# Record line, range, and file anchors against the original branch head.
+gs review comment feature.go:4 -m 'Line draft.'
+stderr 'Drafted comment 1 on feature.go:4'
+gs review comment feature.go:5-6 -m 'Range draft.'
+stderr 'Drafted comment 2 on feature.go:5-6'
+gs review comment feature.go -m 'File draft.'
+stderr 'Drafted comment 3 on feature.go'
+
+# Rename the file, insert before both line anchors, and replace the final line
+# in the range with three lines. Publishing should follow those edits.
+mv feature.go reviewed.go
+cp $WORK/extra/reviewed.go reviewed.go
+git add -A
+gs ca --no-edit
+gs branch submit --force
+
+gs review publish
+stderr 'Published 3 comment'
+shamhub dump reviews 1
+cmp stdout $WORK/golden/reviews.yaml
+
+-- repo/feature.go --
+package main
+
+func work() {
+	prepare()
+	first()
+	second()
+	finish()
+}
+
+func helper() {
+	one()
+	two()
+	three()
+	four()
+	five()
+}
+-- extra/reviewed.go --
+package main
+
+const enabled = true
+func work() {
+	prepare()
+	first()
+	inserted()
+	replacementOne()
+	replacementTwo()
+	finish()
+}
+
+func helper() {
+	one()
+	two()
+	three()
+	four()
+	five()
+}
+-- golden/reviews.yaml --
+changes:
+  - change: 1
+    submissions:
+      - submitter: alice
+        disposition: comment
+        commentIDs:
+          - 2
+          - 3
+          - 4
+    threads:
+      - id: thread-2
+        path: reviewed.go
+        range:
+          start: 5
+          end: 5
+        side: right
+        resolved: false
+        outdated: false
+        comments:
+          - id: 2
+            author: alice
+            body: Line draft.
+      - id: thread-3
+        path: reviewed.go
+        range:
+          start: 6
+          end: 9
+        side: right
+        resolved: false
+        outdated: false
+        comments:
+          - id: 3
+            author: alice
+            body: Range draft.
+      - id: thread-4
+        path: reviewed.go
+        resolved: false
+        outdated: false
+        comments:
+          - id: 4
+            author: alice
+            body: File draft.

@@ -74,6 +74,61 @@ Rendering belongs at the command or handler boundary.
 Domain operations should not need to know
 whether a result will be printed as text, JSON, or another representation.
 
+## User-Facing Logs
+
+Log messages are part of the standard-error interface.
+Write them for a user following the operation,
+not as an internal trace of the implementation.
+
+We use two forms of logging based on purpose:
+structured logs and printf-style logs.
+
+### Structured Logs
+
+Structured logs use full sentences (capitalized, punctuated, and complete)
+with structured attributes for dynamic values.
+Use these when reporting a single event, or for debug-level logs.
+
+```go
+log.Warn(
+	"Could not load remote change data. Using local data.",
+	"changeID", changeID,
+	"error", err,
+)
+```
+
+Structured log attributes get user-friendly camelCase keys.
+Errors use the `"error"` key.
+When an error is recoverable,
+state the fallback or consequence in the message.
+
+### printf-style Logs
+
+printf-style logs use a lowercase prefix for the subject of the message,
+then a colon and a lowercase statement of the action or result.
+Use these when repeated messages report progress for individual items.
+
+```go
+log.Infof("%v: restacked onto %v", branch, onto)
+log.Infof("%v: anchor moved to %v", draft.ID, anchor)
+```
+
+Exception: Debug level logs always use structured logging.
+
+#### printf formatting verbs
+
+Use `%v` when Go's default formatting is the intended presentation,
+including for strings and integers.
+Use another formatting verb only when its distinct presentation
+is part of the output contract,
+such as quoting, a non-decimal base, padding, or precision.
+Use `%q` for quoted strings.
+
+Use `WithPrefix` for stable subsystem context,
+such as a forge or a long-running operation.
+Keep dynamic branch, change, draft, and other item identities
+in the message or structured attributes.
+
 ## Generated Files
 
 Run `mise run generate`

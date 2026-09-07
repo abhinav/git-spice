@@ -116,6 +116,8 @@ Use `make` for slices only when specifying length or capacity.
 ## Logging
 
 Use `internal/silog.Logger`.
+For user-facing message content and formatting,
+follow the logging conventions in `.agents/docs/cli.md`.
 In tests, use `silogtest.New(t)` by default
 so log output is attached to the test.
 Use `silog.Nop()` only when the test needs to suppress logging entirely.

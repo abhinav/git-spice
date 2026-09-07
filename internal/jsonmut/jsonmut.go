@@ -214,6 +214,19 @@ func Delete(path jsontext.Pointer) Statement {
 	return newMutationStatement(path, nil, mutationDelete)
 }
 
+// DeleteIfPresent returns a statement that removes the object member at path.
+// It leaves the document unchanged when path does not exist.
+func DeleteIfPresent(path jsontext.Pointer) Statement {
+	must.Bef(path.IsValid(), "invalid JSON pointer %q", path)
+	must.Bef(path != "", "delete path must not be the document root")
+	return Lookup(path).Then(func(value jsontext.Value) Statement {
+		if len(value) == 0 {
+			return Block()
+		}
+		return Delete(path)
+	})
+}
+
 type mutationMode uint8
 
 const (

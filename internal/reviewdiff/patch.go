@@ -16,6 +16,7 @@ import (
 type Patch struct {
 	files     map[string][]lineRange
 	deletions map[string][]lineRange
+	mappings  map[string]fileMapping
 }
 
 // Parse parses a Git patch for review-comment queries.
@@ -28,8 +29,13 @@ func Parse(src io.Reader) (*Patch, error) {
 	patch := &Patch{
 		files:     make(map[string][]lineRange),
 		deletions: make(map[string][]lineRange),
+		mappings:  make(map[string]fileMapping),
 	}
 	for _, file := range files {
+		if file.OldName != "" && !file.IsCopy {
+			patch.mappings[file.OldName] = newFileMapping(file)
+		}
+
 		// A destination path is enough to make a file commentable, including
 		// binary, rename-only, and mode-only changes without text fragments.
 		if file.NewName != "" {
