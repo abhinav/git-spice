@@ -38,7 +38,7 @@ stdout '"status":"open"'
 
 # text mode shows the full body without truncation
 gs review list
-stderr 'Consider using a constant here because it would make the code much more maintainable and readable.'
+stdout 'Consider using a constant here because it would make the code much more maintainable and readable.'
 
 # draft a comment
 gs review comment main.go:5 -m 'Add error handling here.'
