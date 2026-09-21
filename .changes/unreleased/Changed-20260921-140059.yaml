@@ -1,0 +1,6 @@
+kind: Changed
+body: >-
+  Bitbucket Cloud: stack navigation comments now reference pull requests as
+  inline cards, so each entry shows the pull request's title and state instead
+  of just its number.
+time: 2026-09-21T14:00:59.113307+02:00

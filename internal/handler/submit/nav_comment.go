@@ -115,8 +115,6 @@ func updateNavigationComments(
 	// Forges like GitHub auto-link "#123" and need no formatter.
 	// GitLab implements WithNavigationReference to append "+" so the MR
 	// title is rendered inline.
-	// Bitbucket doesn't auto-link "#123", so WithChangeURL wraps the
-	// reference in an explicit markdown link.
 	var urlFormatter func(forge.ChangeID) string
 	switch r := remoteRepo.(type) {
 	case forge.WithNavigationReference:
