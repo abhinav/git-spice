@@ -77,6 +77,9 @@ Configuration (🔧):
                                    branch against trunk in navigation comments,
                                    and on which CRs. Must be one of: false, top,
                                    all.
+  spice.submit.navigationCommentStyle.layout
+                                   Layout of navigation comments. Must be one
+                                   of: tree, simple.
   spice.submit.navigationCommentStyle.marker
                                    Marker to use for the current change in
                                    navigation comments. Defaults to '◀'.

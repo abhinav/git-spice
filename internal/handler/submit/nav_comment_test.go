@@ -16,6 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/forge/shamhub"
+	"go.abhg.dev/gs/internal/forge/stacknav"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -451,7 +452,8 @@ func TestUpdateNavigationComments(t *testing.T) {
 				tt.when,
 				tt.sync,
 				tt.downstack,
-				"",
+				"",                     // marker
+				"",                     // layout
 				NavCommentTrunkLinkOff, // trunk comparison link
 				"",                     // trunk comparison link text
 				tt.submit,
@@ -566,7 +568,8 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 			NavCommentAlways,
 			NavCommentSyncBranch,
 			NavCommentDownstackAll,
-			"",
+			"",                     // marker
+			"",                     // layout
 			NavCommentTrunkLinkOff, // trunk comparison link
 			"",                     // trunk comparison link text
 			[]string{"feat1"},
@@ -684,7 +687,8 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 			NavCommentAlways,
 			NavCommentSyncDownstack,
 			NavCommentDownstackAll,
-			"",
+			"",                     // marker
+			"",                     // layout
 			NavCommentTrunkLinkOff, // trunk comparison link
 			"",                     // trunk comparison link text
 			[]string{"feat3"},
@@ -795,7 +799,8 @@ func TestUpdateNavigationComments_trunkComparisonLink(t *testing.T) {
 			NavCommentAlways,
 			NavCommentSyncDownstack,
 			NavCommentDownstackAll,
-			"",
+			"",   // marker
+			"",   // layout
 			mode, // trunk comparison link mode
 			"",   // default text
 			[]string{"feat3"},
@@ -976,7 +981,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 				tt.want + "\n" +
 				_commentFooter + "\n" +
 				_commentMarker + "\n"
-			got := generateStackNavigationComment(tt.graph, tt.current, "", nil, "")
+			got := generateStackNavigationComment(tt.graph, tt.current, nil, nil, "")
 			assert.Equal(t, want, got)
 
 			// Sanity check: All generated comments must match
@@ -996,7 +1001,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 		}
 		graph[0].Aboves = []int{1}
 
-		got := generateStackNavigationComment(graph, 1, "<-- you are here", nil, "")
+		got := generateStackNavigationComment(graph, 1, &stacknav.PrintOptions{Marker: "<-- you are here"}, nil, "")
 		want := _commentHeader + "\n\n" +
 			joinLines(
 				"- #123",
@@ -1019,7 +1024,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 		}
 		graph[0].Aboves = []int{1}
 
-		got := generateStackNavigationComment(graph, 1, "", nil, "")
+		got := generateStackNavigationComment(graph, 1, nil, nil, "")
 		want := _commentHeader + "\n\n" +
 			joinLines(
 				"- #123+",
@@ -1040,7 +1045,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 		graph[0].Aboves = []int{1}
 
 		trunkLink := "[Compare against trunk](https://example.com/o/r/compare/main...feat2)"
-		got := generateStackNavigationComment(graph, 1, "", nil, trunkLink)
+		got := generateStackNavigationComment(graph, 1, nil, nil, trunkLink)
 		want := _commentHeader + "\n\n" +
 			joinLines(
 				"- #123",

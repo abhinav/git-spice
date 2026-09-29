@@ -954,6 +954,37 @@ This will render navigation comments like:
         - #125
 ```
 
+### spice.submit.navigationCommentStyle.layout
+
+<!-- gs:version unreleased -->
+
+Specifies how navigation comments lay out the stack.
+
+**Accepted values:**
+
+- `tree` (*default*):
+  list the stack from the bottom up, indenting each change.
+- `simple`:
+  list the stack from the top down with no indentation,
+  ending with the trunk branch.
+  If the stack forks above the change,
+  that comment uses the `tree` layout instead.
+
+**Example:**
+
+```bash
+git config spice.submit.navigationCommentStyle.layout simple
+```
+
+This will render navigation comments like:
+
+```
+- #125
+- #124 ◀
+- #123
+- `main`
+```
+
 ### spice.submit.navigationComment.downstack
 
 <!-- gs:version v0.20.0 -->
