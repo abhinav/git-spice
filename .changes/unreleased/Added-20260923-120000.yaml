@@ -1,0 +1,7 @@
+kind: Added
+body: >-
+  submit: Add `spice.submit.navigationCommentStyle.layout` option.
+  Set it to `simple` to show navigation comments as a flat list
+  from the top of the stack down to the trunk branch.
+  Comments on changes with a fork above them keep the tree layout.
+time: 2026-09-23T12:00:00-07:00
