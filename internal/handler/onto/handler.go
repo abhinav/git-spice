@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -18,6 +19,13 @@ type RestackHandler interface {
 	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
 }
 
+// AutostashHandler is a subset of the autostash.Handler interface.
+type AutostashHandler interface {
+	BeginMergeAutostash(ctx context.Context, method spice.RestackMethod, opts *autostash.Options) (func(*error), error)
+}
+
+var _ AutostashHandler = (*autostash.Handler)(nil)
+
 // Handler coordinates higher-level onto operations.
 //
 // The lower-level spice service moves one branch at a time.
@@ -28,6 +36,25 @@ type Handler struct {
 	Worktree *git.Worktree  // required
 	Service  *spice.Service // required
 	Restack  RestackHandler // required
+
+	// Autostash stashes uncommitted changes around merge-method operations.
+	// If nil, they run against the worktree as-is.
+	Autostash AutostashHandler // optional
+}
+
+func (h *Handler) beginMergeAutostash(
+	ctx context.Context,
+	branch string,
+) (func(*error), error) {
+	if h.Autostash == nil {
+		return func(*error) {}, nil
+	}
+
+	return h.Autostash.BeginMergeAutostash(ctx, h.Service.RestackMethod(), &autostash.Options{
+		Message:   "git-spice: autostash before merge onto",
+		ResetMode: autostash.ResetHard,
+		Branch:    branch,
+	})
 }
 
 // BranchRequest describes a branch onto operation.
@@ -53,7 +80,13 @@ type BranchRequest struct {
 // The request's restack mode decides whether those direct aboves,
 // and their own upstacks,
 // are also rebased immediately.
-func (h *Handler) BranchOnto(ctx context.Context, req *BranchRequest) error {
+func (h *Handler) BranchOnto(ctx context.Context, req *BranchRequest) (retErr error) {
+	cleanup, err := h.beginMergeAutostash(ctx, req.Branch)
+	if err != nil {
+		return err
+	}
+	defer cleanup(&retErr)
+
 	branch, err := h.Service.LookupBranch(ctx, req.Branch)
 	if err != nil {
 		if errors.Is(err, state.ErrNotExist) {
@@ -139,8 +172,14 @@ type UpstackRequest struct {
 }
 
 // UpstackOnto moves one branch and restacks the branches above it.
-func (h *Handler) UpstackOnto(ctx context.Context, req *UpstackRequest) error {
-	err := h.Service.BranchOnto(ctx, &spice.BranchOntoRequest{
+func (h *Handler) UpstackOnto(ctx context.Context, req *UpstackRequest) (retErr error) {
+	cleanup, err := h.beginMergeAutostash(ctx, req.Branch)
+	if err != nil {
+		return err
+	}
+	defer cleanup(&retErr)
+
+	err = h.Service.BranchOnto(ctx, &spice.BranchOntoRequest{
 		Branch: req.Branch,
 		Onto:   req.Onto,
 	})

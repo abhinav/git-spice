@@ -23,8 +23,9 @@ func NewTestService(
 	store Store,
 	forgeReg *forge.Registry,
 	log *silog.Logger,
+	opts *ServiceOptions,
 ) *Service {
-	return newService(repo, wt, store, forgeReg, log)
+	return newService(repo, wt, store, forgeReg, log, opts)
 }
 
 // NewMemoryStore builds git-spice state storage
@@ -53,7 +54,7 @@ func TestService_LookupWorktrees(t *testing.T) {
 	store := NewMemoryStore(t)
 	log := silogtest.New(t)
 
-	svc := NewTestService(mockRepo, mockWorktree, store, nil, log)
+	svc := NewTestService(mockRepo, mockWorktree, store, nil, log, nil)
 
 	feature1WT := t.TempDir()
 	feature3WT := t.TempDir()

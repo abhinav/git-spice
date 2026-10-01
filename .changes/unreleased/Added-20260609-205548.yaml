@@ -1,0 +1,3 @@
+kind: Added
+body: 'restack: Add ''spice.restack.method'' to update stacked branches by merging instead of rebasing, avoiding force-pushes.'
+time: 2026-06-09T20:55:48.7326595+02:00

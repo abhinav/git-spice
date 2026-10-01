@@ -14,7 +14,6 @@ import (
 	"go.abhg.dev/gs/internal/retry"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
-	"go.abhg.dev/gs/internal/xec"
 )
 
 // RebaseInterruptKind specifies the kind of rebase interruption.
@@ -65,6 +64,15 @@ func (e *RebaseInterruptError) Unwrap() error {
 	return e.Err
 }
 
+// InterruptedBranch reports the branch being rebased.
+func (e *RebaseInterruptError) InterruptedBranch() string {
+	return e.State.Branch
+}
+
+func (*RebaseInterruptError) interruptError() {}
+
+var _ InterruptError = (*RebaseInterruptError)(nil)
+
 var errIndexLockHeld = errors.New("index.lock is still held")
 
 // RebaseRequest is a request to rebase a branch.
@@ -114,30 +122,7 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 		// So we need to check if we're left with any unmerged files
 		// separately and fail the operation if so.
 		defer func() {
-			if retErr != nil {
-				return
-			}
-
-			unmergedFiles, err := sliceutil.CollectErr(
-				w.ListFilesPaths(ctx, &ListFilesOptions{Unmerged: true}))
-			if err != nil {
-				retErr = fmt.Errorf("list unmerged files: %w", err)
-				return
-			}
-			if len(unmergedFiles) == 0 {
-				return
-			}
-			sort.Strings(unmergedFiles)
-
-			w.log.Error("Dirty changes in the worktree were stashed, but could not be re-applied.")
-			w.log.Error("The following files were left unmerged:")
-			for _, file := range unmergedFiles {
-				w.log.Error("  - " + silog.MaybeQuote(file))
-			}
-			w.log.Error("Resolve the conflict and run 'git stash drop' to remove the stash entry.")
-			w.log.Error("Or change to a branch where the stash can apply, and run 'git stash pop'.")
-
-			retErr = fmt.Errorf("%v: dirty changes could not be re-applied", req.Branch)
+			w.checkAutostashPop(ctx, req.Branch, &retErr)
 		}()
 	}
 	if req.Quiet {
@@ -229,6 +214,35 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 	return w.handleRebaseFinish(ctx)
 }
 
+// checkAutostashPop sets *retErr if an autostash pop left unmerged files
+// even though the Git command that popped it succeeded.
+func (w *Worktree) checkAutostashPop(ctx context.Context, branch string, retErr *error) {
+	if *retErr != nil {
+		return
+	}
+
+	unmergedFiles, err := sliceutil.CollectErr(
+		w.ListFilesPaths(ctx, &ListFilesOptions{Unmerged: true}))
+	if err != nil {
+		*retErr = fmt.Errorf("list unmerged files: %w", err)
+		return
+	}
+	if len(unmergedFiles) == 0 {
+		return
+	}
+	sort.Strings(unmergedFiles)
+
+	w.log.Error("Dirty changes in the worktree were stashed, but could not be re-applied.")
+	w.log.Error("The following files were left unmerged:")
+	for _, file := range unmergedFiles {
+		w.log.Error("  - " + silog.MaybeQuote(file))
+	}
+	w.log.Error("Resolve the conflict and run 'git stash drop' to remove the stash entry.")
+	w.log.Error("Or change to a branch where the stash can apply, and run 'git stash pop'.")
+
+	*retErr = fmt.Errorf("%v: dirty changes could not be re-applied", branch)
+}
+
 // RebaseContinueOptions holds options for the rebase operation.
 type RebaseContinueOptions struct {
 	// Editor specifies the editor to use for interactive rebases.
@@ -250,26 +264,14 @@ func (w *Worktree) RebaseContinue(ctx context.Context, opts *RebaseContinueOptio
 }
 
 func (w *Worktree) handleRebaseError(ctx context.Context, err error) error {
-	originalErr := err
-	if exitErr := new(xec.ExitError); !errors.As(err, &exitErr) {
-		return fmt.Errorf("rebase: %w", err)
-	}
-
-	// If the rebase operation actually ran, but failed,
-	// we might be in the middle of a rebase operation.
-	state, err := w.RebaseState(ctx)
-	if err != nil {
-		// Rebase probably failed for a different reason,
-		// so no need to log the state read failure verbosely.
-		w.log.Debug("Failed to read rebase state", "error", err)
-		return originalErr
-	}
-
-	return &RebaseInterruptError{
-		Err:   originalErr,
-		Kind:  RebaseInterruptConflict,
-		State: state,
-	}
+	return handleInterruptedOp(ctx, w, "rebase", err, w.RebaseState, nil,
+		func(state *RebaseState, err error) error {
+			return &RebaseInterruptError{
+				Err:   err,
+				Kind:  RebaseInterruptConflict,
+				State: state,
+			}
+		})
 }
 
 func (w *Worktree) handleRebaseFinish(ctx context.Context) error {

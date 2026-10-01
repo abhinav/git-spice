@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
@@ -16,6 +17,43 @@ var ErrAlreadyRestacked = errors.New("branch is already restacked")
 // RestackResponse is the response to a restack operation.
 type RestackResponse struct {
 	Base string
+}
+
+// ensureCheckedOut checks out branch unless it is already current.
+// Unlike git rebase, git merge operates on the checked-out branch.
+func (s *Service) ensureCheckedOut(ctx context.Context, branch string) error {
+	cur, err := s.wt.CurrentBranch(ctx)
+	if err != nil {
+		return fmt.Errorf("current branch: %w", err)
+	}
+	if cur != branch {
+		if err := s.wt.CheckoutBranch(ctx, branch); err != nil {
+			return fmt.Errorf("checkout %v: %w", branch, err)
+		}
+	}
+	return nil
+}
+
+// mergeIntoBranch checks out branch and merges baseHash into it.
+func (s *Service) mergeIntoBranch(ctx context.Context, branch, base string, baseHash git.Hash) error {
+	if err := s.ensureCheckedOut(ctx, branch); err != nil {
+		return err
+	}
+
+	if err := s.wt.Merge(ctx, git.MergeRequest{
+		Commit:  baseHash.String(),
+		Message: fmt.Sprintf("Merge branch '%v' into %v", base, branch),
+		NoEdit:  true,
+		// Handlers already stash around the whole operation;
+		// this covers other callers.
+		Autostash:      true,
+		Rerere:         true,
+		StrategyOption: s.mergeAutoResolve.StrategyOption(),
+		Quiet:          true,
+	}); err != nil {
+		return fmt.Errorf("merge: %w", err)
+	}
+	return nil
 }
 
 // Restack restacks the given branch on top of its base branch,
@@ -58,14 +96,25 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 	//
 	// Replaying B..P onto A drops the old downstack commit B.
 	replayBoundary := commitRange.ReplayBoundary(ctx, commitRange.BaseHead)
-	if err := s.wt.Rebase(ctx, git.RebaseRequest{
-		Onto:      commitRange.BaseHead.String(),
-		Upstream:  replayBoundary.String(),
-		Branch:    name,
-		Autostash: true,
-		Quiet:     true,
-	}); err != nil {
-		return nil, fmt.Errorf("rebase: %w", err)
+	switch s.restackMethod {
+	case RestackMethodRebase:
+		if err := s.wt.Rebase(ctx, git.RebaseRequest{
+			Onto:      commitRange.BaseHead.String(),
+			Upstream:  replayBoundary.String(),
+			Branch:    name,
+			Autostash: true,
+			Quiet:     true,
+		}); err != nil {
+			return nil, fmt.Errorf("rebase: %w", err)
+		}
+
+	case RestackMethodMerge:
+		if err := s.mergeIntoBranch(ctx, name, b.Base, commitRange.BaseHead); err != nil {
+			return nil, err
+		}
+
+	default:
+		must.Failf("unknown restack method: %v", s.restackMethod)
 	}
 
 	tx := s.store.BeginBranchTx()

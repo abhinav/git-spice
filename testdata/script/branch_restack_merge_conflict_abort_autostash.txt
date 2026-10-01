@@ -1,0 +1,73 @@
+# With spice.restack.method=merge, 'gs abort' after a conflict
+# restores the changes stashed from a dirty worktree.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt dirty.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# use the merge method for restacks.
+git config spice.restack.method merge
+
+# create a feature branch that modifies init.
+cp $WORK/extra/init.feature.txt init.txt
+git add init.txt
+gs bc -m feature
+
+# go back to main and modify init in a conflicting way.
+gs trunk
+cp $WORK/extra/init.new.txt init.txt
+git add init.txt
+git commit -m 'Change init'
+
+# make an uncommitted change to an unrelated tracked file.
+gs up
+cp $WORK/extra/dirty.new.txt dirty.txt
+git status --porcelain
+cmp stdout $WORK/golden/dirty-status.txt
+
+# restack the feature branch: the merge conflicts.
+# the dirty change was stashed out of the way.
+! gs branch restack
+stderr 'There was a conflict while merging'
+exists .git/MERGE_HEAD
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status.txt
+
+# abort: the merge is gone and the uncommitted change is back.
+gs abort
+stderr 'Applied autostash'
+! exists .git/MERGE_HEAD
+git status --porcelain
+cmp stdout $WORK/golden/dirty-status.txt
+cmp dirty.txt $WORK/extra/dirty.new.txt
+cmp init.txt $WORK/extra/init.feature.txt
+
+# nothing was left behind in the stash list.
+git stash list
+! stdout .
+
+-- repo/init.txt --
+initial init
+
+-- repo/dirty.txt --
+clean dirty
+
+-- extra/init.new.txt --
+changed init
+
+-- extra/init.feature.txt --
+feature's init
+
+-- extra/dirty.new.txt --
+dirty changes
+
+-- golden/dirty-status.txt --
+ M dirty.txt
+-- golden/conflict-status.txt --
+UU init.txt

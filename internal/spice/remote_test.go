@@ -70,7 +70,7 @@ func TestUnusedBranchName(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			repo := NewMockGitRepository(mockCtrl)
 			wt := NewMockGitWorktree(mockCtrl)
-			svc := NewTestService(repo, wt, NewMockStore(mockCtrl), new(forge.Registry), log)
+			svc := NewTestService(repo, wt, NewMockStore(mockCtrl), new(forge.Registry), log, nil)
 
 			var lastCall *gomock.Call
 			for _, call := range tt.calls {
@@ -97,7 +97,7 @@ func TestUnusedBranchName_listError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	repo := NewMockGitRepository(mockCtrl)
 	wt := NewMockGitWorktree(mockCtrl)
-	svc := NewTestService(repo, wt, NewMockStore(mockCtrl), new(forge.Registry), silogtest.New(t))
+	svc := NewTestService(repo, wt, NewMockStore(mockCtrl), new(forge.Registry), silogtest.New(t), nil)
 
 	repo.EXPECT().
 		ListRemoteRefs(gomock.Any(), "origin", gomock.Any()).

@@ -45,7 +45,7 @@ func TestListChangeTemplates(t *testing.T) {
 		AnyTimes()
 
 	store := spice.NewMemoryStore(t)
-	svc := spice.NewTestService(repo, wt, store, new(forge.Registry), silogtest.New(t))
+	svc := spice.NewTestService(repo, wt, store, new(forge.Registry), silogtest.New(t), nil)
 
 	tmpl := &forge.ChangeTemplate{
 		Filename: "CHANGE_TEMPLATE.md",

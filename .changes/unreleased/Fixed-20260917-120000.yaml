@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'rebase abort: Restore changes that the interrupted operation autostashed instead of dropping them.'
+time: 2026-09-17T12:00:00+02:00

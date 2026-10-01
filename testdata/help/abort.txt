@@ -1,0 +1,17 @@
+Usage: gs abort [flags]
+
+Abort an interrupted operation (rebase or merge)
+
+Cancels an ongoing git-spice operation that was interrupted by a git rebase or
+merge. For example, if 'gs upstack restack' encounters a conflict, cancel the
+operation with 'gs abort', going back to the state before the operation.
+
+The command can be used in place of 'git rebase --abort' or 'git merge --abort'
+even if a git-spice operation is not currently in progress.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

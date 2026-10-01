@@ -2,14 +2,10 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 
 	"go.abhg.dev/gs/internal/cli"
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/handler/continuation"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -30,45 +26,6 @@ func (*rebaseAbortCmd) Help() string {
 	`, name))
 }
 
-func (cmd *rebaseAbortCmd) Run(
-	ctx context.Context,
-	wt *git.Worktree,
-	log *silog.Logger,
-	store *state.Store,
-) error {
-	var wasRebasing bool
-	if _, err := wt.RebaseState(ctx); err != nil {
-		if !errors.Is(err, git.ErrNoRebase) {
-			return fmt.Errorf("get rebase state: %w", err)
-		}
-		// If the user ran 'git rebase --abort' first,
-		// we will not be in the middle of a rebase operation.
-		// That's okay, still drain the continuations
-		// to ensure we don't have any lingering state.
-	} else {
-		wasRebasing = true
-		if err := wt.RebaseAbort(ctx); err != nil {
-			return fmt.Errorf("abort rebase: %w", err)
-		}
-	}
-
-	conts, err := store.TakeContinuations(ctx, cli.Name()+" rebase abort")
-	if err != nil {
-		return fmt.Errorf("take rebase continuations: %w", err)
-	}
-
-	// Make sure that *something* happened from the user's perspective.
-	// If we didn't abort a rebase, and we didn't delete a continuation,
-	// then this was a no-op, which this command should not be.
-	if len(conts) == 0 && !wasRebasing {
-		return errors.New("no operation to abort")
-	}
-
-	for _, cont := range conts {
-		log.Debug("Rebase aborted: will not run command",
-			"command", strings.Join(cont.Command, " "),
-			"branch", cont.Branch)
-	}
-
-	return nil
+func (cmd *rebaseAbortCmd) Run(ctx context.Context, handler ContinuationHandler) error {
+	return handler.Abort(ctx, &continuation.AbortRequest{})
 }
