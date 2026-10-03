@@ -1,0 +1,315 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 142
+        host: api.github.com
+        body: |
+            {"query":"query($owner:String!$repo:String!){repository(owner: $owner, name: $repo){id}}","variables":{"owner":"test-owner","repo":"test-repo"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"id":"R_kgDOMVd0xg"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 261.712291ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 329
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"merge-range-bottom-bZiK8Eda","title":"Merge range bottom merge-range-bottom-bZiK8Eda","body":"Merge range integration test"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs793H6g","number":158,"url":"https://github.com/test-owner/test-repo/pull/158"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 1.667342s
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 343
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"merge-range-bottom-bZiK8Eda","headRefName":"merge-range-top-hIOTMX1T","title":"Merge range top merge-range-top-hIOTMX1T","body":"Merge range integration test"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs793H8d","number":159,"url":"https://github.com/test-owner/test-repo/pull/159"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 1.578511875s
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 342
+        host: api.github.com
+        body: |
+            {"query":"query($owner:String!,$repo:String!,$pr0:Int!,$pr1:Int!){repository(owner: $owner, name: $repo){pr0:pullRequest(number: $pr0){state,headRepository{owner{login},name},stack{id}},pr1:pullRequest(number: $pr1){state,headRepository{owner{login},name},stack{id}}}}","variables":{"owner":"test-owner","pr0":158,"pr1":159,"repo":"test-repo"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"repository":{"pr0":{"state":"OPEN","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":null},"pr1":{"state":"OPEN","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":null}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 358.217542ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 28
+        host: api.github.com
+        body: |
+            {"pull_requests":[158,159]}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/repos/test-owner/test-repo/stacks
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 3367
+        body: '{"id":302729,"number":160,"node_id":"PRS_kwDOMVd0xs4ABJ6J","url":"https://api.github.com/repos/test-owner/test-repo/stacks/160","base":{"ref":"main"},"open":true,"created_at":"2026-08-12T04:18:42Z","pull_requests":[{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/158","id":4259085984,"number":158,"head":{"ref":"merge-range-bottom-bZiK8Eda","sha":"24777ef044c0a4bc712d1345bf9c0ed8b791197b","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"main","sha":"7d4bdbcf64b4302bdb1af0923056b479a32a5eb5","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs793H6g","title":"Merge range bottom merge-range-bottom-bZiK8Eda","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/158","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}},{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/159","id":4259086109,"number":159,"head":{"ref":"merge-range-top-hIOTMX1T","sha":"bb58f1370879a404c18b51898dcf2e08ea740727","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"merge-range-bottom-bZiK8Eda","sha":"24777ef044c0a4bc712d1345bf9c0ed8b791197b","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs793H8d","title":"Merge range top merge-range-top-hIOTMX1T","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/159","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}}]}'
+        headers:
+            Content-Length:
+                - "3367"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 354.559208ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 153
+        host: api.github.com
+        body: |
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state,headRefOid}}}","variables":{"ids":["PR_kwDOMVd0xs793H6g","PR_kwDOMVd0xs793H8d"]}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"nodes":[{"state":"OPEN","headRefOid":"24777ef044c0a4bc712d1345bf9c0ed8b791197b"},{"state":"OPEN","headRefOid":"bb58f1370879a404c18b51898dcf2e08ea740727"}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 388.325459ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 428
+        host: api.github.com
+        body: |
+            {"query":"query($owner:String!,$repo:String!,$pr0:Int!,$pr1:Int!){repository(owner: $owner, name: $repo){pr0:pullRequest(number: $pr0){state,isDraft,baseRefName,headRefName,headRefOid,headRepository{owner{login},name},stack{id}},pr1:pullRequest(number: $pr1){state,isDraft,baseRefName,headRefName,headRefOid,headRepository{owner{login},name},stack{id}}}}","variables":{"owner":"test-owner","pr0":158,"pr1":159,"repo":"test-repo"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"repository":{"pr0":{"state":"OPEN","isDraft":false,"baseRefName":"main","headRefName":"merge-range-bottom-bZiK8Eda","headRefOid":"24777ef044c0a4bc712d1345bf9c0ed8b791197b","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ABJ6J"}},"pr1":{"state":"OPEN","isDraft":false,"baseRefName":"merge-range-bottom-bZiK8Eda","headRefName":"merge-range-top-hIOTMX1T","headRefOid":"bb58f1370879a404c18b51898dcf2e08ea740727","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ABJ6J"}}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 272.209958ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 184
+        host: api.github.com
+        body: |
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequestStack{id,number,entries(first: 100){nodes{pullRequest{number,state}}}}}}","variables":{"ids":["PRS_kwDOMVd0xs4ABJ6J"]}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"nodes":[{"id":"PRS_kwDOMVd0xs4ABJ6J","number":160,"entries":{"nodes":[{"pullRequest":{"number":158,"state":"OPEN"}},{"pullRequest":{"number":159,"state":"OPEN"}}]}}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 656.415ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 76
+        host: api.github.com
+        body: |
+            {"sha":"bb58f1370879a404c18b51898dcf2e08ea740727","merge_action":"default"}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/repos/test-owner/test-repo/pulls/159/merge-async
+        method: PUT
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 227
+        body: '{"status":"pending","details":{"message":"Merge request enqueued.","uuid":"2f776f09-a980-40c7-a01d-882c7d6596b1","merge_method":"default","merge_action":"default","expected_head_sha":"bb58f1370879a404c18b51898dcf2e08ea740727"}}'
+        headers:
+            Content-Length:
+                - "227"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 202 Accepted
+        code: 202
+        duration: 211.988042ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        url: https://api.github.com/repos/test-owner/test-repo/pulls/159/merge-async/2f776f09-a980-40c7-a01d-882c7d6596b1
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"status":"pending","details":{"message":"Merge request is in progress.","uuid":"2f776f09-a980-40c7-a01d-882c7d6596b1","merge_method":"default","merge_action":"default","expected_head_sha":"bb58f1370879a404c18b51898dcf2e08ea740727"}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 181.046583ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        url: https://api.github.com/repos/test-owner/test-repo/pulls/159/merge-async/2f776f09-a980-40c7-a01d-882c7d6596b1
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"status":"merged","details":{"message":"Pull request was merged.","sha":"da312ddc707bee1d1ea938427b95ce9e580a4c16"}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 168.156208ms
+    - id: 11
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 153
+        host: api.github.com
+        body: |
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state,headRefOid}}}","variables":{"ids":["PR_kwDOMVd0xs793H6g","PR_kwDOMVd0xs793H8d"]}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"nodes":[{"state":"MERGED","headRefOid":"24777ef044c0a4bc712d1345bf9c0ed8b791197b"},{"state":"MERGED","headRefOid":"bb58f1370879a404c18b51898dcf2e08ea740727"}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 496.802291ms

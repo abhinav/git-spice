@@ -3,7 +3,7 @@ package forge
 import "context"
 
 // StackRepository is an optional repository capability
-// for repositories that support forge-native stacks.
+// for reconciling and merging forge-native stacks.
 type StackRepository interface {
 	Repository
 
@@ -21,6 +21,17 @@ type StackRepository interface {
 	// unsupported. Implementations may warn and omit those trees from the
 	// returned plan.
 	PlanStackUpdate(context.Context, []StackChange) (StackUpdatePlan, error)
+
+	// PlanMergeRanges identifies the supplied changes that the provider can
+	// merge atomically using its current native-stack representation.
+	// Returned plans are non-empty, disjoint subsets of changes.
+	// Each plan follows the supplied relationships from bottom to top;
+	// changes omitted from every plan remain eligible for ordinary per-change
+	// merging.
+	//
+	// [ErrUnsupported] means that no plans were created and the caller may merge
+	// every supplied change individually.
+	PlanMergeRanges(context.Context, []StackChange) ([]MergeRangePlan, error)
 }
 
 // StackUpdatePlan owns one prepared provider stack transition.
@@ -31,6 +42,22 @@ type StackUpdatePlan interface {
 	// returns [ErrUnsupported]; callers must prepare a new plan before retrying
 	// after any result.
 	Execute(context.Context) error
+}
+
+// MergeRangePlan identifies one provider-selected atomic merge range and owns
+// the operation that can merge it.
+type MergeRangePlan interface {
+	// Changes identifies this range from bottom to top.
+	// The caller must not modify the returned slice.
+	Changes() []ChangeID
+
+	// Merge atomically merges this planned range.
+	// The request must contain exactly the changes returned by Changes in the
+	// same order, with their provider-facing state after preparation.
+	//
+	// [ErrUnsupported] means that no atomic merge was started and the caller may
+	// merge the planned changes individually.
+	Merge(context.Context, MergeRangeRequest) (MergeOperation, error)
 }
 
 // StackChange identifies one member and its desired immediate base.
