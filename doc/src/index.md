@@ -122,13 +122,13 @@ $ gs repo sync
     merges it,
     then restacks and updates branches above it before continuing.
 
--   [:octicons-comment-discussion-16:{ .lg .middle } __Review stack navigation__](guide/cr.md#navigation-comments)
+-   [:octicons-comment-discussion-16:{ .lg .middle } __Review stacked change requests__](guide/review.md)
 
     ---
 
-    Help reviewers follow stacked CRs with navigation comments.
-    git-spice shows where each CR sits in the stack
-    and keeps that context updated as the stack changes.
+    Draft comments locally, inspect review threads,
+    and publish feedback from the command line.
+    Keep each branch's feedback with its CR as you move through the stack.
 
 -   [:material-stairs:{ .lg .middle } __Incremental improvements__](start/stack.md)
 

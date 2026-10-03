@@ -163,6 +163,40 @@ checksum = "sha256:66a5af92e063fb84b735b346911799530d521d4b6bdfef7c9fa657f3d41a1
 url = "https://github.com/abhinav/requiredfield/releases/download/v0.10.0/requiredfield.Windows-x86_64.zip"
 url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/522684646"
 
+[[tools."github:joshka/betamax"]]
+version = "betamax-v0.1.21"
+backend = "github:joshka/betamax"
+
+[tools."github:joshka/betamax"."platforms.linux-arm64"]
+checksum = "sha256:3ec76b4ef87721fad7f4db28eb8be34f31f0fe97c41968c60720a92399c1f1e9"
+url = "https://github.com/joshka/betamax/releases/download/betamax-v0.1.21/betamax-0.1.21-aarch64-unknown-linux-gnu.tgz"
+url_api = "https://api.github.com/repos/joshka/betamax/releases/assets/574217856"
+
+[tools."github:joshka/betamax"."platforms.linux-arm64-musl"]
+checksum = "sha256:3ec76b4ef87721fad7f4db28eb8be34f31f0fe97c41968c60720a92399c1f1e9"
+url = "https://github.com/joshka/betamax/releases/download/betamax-v0.1.21/betamax-0.1.21-aarch64-unknown-linux-gnu.tgz"
+url_api = "https://api.github.com/repos/joshka/betamax/releases/assets/574217856"
+
+[tools."github:joshka/betamax"."platforms.linux-x64"]
+checksum = "sha256:8dd5893d8d74cdf28ff4052be31b2b72810f40bf8c08385b84e53c572209848a"
+url = "https://github.com/joshka/betamax/releases/download/betamax-v0.1.21/betamax-0.1.21-x86_64-unknown-linux-gnu.tgz"
+url_api = "https://api.github.com/repos/joshka/betamax/releases/assets/574219103"
+
+[tools."github:joshka/betamax"."platforms.linux-x64-musl"]
+checksum = "sha256:8dd5893d8d74cdf28ff4052be31b2b72810f40bf8c08385b84e53c572209848a"
+url = "https://github.com/joshka/betamax/releases/download/betamax-v0.1.21/betamax-0.1.21-x86_64-unknown-linux-gnu.tgz"
+url_api = "https://api.github.com/repos/joshka/betamax/releases/assets/574219103"
+
+[tools."github:joshka/betamax"."platforms.macos-arm64"]
+checksum = "sha256:455dc756d1f66aaf626c530fe0f657e4d8a91c5b714ea44d2d1fd0f257514a39"
+url = "https://github.com/joshka/betamax/releases/download/betamax-v0.1.21/betamax-0.1.21-aarch64-apple-darwin.tgz"
+url_api = "https://api.github.com/repos/joshka/betamax/releases/assets/574219758"
+
+[tools."github:joshka/betamax"."platforms.macos-x64"]
+checksum = "sha256:733e35f1395c13d163c56340b61a9fe859bad9273a46117c9c880ad7802cece2"
+url = "https://github.com/joshka/betamax/releases/download/betamax-v0.1.21/betamax-0.1.21-x86_64-apple-darwin.tgz"
+url_api = "https://api.github.com/repos/joshka/betamax/releases/assets/574221745"
+
 [[tools.go]]
 version = "1.27.0"
 backend = "core:go"
