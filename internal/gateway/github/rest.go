@@ -67,17 +67,6 @@ func (c *Gateway) postREST(
 	return c.doREST(ctx, http.MethodPost, path, req, res)
 }
 
-// deleteREST performs an authenticated DELETE request and, when res is
-// non-nil, decodes its JSON response into res.
-func (c *Gateway) deleteREST(
-	ctx context.Context,
-	path []string,
-	req any,
-	res any,
-) error {
-	return c.doREST(ctx, http.MethodDelete, path, req, res)
-}
-
 // putREST performs an authenticated PUT request with req as its JSON body and,
 // when res is non-nil, decodes the JSON response into res.
 // acceptedStatuses identifies non-2xx responses whose bodies still use res's

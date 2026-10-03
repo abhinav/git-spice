@@ -102,8 +102,9 @@ func TestGateway_PullRequestsForMergeRange(t *testing.T) {
 	require.NotNil(t, got[0].Stack)
 	assert.Equal(t, 42, got[0].Stack.Number)
 	assert.Equal(t, []PullRequestStackMember{
-		{Number: 1},
-		{Number: 2},
+		{Number: 1, State: PullRequestStateOpen},
+		{Number: 2, State: PullRequestStateOpen},
+		{Number: 4, State: PullRequestStateMerged},
 	}, got[0].Stack.Members)
 	assert.True(t, got[1].IsDraft)
 	assert.Equal(t, "fork", got[1].HeadRepositoryOwner)

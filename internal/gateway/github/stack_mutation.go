@@ -27,8 +27,9 @@ type UnstackPullRequestStackResult struct {
 }
 
 // UnstackPullRequestStack dissolves a native pull request stack. GitHub may
-// preserve queued or auto-merge members and return them in a smaller stack.
-// See https://docs.github.com/en/rest/pulls/stacks#unstack-a-pull-request-stack.
+// preserve merged, queued, or auto-merge members and return them in a smaller
+// stack.
+// See https://docs.github.com/en/rest/pulls/stacks#remove-pull-requests-from-a-pull-request-stack.
 func (c *Gateway) UnstackPullRequestStack(
 	ctx context.Context,
 	input *UnstackPullRequestStackInput,
@@ -38,11 +39,12 @@ func (c *Gateway) UnstackPullRequestStack(
 			Number int `json:"number"`
 		} `json:"pull_requests"`
 	}
-	if err := c.deleteREST(
+	if err := c.postREST(
 		ctx,
 		[]string{
 			"repos", input.Owner, input.Repo, "stacks",
 			strconv.Itoa(input.StackNumber),
+			"unstack",
 		},
 		nil,
 		&res,

@@ -235,6 +235,44 @@ func (c *MockGithubGatewayAddPullRequestReviewThreadReplyCall) DoAndReturn(f fun
 	return c
 }
 
+// AddPullRequestsToStack mocks base method.
+func (m *MockGithubGateway) AddPullRequestsToStack(arg0 context.Context, arg1 *github.AddPullRequestsToStackInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddPullRequestsToStack", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddPullRequestsToStack indicates an expected call of AddPullRequestsToStack.
+func (mr *MockGithubGatewayMockRecorder) AddPullRequestsToStack(arg0, arg1 any) *MockGithubGatewayAddPullRequestsToStackCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPullRequestsToStack", reflect.TypeOf((*MockGithubGateway)(nil).AddPullRequestsToStack), arg0, arg1)
+	return &MockGithubGatewayAddPullRequestsToStackCall{Call: call}
+}
+
+// MockGithubGatewayAddPullRequestsToStackCall wrap *gomock.Call
+type MockGithubGatewayAddPullRequestsToStackCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGithubGatewayAddPullRequestsToStackCall) Return(arg0 error) *MockGithubGatewayAddPullRequestsToStackCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGithubGatewayAddPullRequestsToStackCall) Do(f func(context.Context, *github.AddPullRequestsToStackInput) error) *MockGithubGatewayAddPullRequestsToStackCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGithubGatewayAddPullRequestsToStackCall) DoAndReturn(f func(context.Context, *github.AddPullRequestsToStackInput) error) *MockGithubGatewayAddPullRequestsToStackCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ChangeStatuses mocks base method.
 func (m *MockGithubGateway) ChangeStatuses(arg0 context.Context, arg1 []github.ID) ([]*github.ChangeStatus, error) {
 	m.ctrl.T.Helper()
@@ -309,6 +347,44 @@ func (c *MockGithubGatewayChangeTemplatesCall) Do(f func(context.Context, string
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGithubGatewayChangeTemplatesCall) DoAndReturn(f func(context.Context, string, string) ([]*github.ChangeTemplate, error)) *MockGithubGatewayChangeTemplatesCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// CheckPullRequestStacks mocks base method.
+func (m *MockGithubGateway) CheckPullRequestStacks(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckPullRequestStacks", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckPullRequestStacks indicates an expected call of CheckPullRequestStacks.
+func (mr *MockGithubGatewayMockRecorder) CheckPullRequestStacks(arg0, arg1, arg2 any) *MockGithubGatewayCheckPullRequestStacksCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckPullRequestStacks", reflect.TypeOf((*MockGithubGateway)(nil).CheckPullRequestStacks), arg0, arg1, arg2)
+	return &MockGithubGatewayCheckPullRequestStacksCall{Call: call}
+}
+
+// MockGithubGatewayCheckPullRequestStacksCall wrap *gomock.Call
+type MockGithubGatewayCheckPullRequestStacksCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGithubGatewayCheckPullRequestStacksCall) Return(arg0 error) *MockGithubGatewayCheckPullRequestStacksCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGithubGatewayCheckPullRequestStacksCall) Do(f func(context.Context, string, string) error) *MockGithubGatewayCheckPullRequestStacksCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGithubGatewayCheckPullRequestStacksCall) DoAndReturn(f func(context.Context, string, string) error) *MockGithubGatewayCheckPullRequestStacksCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -463,6 +539,44 @@ func (c *MockGithubGatewayCreatePullRequestCall) Do(f func(context.Context, *git
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGithubGatewayCreatePullRequestCall) DoAndReturn(f func(context.Context, *github.CreatePullRequestInput) (*github.CreatedPullRequest, error)) *MockGithubGatewayCreatePullRequestCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// CreatePullRequestStack mocks base method.
+func (m *MockGithubGateway) CreatePullRequestStack(arg0 context.Context, arg1 *github.CreatePullRequestStackInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreatePullRequestStack", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreatePullRequestStack indicates an expected call of CreatePullRequestStack.
+func (mr *MockGithubGatewayMockRecorder) CreatePullRequestStack(arg0, arg1 any) *MockGithubGatewayCreatePullRequestStackCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePullRequestStack", reflect.TypeOf((*MockGithubGateway)(nil).CreatePullRequestStack), arg0, arg1)
+	return &MockGithubGatewayCreatePullRequestStackCall{Call: call}
+}
+
+// MockGithubGatewayCreatePullRequestStackCall wrap *gomock.Call
+type MockGithubGatewayCreatePullRequestStackCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGithubGatewayCreatePullRequestStackCall) Return(arg0 error) *MockGithubGatewayCreatePullRequestStackCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGithubGatewayCreatePullRequestStackCall) Do(f func(context.Context, *github.CreatePullRequestStackInput) error) *MockGithubGatewayCreatePullRequestStackCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGithubGatewayCreatePullRequestStackCall) DoAndReturn(f func(context.Context, *github.CreatePullRequestStackInput) error) *MockGithubGatewayCreatePullRequestStackCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -1046,6 +1160,45 @@ func (c *MockGithubGatewayPullRequestReviewThreadsCall) DoAndReturn(f func(conte
 	return c
 }
 
+// PullRequestsForStackUpdate mocks base method.
+func (m *MockGithubGateway) PullRequestsForStackUpdate(arg0 context.Context, arg1, arg2 string, arg3 []int) ([]*github.StackUpdatePullRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PullRequestsForStackUpdate", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]*github.StackUpdatePullRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PullRequestsForStackUpdate indicates an expected call of PullRequestsForStackUpdate.
+func (mr *MockGithubGatewayMockRecorder) PullRequestsForStackUpdate(arg0, arg1, arg2, arg3 any) *MockGithubGatewayPullRequestsForStackUpdateCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullRequestsForStackUpdate", reflect.TypeOf((*MockGithubGateway)(nil).PullRequestsForStackUpdate), arg0, arg1, arg2, arg3)
+	return &MockGithubGatewayPullRequestsForStackUpdateCall{Call: call}
+}
+
+// MockGithubGatewayPullRequestsForStackUpdateCall wrap *gomock.Call
+type MockGithubGatewayPullRequestsForStackUpdateCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGithubGatewayPullRequestsForStackUpdateCall) Return(arg0 []*github.StackUpdatePullRequest, arg1 error) *MockGithubGatewayPullRequestsForStackUpdateCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGithubGatewayPullRequestsForStackUpdateCall) Do(f func(context.Context, string, string, []int) ([]*github.StackUpdatePullRequest, error)) *MockGithubGatewayPullRequestsForStackUpdateCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGithubGatewayPullRequestsForStackUpdateCall) DoAndReturn(f func(context.Context, string, string, []int) ([]*github.StackUpdatePullRequest, error)) *MockGithubGatewayPullRequestsForStackUpdateCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // RefExists mocks base method.
 func (m *MockGithubGateway) RefExists(arg0 context.Context, arg1, arg2, arg3 string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -1272,6 +1425,45 @@ func (c *MockGithubGatewayUnresolveReviewThreadCall) Do(f func(context.Context, 
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGithubGatewayUnresolveReviewThreadCall) DoAndReturn(f func(context.Context, github.ID) error) *MockGithubGatewayUnresolveReviewThreadCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// UnstackPullRequestStack mocks base method.
+func (m *MockGithubGateway) UnstackPullRequestStack(arg0 context.Context, arg1 *github.UnstackPullRequestStackInput) (*github.UnstackPullRequestStackResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnstackPullRequestStack", arg0, arg1)
+	ret0, _ := ret[0].(*github.UnstackPullRequestStackResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnstackPullRequestStack indicates an expected call of UnstackPullRequestStack.
+func (mr *MockGithubGatewayMockRecorder) UnstackPullRequestStack(arg0, arg1 any) *MockGithubGatewayUnstackPullRequestStackCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnstackPullRequestStack", reflect.TypeOf((*MockGithubGateway)(nil).UnstackPullRequestStack), arg0, arg1)
+	return &MockGithubGatewayUnstackPullRequestStackCall{Call: call}
+}
+
+// MockGithubGatewayUnstackPullRequestStackCall wrap *gomock.Call
+type MockGithubGatewayUnstackPullRequestStackCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGithubGatewayUnstackPullRequestStackCall) Return(arg0 *github.UnstackPullRequestStackResult, arg1 error) *MockGithubGatewayUnstackPullRequestStackCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGithubGatewayUnstackPullRequestStackCall) Do(f func(context.Context, *github.UnstackPullRequestStackInput) (*github.UnstackPullRequestStackResult, error)) *MockGithubGatewayUnstackPullRequestStackCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGithubGatewayUnstackPullRequestStackCall) DoAndReturn(f func(context.Context, *github.UnstackPullRequestStackInput) (*github.UnstackPullRequestStackResult, error)) *MockGithubGatewayUnstackPullRequestStackCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

@@ -131,8 +131,8 @@ func TestGateway_AddPullRequestsToStackCount(t *testing.T) {
 
 func TestGateway_UnstackPullRequestStack(t *testing.T) {
 	gateway := newTestGateway(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
-		assert.Equal(t, http.MethodDelete, r.Method)
-		assert.Equal(t, "/repos/octo/hello/stacks/42", r.URL.Path)
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/repos/octo/hello/stacks/42/unstack", r.URL.Path)
 		return restJSONResponse(http.StatusOK, `{
 			"pull_requests":[{"number":102},{"number":103}]
 		}`), nil
