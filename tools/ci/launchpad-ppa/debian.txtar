@@ -71,7 +71,7 @@ override_dh_auto_build:
 	CGO_ENABLED=0 go build \
 		-o _build/git-spice \
 		-ldflags "-s -w -X main._version=$(VERSION)" \
-		go.abhg.dev/gs
+		go.abhg.dev/git-spice
 
 override_dh_auto_test:
 	@echo "Skipping upstream tests during package build."
