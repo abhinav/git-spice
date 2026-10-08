@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	"go.abhg.dev/gs/internal/gateway/azuredevops"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
@@ -29,6 +30,11 @@ type Options struct {
 	// Token is a fixed token used to authenticate with Azure DevOps.
 	// This may be used to skip the login flow.
 	Token string `name:"azuredevops-token" hidden:"" env:"AZURE_DEVOPS_PAT" help:"Azure DevOps Personal Access Token"`
+
+	// HTTPHeaders are extra HTTP headers to attach to API requests.
+	// Values take the form "Name: value",
+	// or "Name: !command" to source the value from a command's stdout.
+	HTTPHeaders []string `name:"azuredevops-http-header" hidden:"" config:"forge.azuredevops.httpHeader" sep:"\n" help:"Extra HTTP headers for API requests"`
 }
 
 // Definition configures Azure DevOps forge instances.
@@ -169,6 +175,13 @@ func (f *Forge) OpenRepository(
 	rid := mustRepositoryID(id)
 	adt := tok.(*AuthenticationToken)
 
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.Options.HTTPHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
 	// For Azure CLI auth, refresh the token
 	// by calling 'az account get-access-token'.
 	// Azure CLI tokens expire after ~1 hour,
@@ -202,7 +215,10 @@ func (f *Forge) OpenRepository(
 	// not just the base URL.
 	orgURL := f.URL() + "/" + rid.organization
 	gateway, err := azuredevops.NewGateway(
-		ctx, orgURL, gatewayAuthentication(adt), adt.AccessToken, nil,
+		ctx, orgURL, gatewayAuthentication(adt), adt.AccessToken,
+		&azuredevops.Options{
+			HTTPClient: extraheader.Client(nil, headers),
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create Azure DevOps client: %w", err)

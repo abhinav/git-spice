@@ -631,6 +631,7 @@ func newConformanceGateway(
 			testProjectKey, testSlug, false,
 			silog.Nop(),
 			&server.Token{AccessToken: "test-token"},
+			http.DefaultClient,
 		)
 		require.NoError(t, err)
 		return gw
