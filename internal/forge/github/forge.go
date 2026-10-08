@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
@@ -35,6 +36,11 @@ type Options struct {
 	// Token is a fixed token used to authenticate with GitHub.
 	// This may be used to skip the login flow.
 	Token string `name:"github-token" hidden:"" env:"GITHUB_TOKEN" help:"GitHub API token"`
+
+	// HTTPHeaders are extra HTTP headers to attach to API requests.
+	// Values take the form "Name: value",
+	// or "Name: !command" to source the value from a command's stdout.
+	HTTPHeaders []string `name:"github-http-header" hidden:"" config:"forge.github.httpHeader" sep:"\n" help:"Extra HTTP headers for API requests"`
 }
 
 // Definition configures GitHub forge instances.
@@ -147,13 +153,21 @@ func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 func (f *Forge) OpenRepository(ctx context.Context, tok forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
 	rid := mustRepositoryID(id)
 
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.Options.HTTPHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
 	tokenSource, err := f.tokenSource(tok.(*AuthenticationToken))
 	if err != nil {
 		return nil, err
 	}
 
 	gatewayTokens := newGatewayTokenSource(tokenSource)
-	gatewayClient, err := github.NewGateway(f.APIURL(), nil, gatewayTokens)
+	gatewayClient, err := github.NewGateway(f.APIURL(),
+		extraheader.Client(nil, headers), gatewayTokens)
 	if err != nil {
 		return nil, fmt.Errorf("create GitHub gateway: %w", err)
 	}

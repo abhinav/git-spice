@@ -1,0 +1,3 @@
+kind: Added
+body: 'Forges now support extra HTTP headers on API requests with the `spice.forge.<forge>.httpHeader` configuration option. Header values may be sourced from the output of a command by prefixing it with `!`, e.g. `git config --add spice.forge.gitlab.httpHeader ''cf-access-token: !cloudflared access token https://example.com''`.'
+time: 2026-10-08T20:22:50.682081969+13:00
