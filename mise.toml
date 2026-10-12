@@ -17,7 +17,7 @@ go = "latest"
 "github:abhinav/gotestsum" = "v1.14.0-beta.1+github-actions-fails"
 golangci-lint = "latest"
 
-"github:joshka/betamax" = "latest"
+"github:joshka/betamax" = { version = "latest", os = ["linux", "macos"] }
 
 # Changelog manager.
 changie = "latest"
