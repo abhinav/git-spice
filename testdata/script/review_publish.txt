@@ -34,8 +34,7 @@ stderr 'Drafted comment 2 on feature.go:7'
 
 # list draft comments
 gs review list --draft-only
-stderr 'feature.go:3'
-stderr 'feature.go:7'
+cmp stdout $WORK/golden/drafts.txt
 
 # publish draft comments as a review
 gs review publish
@@ -47,7 +46,7 @@ stderr '--approve and --request-changes'
 
 # draft comments should be cleared after publication
 gs review list --draft-only
-stderr 'No draft comments'
+cmp stdout $WORK/golden/empty.txt
 
 # Published draft IDs are not reused.
 gs review comment feature.go:3 -m 'One more thought.'
@@ -63,3 +62,25 @@ func doWork() {
 func handleRequest() {
 	// handles a request
 }
+-- golden/drafts.txt --
+Draft comments
+
+  1  feature.go:3
+      1 | package main
+      2 |
+    > 3 | func doWork() {
+      4 | 	// does some work
+      5 | }
+      6 |
+    Consider renaming this function.
+
+  2  feature.go:7
+      4 | 	// does some work
+      5 | }
+      6 |
+    > 7 | func handleRequest() {
+      8 | 	// handles a request
+      9 | }
+    Add error handling here.
+-- golden/empty.txt --
+No draft comments on feature1.

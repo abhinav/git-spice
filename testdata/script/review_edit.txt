@@ -34,7 +34,7 @@ stderr 'Updated draft comment 1'
 
 # verify the edit took effect by listing drafts
 gs review list --draft-only
-stderr 'Updated comment'
+cmp stdout $WORK/golden/drafts.txt
 
 -- repo/main.go --
 package main
@@ -42,3 +42,13 @@ package main
 func main() {
 	println("hello")
 }
+-- golden/drafts.txt --
+Draft comments
+
+  1  main.go:3
+      1 | package main
+      2 |
+    > 3 | func main() {
+      4 | 	println("hello")
+      5 | }
+    Updated comment.

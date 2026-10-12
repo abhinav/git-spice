@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/review"
-	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -44,7 +44,6 @@ func (*reviewListCmd) Help() string {
 func (cmd *reviewListCmd) Run(
 	ctx context.Context,
 	kctx *kong.Context,
-	log *silog.Logger,
 	wt *git.Worktree,
 	handler ReviewHandler,
 ) error {
@@ -57,9 +56,11 @@ func (cmd *reviewListCmd) Run(
 	}
 
 	response, err := handler.LoadReviewData(ctx, &review.LoadRequest{
-		Branch:     cmd.Branch,
-		DraftOnly:  cmd.DraftOnly,
-		Unresolved: cmd.Unresolved,
+		Branch:              cmd.Branch,
+		DraftOnly:           cmd.DraftOnly,
+		Unresolved:          cmd.Unresolved,
+		IncludeSource:       !cmd.JSON,
+		IncludeReplyThreads: !cmd.JSON,
 	})
 	if err != nil {
 		return err
@@ -68,89 +69,265 @@ func (cmd *reviewListCmd) Run(
 	if cmd.JSON {
 		return writeReviewListJSON(kctx.Stdout, response)
 	}
-	writeReviewListText(log, response, cmd.DraftOnly)
+	return writeReviewListText(kctx.Stdout, response, cmd.DraftOnly)
+}
+
+// reviewListRenderer emits the human-readable review hierarchy.
+// Root drafts and remote threads form separate sections,
+// while draft replies stay inside the remote thread they target:
+//
+//	Draft comments
+//
+//	  1  main.go:4
+//	    Use a helper here.
+//
+//	Review threads
+//
+//	  thread-100  main.go:5-12  [resolved]
+//	    alice:
+//	      This block is doing too much.
+//	    draft 2:
+//	      I will send a follow-up.
+type reviewListRenderer struct {
+	w         io.Writer
+	branch    string
+	draftOnly bool
+
+	rootDrafts       []review.ListedDraft
+	threads          []review.ListedThread
+	repliesByThread  map[string][]review.ListedDraft
+	replyThreadOrder []string
+}
+
+// writeReviewListText presents drafts and remote discussions as a hierarchy.
+func writeReviewListText(
+	w io.Writer,
+	response *review.LoadResult,
+	draftOnly bool,
+) (retErr error) {
+	bufw := bufio.NewWriter(w)
+	defer func() {
+		retErr = errors.Join(retErr, bufw.Flush())
+	}()
+
+	renderer := newReviewListRenderer(bufw, response, draftOnly)
+	renderer.render()
 	return nil
 }
 
-// writeReviewListText presents review comments in a human-readable form.
-func writeReviewListText(
-	log *silog.Logger,
+func newReviewListRenderer(
+	w io.Writer,
 	response *review.LoadResult,
 	draftOnly bool,
-) {
-	if len(response.Drafts) > 0 {
-		log.Infof("Draft comments:")
-		for _, draft := range response.Drafts {
-			writeReviewDraftText(log, draft)
+) *reviewListRenderer {
+	renderer := &reviewListRenderer{
+		w:               w,
+		branch:          response.Branch,
+		draftOnly:       draftOnly,
+		repliesByThread: make(map[string][]review.ListedDraft),
+	}
+
+	// Root drafts become independent list items. Reply drafts are indexed by
+	// thread, with first-seen order retained for threads the forge no longer
+	// returns.
+	for _, draft := range response.Drafts {
+		if draft.Draft.ReplyTo == "" {
+			renderer.rootDrafts = append(renderer.rootDrafts, draft)
+			continue
+		}
+		if _, ok := renderer.repliesByThread[draft.Draft.ReplyTo]; !ok {
+			renderer.replyThreadOrder = append(
+				renderer.replyThreadOrder,
+				draft.Draft.ReplyTo,
+			)
+		}
+		renderer.repliesByThread[draft.Draft.ReplyTo] = append(
+			renderer.repliesByThread[draft.Draft.ReplyTo],
+			draft,
+		)
+	}
+
+	// Draft-only output retains a remote thread only when it gives context to
+	// a local draft reply.
+	for _, thread := range response.Threads {
+		threadID := thread.Thread.ID.String()
+		if draftOnly && len(renderer.repliesByThread[threadID]) == 0 {
+			continue
+		}
+		renderer.threads = append(renderer.threads, thread)
+	}
+	return renderer
+}
+
+func (r *reviewListRenderer) render() {
+	// Root drafts lead the document as standalone comments:
+	//
+	//	Draft comments
+	//
+	//	  1  main.go:4
+	//	    Use a helper here.
+	if len(r.rootDrafts) > 0 {
+		fmt.Fprintln(r.w, "Draft comments")
+		for _, draft := range r.rootDrafts {
+			fmt.Fprintln(r.w)
+			r.draft(draft)
 		}
 	}
 
-	if draftOnly && len(response.Drafts) == 0 {
-		log.Infof("No draft comments for %s.", response.Branch)
+	// Published comments and local reply drafts share a thread section.
+	// Keeping the replies nested makes the thread ID visibly govern every
+	// operation below it.
+	if len(r.threads) > 0 || len(r.replyThreadOrder) > 0 {
+		if len(r.rootDrafts) > 0 {
+			fmt.Fprintln(r.w)
+		}
+		fmt.Fprintln(r.w, "Review threads")
+
+		for _, thread := range r.threads {
+			threadID := thread.Thread.ID.String()
+			fmt.Fprintln(r.w)
+			r.thread(thread, r.repliesByThread[threadID])
+			delete(r.repliesByThread, threadID)
+		}
+
+		// A forge may stop returning a thread while a local reply still targets
+		// it. Keep that draft operable under an unavailable thread header without
+		// inventing an anchor or remote state.
+		for _, threadID := range r.replyThreadOrder {
+			replies := r.repliesByThread[threadID]
+			if len(replies) == 0 {
+				continue
+			}
+			fmt.Fprintln(r.w)
+			fmt.Fprintf(r.w, "  %s  [unavailable]\n", threadID)
+			for _, draft := range replies {
+				r.reply(draft.Draft)
+			}
+		}
+	}
+
+	if len(r.rootDrafts) == 0 && len(r.threads) == 0 && len(r.replyThreadOrder) == 0 {
+		if r.draftOnly {
+			fmt.Fprintf(r.w, "No draft comments on %s.\n", r.branch)
+		} else {
+			fmt.Fprintf(r.w, "No review comments on %s.\n", r.branch)
+		}
+	}
+}
+
+func (r *reviewListRenderer) draft(listed review.ListedDraft) {
+	draft := listed.Draft
+	fmt.Fprintf(r.w, "  %v  %s\n", draft.ID, draft.Anchor)
+	r.sourceExcerpt(
+		listed.Source,
+		draft.Anchor.StartLine,
+		draft.Anchor.EndLine,
+	)
+	r.body("    ", draft.Body)
+}
+
+func (r *reviewListRenderer) thread(
+	listed review.ListedThread,
+	draftReplies []review.ListedDraft,
+) {
+	thread := listed.Thread
+	fmt.Fprintf(
+		r.w,
+		"  %s  %s%s\n",
+		thread.ID,
+		reviewThreadAnchor(thread),
+		reviewThreadState(thread),
+	)
+	r.sourceExcerpt(
+		listed.Source,
+		thread.Range.StartLine,
+		thread.Range.EndLine,
+	)
+	if !r.draftOnly {
+		for _, comment := range thread.Comments {
+			author := comment.Author
+			if author == "" {
+				author = "comment"
+			}
+			fmt.Fprintf(r.w, "    %s:\n", author)
+			r.body("      ", comment.Body)
+		}
+	}
+	for _, draft := range draftReplies {
+		r.reply(draft.Draft)
+	}
+}
+
+func (r *reviewListRenderer) reply(draft review.Draft) {
+	fmt.Fprintf(r.w, "    draft %v:\n", draft.ID)
+	r.body("      ", draft.Body)
+}
+
+// sourceExcerpt marks selected lines and inserts an omission marker where a
+// long selected range was abbreviated by the handler.
+func (r *reviewListRenderer) sourceExcerpt(
+	lines []review.SourceLine,
+	selectedStart, selectedEnd int,
+) {
+	if len(lines) == 0 {
 		return
 	}
 
-	if len(response.Comments) > 0 {
-		log.Infof("Comments:")
-		for _, comment := range response.Comments {
-			writeForgeReviewCommentText(log, comment)
+	width := len(strconv.Itoa(lines[len(lines)-1].Number))
+	previous := lines[0].Number - 1
+	for _, line := range lines {
+		if line.Number > previous+1 {
+			fmt.Fprintf(r.w, "      %*s | ...\n", width, "")
+		}
+		marker := " "
+		if line.Number >= selectedStart && line.Number <= selectedEnd {
+			marker = ">"
+		}
+		fmt.Fprintf(r.w, "    %s %*v |", marker, width, line.Number)
+		if line.Text != "" {
+			fmt.Fprintf(r.w, " %s", line.Text)
+		}
+		fmt.Fprintln(r.w)
+		previous = line.Number
+	}
+}
+
+func (r *reviewListRenderer) body(indent, body string) {
+	for line := range strings.SplitSeq(body, "\n") {
+		fmt.Fprintf(r.w, "%s%s\n", indent, line)
+	}
+}
+
+// reviewThreadAnchor returns the command-facing anchor and calls out left-side
+// coordinates because right-side coordinates are the default.
+func reviewThreadAnchor(thread forge.ReviewThread) string {
+	location := thread.Path
+	if !thread.Range.IsZero() {
+		if thread.Range.StartLine == thread.Range.EndLine {
+			location += fmt.Sprintf(":%v", thread.Range.StartLine)
+		} else {
+			location += fmt.Sprintf(":%v-%v", thread.Range.StartLine, thread.Range.EndLine)
+		}
+		if thread.Side == forge.ReviewThreadSideLeft {
+			location += " (left)"
 		}
 	}
-
-	if len(response.Comments) == 0 && len(response.Drafts) == 0 {
-		log.Infof("No comments on %s.", response.Branch)
-	}
+	return location
 }
 
-func writeReviewDraftText(log *silog.Logger, draft review.Draft) {
-	location := ""
-	if draft.ReplyTo != "" {
-		location = "reply:" + draft.ReplyTo
-	} else {
-		location = draft.Anchor.String()
+// reviewThreadState reports only non-default states that affect scanning.
+func reviewThreadState(thread forge.ReviewThread) string {
+	var states []string
+	if thread.Resolved != nil && *thread.Resolved {
+		states = append(states, "resolved")
 	}
-	log.Infof("  %-4s %s", draft.ID, location)
-	writeReviewBody(log, draft.Body)
-}
-
-func writeForgeReviewCommentText(
-	log *silog.Logger,
-	comment review.ListedComment,
-) {
-	location := fmt.Sprintf(
-		"%s:%d",
-		comment.Thread.Path,
-		comment.Thread.Range.StartLine,
-	)
-	threadInfo := ""
-	if comment.Thread.ID != nil {
-		threadInfo = " [" + comment.Thread.ID.String() + "]"
+	if thread.Outdated != nil && *thread.Outdated {
+		states = append(states, "outdated")
 	}
-	log.Infof(
-		"  %-12s %s  %s  %s%s",
-		comment.Comment.ID.String(),
-		location,
-		comment.Comment.Author,
-		reviewCommentStatus(comment),
-		threadInfo,
-	)
-	writeReviewBody(log, comment.Comment.Body)
-}
-
-func writeReviewBody(log *silog.Logger, body string) {
-	for line := range strings.SplitSeq(body, "\n") {
-		log.Infof("    %s", line)
+	if len(states) == 0 {
+		return ""
 	}
-}
-
-func reviewCommentStatus(comment review.ListedComment) string {
-	if comment.Thread.Outdated != nil && *comment.Thread.Outdated {
-		return "outdated"
-	}
-	if comment.Thread.Resolved != nil && *comment.Thread.Resolved {
-		return "resolved"
-	}
-	return "open"
+	return "  [" + strings.Join(states, ", ") + "]"
 }
 
 // writeReviewListJSON encodes review comments as NDJSON.
@@ -165,13 +342,15 @@ func writeReviewListJSON(
 
 	enc := json.NewEncoder(bufw)
 	for _, draft := range response.Drafts {
-		if err := enc.Encode(reviewDraftToJSON(draft)); err != nil {
+		if err := enc.Encode(reviewDraftToJSON(draft.Draft)); err != nil {
 			return fmt.Errorf("encode draft: %w", err)
 		}
 	}
-	for _, comment := range response.Comments {
-		if err := enc.Encode(forgeReviewCommentToJSON(comment)); err != nil {
-			return fmt.Errorf("encode forge: %w", err)
+	for _, thread := range response.Threads {
+		for _, comment := range thread.Thread.Comments {
+			if err := enc.Encode(forgeReviewCommentToJSON(thread.Thread, comment)); err != nil {
+				return fmt.Errorf("encode forge: %w", err)
+			}
 		}
 	}
 	return nil
@@ -205,41 +384,54 @@ func reviewDraftToJSON(draft review.Draft) jsonComment {
 	return comment
 }
 
-func forgeReviewCommentToJSON(comment review.ListedComment) jsonComment {
+func forgeReviewCommentToJSON(
+	thread forge.ReviewThread,
+	comment forge.ReviewComment,
+) jsonComment {
 	var createdAt *time.Time
-	if !comment.Comment.CreatedAt.IsZero() {
-		createdAt = &comment.Comment.CreatedAt
+	if !comment.CreatedAt.IsZero() {
+		createdAt = &comment.CreatedAt
 	}
 
 	scope := "line"
-	if comment.Thread.Range.IsZero() {
+	if thread.Range.IsZero() {
 		scope = "file"
 	}
 	result := jsonComment{
 		Kind:      "forge",
-		ID:        comment.Comment.ID.String(),
+		ID:        comment.ID.String(),
 		Scope:     scope,
-		Path:      comment.Thread.Path,
-		Line:      comment.Thread.Range.StartLine,
-		CommitSHA: comment.Thread.CommitHash.String(),
-		Body:      comment.Comment.Body,
-		ThreadID:  comment.Thread.ID.String(),
-		Author:    comment.Comment.Author,
-		Resolved:  comment.Thread.Resolved,
-		Stale:     comment.Thread.Outdated,
-		Status:    reviewCommentStatus(comment),
+		Path:      thread.Path,
+		Line:      thread.Range.StartLine,
+		CommitSHA: thread.CommitHash.String(),
+		Body:      comment.Body,
+		ThreadID:  thread.ID.String(),
+		Author:    comment.Author,
+		Resolved:  thread.Resolved,
+		Stale:     thread.Outdated,
+		Status:    reviewCommentStatus(thread),
 		CreatedAt: createdAt,
 	}
 	if scope == "line" {
-		result.Side = comment.Thread.Side.String()
-		if comment.Thread.Range.StartLine != comment.Thread.Range.EndLine {
+		result.Side = thread.Side.String()
+		if thread.Range.StartLine != thread.Range.EndLine {
 			result.Range = &jsonCommentRange{
-				Start: comment.Thread.Range.StartLine,
-				End:   comment.Thread.Range.EndLine,
+				Start: thread.Range.StartLine,
+				End:   thread.Range.EndLine,
 			}
 		}
 	}
 	return result
+}
+
+func reviewCommentStatus(thread forge.ReviewThread) string {
+	if thread.Outdated != nil && *thread.Outdated {
+		return "outdated"
+	}
+	if thread.Resolved != nil && *thread.Resolved {
+		return "resolved"
+	}
+	return "open"
 }
 
 // jsonComment is the JSON representation of a review comment.

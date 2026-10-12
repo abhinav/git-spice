@@ -1,11 +1,14 @@
 package review
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
@@ -19,30 +22,28 @@ type LoadRequest struct {
 
 	// Unresolved omits resolved forge threads.
 	Unresolved bool
+
+	// IncludeSource adds best-effort source excerpts to loaded anchors.
+	IncludeSource bool
+
+	// IncludeReplyThreads loads thread metadata needed to place draft replies
+	// when DraftOnly is set.
+	IncludeReplyThreads bool
 }
 
-// LoadResult contains local drafts and published review comments.
+// LoadResult contains local drafts and published review threads.
 type LoadResult struct {
 	// Branch is the branch selected by the request.
 	Branch string
 
 	// Drafts are the branch's unpublished comments.
-	Drafts []Draft
+	Drafts []ListedDraft
 
-	// Comments are published comments paired with their owning thread.
-	Comments []ListedComment
+	// Threads are published review discussions.
+	Threads []ListedThread
 }
 
-// ListedComment pairs a review comment with its thread location and state.
-type ListedComment struct {
-	// Thread owns the comment's location and resolution state.
-	Thread forge.ReviewThread
-
-	// Comment is one entry in Thread.
-	Comment forge.ReviewComment
-}
-
-// LoadReviewData loads local drafts and remote review comments for a branch.
+// LoadReviewData loads local drafts and remote review threads for a branch.
 func (h *Handler) LoadReviewData(
 	ctx context.Context,
 	req *LoadRequest,
@@ -51,11 +52,29 @@ func (h *Handler) LoadReviewData(
 	if err != nil {
 		return nil, fmt.Errorf("load draft comments: %w", err)
 	}
-	result := &LoadResult{
-		Branch: req.Branch,
-		Drafts: drafts,
+	result := &LoadResult{Branch: req.Branch}
+	for _, draft := range drafts {
+		listed := ListedDraft{Draft: draft}
+		if req.IncludeSource && draft.ReplyTo == "" && !draft.Anchor.IsFile() {
+			listed.Source = h.loadSource(
+				ctx,
+				draft.CommitHash,
+				draft.Anchor.Path,
+				draft.Anchor.StartLine,
+				draft.Anchor.EndLine,
+			)
+		}
+		result.Drafts = append(result.Drafts, listed)
 	}
-	if req.DraftOnly {
+
+	draftReplyTargets := make(map[string]struct{})
+	for _, draft := range drafts {
+		if draft.ReplyTo != "" {
+			draftReplyTargets[draft.ReplyTo] = struct{}{}
+		}
+	}
+	// Draft replies need their remote thread even in --draft-only output.
+	if req.DraftOnly && (!req.IncludeReplyThreads || len(draftReplyTargets) == 0) {
 		return result, nil
 	}
 
@@ -71,8 +90,6 @@ func (h *Handler) LoadReviewData(
 		return result, nil
 	}
 
-	// Keep each comment beside its thread while consuming the forge iterator.
-	// The presenter needs thread-level coordinates and state for every comment.
 	for thread, err := range h.Repository.ListReviewThreads(
 		ctx,
 		change.Change.ChangeID(),
@@ -80,15 +97,136 @@ func (h *Handler) LoadReviewData(
 		if err != nil {
 			return nil, fmt.Errorf("list review threads: %w", err)
 		}
+		_, hasDraftReply := draftReplyTargets[thread.ID.String()]
+		contextOnly := req.DraftOnly
 		if req.Unresolved && thread.Resolved != nil && *thread.Resolved {
+			if !hasDraftReply {
+				continue
+			}
+			contextOnly = true
+		}
+		if req.DraftOnly && !hasDraftReply {
 			continue
 		}
-		for _, comment := range thread.Comments {
-			result.Comments = append(result.Comments, ListedComment{
-				Thread:  *thread,
-				Comment: comment,
-			})
+
+		listed := ListedThread{Thread: *thread}
+		if contextOnly {
+			listed.Thread.Comments = nil
 		}
+		if req.IncludeSource && thread.Side == forge.ReviewThreadSideRight && !thread.Range.IsZero() {
+			listed.Source = h.loadSource(
+				ctx,
+				thread.CommitHash,
+				thread.Path,
+				thread.Range.StartLine,
+				thread.Range.EndLine,
+			)
+		}
+		result.Threads = append(result.Threads, listed)
 	}
 	return result, nil
+}
+
+// ListedDraft is a local draft with optional source context.
+type ListedDraft struct {
+	// Draft is the stored local comment.
+	Draft Draft
+
+	// Source is the available source context around Draft's anchor.
+	// It is empty for replies, file-level drafts, and unavailable source.
+	Source []SourceLine
+}
+
+// ListedThread is a remote review thread with optional source context.
+type ListedThread struct {
+	// Thread is the forge discussion.
+	Thread forge.ReviewThread
+
+	// Source is the available source context around Thread's anchor.
+	// It is empty for file-level and left-side threads and unavailable source.
+	Source []SourceLine
+}
+
+// SourceLine is one line of source shown around a review anchor.
+type SourceLine struct {
+	// Number is the one-based line number in the source file.
+	Number int
+
+	// Text is the source line without its line ending.
+	Text string
+}
+
+// loadSource returns a bounded excerpt when the anchor's source is available.
+// Source context is supplementary, so any Git or scanning failure omits it
+// without changing the review-list operation.
+func (h *Handler) loadSource(
+	ctx context.Context,
+	commit git.Hash,
+	path string,
+	start, end int,
+) []SourceLine {
+	if commit.IsZero() {
+		return nil
+	}
+
+	source, err := h.Worktree.OpenFileAt(ctx, commit, path)
+	if err != nil {
+		return nil
+	}
+	lines, scanErr := scanSourceExcerpt(source, start, end)
+	var drainErr error
+	if scanErr == nil {
+		// The excerpt stops after trailing context. Drain the process pipe so
+		// closing it early does not turn an otherwise usable excerpt into a
+		// cat-file failure for a large source file.
+		_, drainErr = io.Copy(io.Discard, source)
+	}
+	closeErr := source.Close()
+	if errors.Join(scanErr, drainErr, closeErr) != nil {
+		return nil
+	}
+	return lines
+}
+
+const (
+	_reviewContextLines      = 3
+	_reviewSelectedLineLimit = 6
+)
+
+// scanSourceExcerpt reads through the anchor and its trailing context without
+// retaining the rest of the file. Long selected ranges keep their first and
+// last three lines; the presenter marks the omitted interval.
+func scanSourceExcerpt(
+	r io.Reader,
+	start, end int,
+) ([]SourceLine, error) {
+	first := max(1, start-_reviewContextLines)
+	last := end + _reviewContextLines
+	selectedLines := end - start + 1
+
+	var lines []SourceLine
+	scanner := bufio.NewScanner(r)
+	lastRead := 0
+	for lineNumber := 1; lineNumber <= last && scanner.Scan(); lineNumber++ {
+		lastRead = lineNumber
+		if lineNumber < first {
+			continue
+		}
+		if selectedLines > _reviewSelectedLineLimit &&
+			lineNumber >= start+_reviewSelectedLineLimit/2 &&
+			lineNumber <= end-_reviewSelectedLineLimit/2 {
+			continue
+		}
+		lines = append(lines, SourceLine{
+			Number: lineNumber,
+			Text:   scanner.Text(),
+		})
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	if lastRead < end {
+		return nil, nil
+	}
+	return lines, nil
 }

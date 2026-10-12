@@ -32,12 +32,12 @@ stderr 'Posted comment'
 gs review resolve thread-2
 stderr 'Resolved thread thread-2'
 gs review list
-stderr 'resolved'
+cmp stdout $WORK/golden/resolved.txt
 
 gs review reopen thread-2
 stderr 'Reopened thread thread-2'
 gs review list
-stderr 'open'
+cmp stdout $WORK/golden/open.txt
 
 -- repo/util.go --
 package main
@@ -45,3 +45,25 @@ package main
 func doStuff() {
 	// stuff
 }
+-- golden/resolved.txt --
+Review threads
+
+  thread-2  util.go:3  [resolved]
+      1 | package main
+      2 |
+    > 3 | func doStuff() {
+      4 | 	// stuff
+      5 | }
+    alice:
+      Rename this function.
+-- golden/open.txt --
+Review threads
+
+  thread-2  util.go:3
+      1 | package main
+      2 |
+    > 3 | func doStuff() {
+      4 | 	// stuff
+      5 | }
+    alice:
+      Rename this function.

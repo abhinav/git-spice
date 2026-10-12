@@ -15,18 +15,20 @@ func TestReviewListJSONUnsupportedThreadState(t *testing.T) {
 	err := writeReviewListJSON(
 		&stdout,
 		&review.LoadResult{
-			Comments: []review.ListedComment{
+			Threads: []review.ListedThread{
 				{
 					Thread: forge.ReviewThread{
 						ID:    testReviewThreadID("thread-1"),
 						Path:  "review.go",
 						Range: forge.ReviewThreadLine(3),
 						Side:  forge.ReviewThreadSideRight,
-					},
-					Comment: forge.ReviewComment{
-						ID:     testReviewCommentID("comment-1"),
-						Body:   "Consider a constant.",
-						Author: "reviewer",
+						Comments: []forge.ReviewComment{
+							{
+								ID:     testReviewCommentID("comment-1"),
+								Body:   "Consider a constant.",
+								Author: "reviewer",
+							},
+						},
 					},
 				},
 			},

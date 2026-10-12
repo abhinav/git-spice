@@ -35,11 +35,7 @@ stderr 'Posted comment'
 
 # Text output lists the line and file-level anchors.
 gs review list
-stderr 'main\.go:4'
-stderr 'main\.go:0'
-stderr 'Line-scope comment'
-stderr 'Range-scope comment'
-stderr 'File-scope comment'
+cmp stdout $WORK/golden/list.txt
 
 # ShamHub's stable YAML dump preserves the complete inclusive range.
 shamhub dump reviews 1
@@ -56,6 +52,32 @@ func main() {
 	println("hello")
 	println("world")
 }
+-- golden/list.txt --
+Review threads
+
+  thread-2  main.go:4
+      1 | package main
+      2 |
+      3 | func main() {
+    > 4 | 	println("hello")
+      5 | 	println("world")
+      6 | }
+    alice:
+      Line-scope comment.
+
+  thread-3  main.go:4-5
+      1 | package main
+      2 |
+      3 | func main() {
+    > 4 | 	println("hello")
+    > 5 | 	println("world")
+      6 | }
+    alice:
+      Range-scope comment.
+
+  thread-4  main.go
+    alice:
+      File-scope comment.
 -- golden/reviews.yaml --
 changes:
   - change: 1

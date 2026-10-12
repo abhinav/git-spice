@@ -374,10 +374,120 @@ func TestHandler_LoadReviewData(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "feature", got.Branch)
-	assert.Equal(t, []Draft{draft}, got.Drafts)
-	assert.Equal(t, []ListedComment{
-		{Thread: *thread, Comment: thread.Comments[0]},
-	}, got.Comments)
+	assert.Equal(t, []ListedDraft{{Draft: draft}}, got.Drafts)
+	assert.Equal(t, []ListedThread{{Thread: *thread}}, got.Threads)
+}
+
+func TestHandler_LoadReviewData_unavailableSource(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	worktree := NewMockWorktree(ctrl)
+	store := NewMockStore(ctrl)
+	head := git.Hash("1111111111111111111111111111111111111111")
+	draft := reviewmodel.Draft{
+		ID:         1,
+		Body:       "Use a constant.",
+		CommitHash: head,
+		Anchor: reviewmodel.Anchor{
+			Path:      "missing.go",
+			StartLine: 3,
+			EndLine:   3,
+		},
+	}
+	handler := &Handler{
+		Log:        silog.Nop(),
+		Worktree:   worktree,
+		Service:    nil,
+		Store:      store,
+		Repository: NewMockReviewRepository(ctrl),
+		Editor:     nil,
+	}
+
+	store.
+		EXPECT().
+		LoadReviewDrafts(gomock.Any(), "feature").
+		Return([]Draft{draft}, nil)
+	worktree.
+		EXPECT().
+		OpenFileAt(gomock.Any(), head, "missing.go").
+		Return(&errorReadCloser{
+			Reader: strings.NewReader(""),
+			err:    git.ErrNotExist,
+		}, nil)
+
+	got, err := handler.LoadReviewData(t.Context(), &LoadRequest{
+		Branch:        "feature",
+		DraftOnly:     true,
+		IncludeSource: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []ListedDraft{{Draft: draft}}, got.Drafts)
+}
+
+func TestHandler_LoadReviewData_draftReplyWithoutThreadContext(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	store := NewMockStore(ctrl)
+	draft := reviewmodel.Draft{
+		ID:      1,
+		Body:    "Agreed.",
+		ReplyTo: "thread-1",
+	}
+	handler := &Handler{
+		Log:        silog.Nop(),
+		Worktree:   NewMockWorktree(ctrl),
+		Service:    nil,
+		Store:      store,
+		Repository: NewMockReviewRepository(ctrl),
+		Editor:     nil,
+	}
+
+	store.
+		EXPECT().
+		LoadReviewDrafts(gomock.Any(), "feature").
+		Return([]Draft{draft}, nil)
+
+	got, err := handler.LoadReviewData(t.Context(), &LoadRequest{
+		Branch:    "feature",
+		DraftOnly: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []ListedDraft{{Draft: draft}}, got.Drafts)
+}
+
+func TestScanSourceExcerpt_longRange(t *testing.T) {
+	source := strings.Join([]string{
+		"one",
+		"two",
+		"three",
+		"four",
+		"five",
+		"six",
+		"seven",
+		"eight",
+		"nine",
+		"ten",
+		"eleven",
+		"twelve",
+		"thirteen",
+		"fourteen",
+		"fifteen",
+	}, "\n")
+
+	got, err := scanSourceExcerpt(strings.NewReader(source), 5, 12)
+	require.NoError(t, err)
+	assert.Equal(t, []SourceLine{
+		{Number: 2, Text: "two"},
+		{Number: 3, Text: "three"},
+		{Number: 4, Text: "four"},
+		{Number: 5, Text: "five"},
+		{Number: 6, Text: "six"},
+		{Number: 7, Text: "seven"},
+		{Number: 10, Text: "ten"},
+		{Number: 11, Text: "eleven"},
+		{Number: 12, Text: "twelve"},
+		{Number: 13, Text: "thirteen"},
+		{Number: 14, Text: "fourteen"},
+		{Number: 15, Text: "fifteen"},
+	}, got)
 }
 
 func TestHandler_PublishDrafts(t *testing.T) {
@@ -1105,4 +1215,13 @@ type testCommentID string
 
 func (id testCommentID) String() string {
 	return string(id)
+}
+
+type errorReadCloser struct {
+	io.Reader
+	err error
+}
+
+func (r *errorReadCloser) Close() error {
+	return r.err
 }
