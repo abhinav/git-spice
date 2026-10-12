@@ -6,7 +6,7 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.6
 	charm.land/lipgloss/v2 v2.0.3
-	github.com/alecthomas/kong v1.15.0
+	github.com/alecthomas/kong v1.16.2-0.20260824060553-27d969c48021
 	github.com/bluekeyes/go-gitdiff v0.9.0
 	github.com/buildkite/shellwords v1.0.1
 	github.com/charmbracelet/colorprofile v0.4.3
@@ -74,5 +74,3 @@ require (
 )
 
 tool go.uber.org/mock/mockgen
-
-replace github.com/alecthomas/kong => github.com/abhinav/kong v0.8.2-0.20260711201529-e00b26b8d66f
