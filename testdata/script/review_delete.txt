@@ -32,14 +32,13 @@ stderr 'Drafted comment 2'
 ! gs review delete 1 99
 stderr 'draft comment 99 not found'
 gs review list --draft-only
-stderr 'First comment'
-stderr 'Second comment'
+cmp stdout $WORK/golden/drafts.txt
 
 # delete both comments
 gs review delete 1 2
 stderr 'Deleted 2 draft comment'
 gs review list --draft-only
-stderr 'No draft comments'
+cmp stdout $WORK/golden/empty.txt
 
 # deleted IDs are not reused
 gs review comment main.go:3 -m 'Third comment.'
@@ -51,3 +50,23 @@ package main
 func main() {
 	println("hello")
 }
+-- golden/drafts.txt --
+Draft comments
+
+  1  main.go:3
+      1 | package main
+      2 |
+    > 3 | func main() {
+      4 | 	println("hello")
+      5 | }
+    First comment.
+
+  2  main.go:4
+      1 | package main
+      2 |
+      3 | func main() {
+    > 4 | 	println("hello")
+      5 | }
+    Second comment.
+-- golden/empty.txt --
+No draft comments on feature1.

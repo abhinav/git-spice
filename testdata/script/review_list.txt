@@ -49,6 +49,7 @@ cmp stdout $WORK/golden/draft-only.txt
 # A branch without a change request still reports that fact as a diagnostic.
 gs bc -m 'Another branch' feature2
 gs review list
+cmp stdout $WORK/golden/no-comments.txt
 stderr 'No change request'
 
 -- repo/main.go --
@@ -144,3 +145,5 @@ Review threads
       15 | 	return "goodbye"
     draft 3:
       I will send a follow-up.
+-- golden/no-comments.txt --
+No review comments on feature2.
