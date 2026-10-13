@@ -17,7 +17,7 @@ description: >-
     - <!-- gs:bitbucket --> (<!-- gs:version v0.25.0 -->)
     - <!-- gs:gitea --> (<!-- gs:version v0.30.0 -->)
     - <!-- gs:forgejo --> (<!-- gs:version v0.30.0 -->)
-    - <!-- gs:azuredevops --> (<!-- gs:version unreleased -->)
+    - <!-- gs:azuredevops --> (<!-- gs:version v0.32.0 -->)
 
     If you're using a different service,
     you can still use git-spice,

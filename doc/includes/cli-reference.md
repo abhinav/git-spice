@@ -1577,7 +1577,7 @@ as a stream of JSON objects.
 * `-b`, `--branch=BRANCH`: Branch to list comments for. Defaults to the current branch.
 * `--draft-only`: Show only draft comments.
 * `--unresolved`: Show only unresolved comments.
-* `--json`: Write to stdout as a stream of JSON objects. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+* `--json`: Write to stdout as a stream of JSON objects.
 
 ### git-spice review edit {#gs-review-edit}
 

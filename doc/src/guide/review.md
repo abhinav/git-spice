@@ -7,7 +7,7 @@ description: >-
 
 # Reviewing stacked change requests
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.32.0 -->
 
 With git-spice, you can review change requests without leaving the terminal.
 By default reviews are drafted locally and published to the forge when ready.

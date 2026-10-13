@@ -21,7 +21,7 @@ Bitbucket Data Center / Server support requires at least version <!-- gs:version
 Gitea support requires at least version <!-- gs:version v0.30.0 -->.
 Forgejo support requires at least version <!-- gs:version v0.30.0 -->,
 and defaults to Codeberg.
-Azure DevOps support requires at least version <!-- gs:version unreleased -->.
+Azure DevOps support requires at least version <!-- gs:version v0.32.0 -->.
 
 ## Logging in
 
