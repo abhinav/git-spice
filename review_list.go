@@ -22,7 +22,7 @@ type reviewListCmd struct {
 	Branch     string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch to list comments for. Defaults to the current branch."`
 	DraftOnly  bool   `name:"draft-only" help:"Show only draft comments."`
 	Unresolved bool   `help:"Show only unresolved comments."`
-	JSON       bool   `name:"json" released:"v0.32.0" help:"Write to stdout as a stream of JSON objects."`
+	JSON       bool   `name:"json" help:"Write to stdout as a stream of JSON objects."`
 }
 
 func (*reviewListCmd) Help() string {
