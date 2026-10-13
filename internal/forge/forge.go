@@ -46,7 +46,19 @@ type Definition interface {
 	// The remote URL must be non-nil.
 	// Implementations may use it to derive instance configuration
 	// that is not known when command-line options are registered.
-	New(remoteURL *giturl.URL) (Forge, error)
+	//
+	// opts may be nil for default behavior.
+	New(remoteURL *giturl.URL, opts *NewOptions) (Forge, error)
+}
+
+// NewOptions carries application-wide options
+// passed to [Definition.New] when constructing a forge instance.
+type NewOptions struct {
+	// HTTPHeaders are extra HTTP header specifications
+	// to attach to the forge's API requests.
+	// Values take the form "Name: value",
+	// or "Name: !command" to source the value from a command's stdout.
+	HTTPHeaders []string // optional
 }
 
 // Forge is a forge that hosts Git repositories.

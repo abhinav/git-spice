@@ -661,6 +661,72 @@ func TestMainForgeKindConfig(t *testing.T) {
 	}
 }
 
+func TestForgeHTTPHeadersConfig(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		want   []string
+	}{
+		{
+			name: "Default",
+			want: nil,
+		},
+		{
+			name: "Single",
+			config: joinLines(
+				`[spice "forge"]`,
+				`  httpHeader = X-Test: one`,
+			),
+			want: []string{"X-Test: one"},
+		},
+		{
+			name: "Multiple",
+			config: joinLines(
+				`[spice "forge"]`,
+				`  httpHeader = X-Test: one`,
+				`  httpHeader = X-Other: two`,
+			),
+			want: []string{"X-Test: one", "X-Other: two"},
+		},
+		{
+			// Header values may contain commas;
+			// they must not be split into multiple values.
+			name: "CommaInValue",
+			config: joinLines(
+				`[spice "forge"]`,
+				`  httpHeader = X-Test: one, two`,
+			),
+			want: []string{"X-Test: one, two"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spicecfg := loadTestSpiceConfig(t, tt.config)
+
+			var cmd mainCmd
+			logger := silogtest.New(t)
+			var (
+				forges   forge.Registry
+				sigStack sigstack.Stack
+			)
+			parser, err := kong.New(
+				&cmd,
+				kong.Resolvers(spicecfg),
+				kong.Bind(logger, &forges, &sigStack),
+				kong.BindTo(t.Context(), (*context.Context)(nil)),
+				kong.BindTo(spicecfg, (*experiment.Enabler)(nil)),
+				kong.Vars{"defaultPrompt": "false"},
+			)
+			require.NoError(t, err)
+
+			_, err = parser.Parse([]string{"version"})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, cmd.Forge.HTTPHeaders)
+		})
+	}
+}
+
 func loadTestSpiceConfig(t *testing.T, cfg string) *spice.Config {
 	t.Helper()
 

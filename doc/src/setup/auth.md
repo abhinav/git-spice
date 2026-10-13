@@ -806,6 +806,44 @@ export FORGEJO_URL=https://forgejo.example.com
 export FORGEJO_API_URL=https://forgejo.example.com/api/v1
 ```
 
+## Extra HTTP headers
+
+<!-- gs:version unreleased -->
+
+If your forge sits behind a reverse proxy or access gateway,
+API requests may need extra HTTP headers,
+such as a Cloudflare Access token.
+Set these with the $$spice.forge.httpHeader$$ configuration option.
+
+Each value of the option specifies one header as `Name: value`:
+
+```freeze language="terminal"
+{green}${reset} git config --add {red}spice.forge.httpHeader{reset} {mag}'X-Access-Token: hunter2'{reset}
+```
+
+If the header value must be computed at runtime,
+prefix the value with `!` and a command.
+The command's output becomes the header value.
+
+```freeze language="terminal"
+{green}${reset} git config --add {red}spice.forge.httpHeader{reset} {mag}'cf-access-token: !cloudflared access token https://forge.example.com'{reset}
+```
+
+Command-backed headers are resolved once
+at the start of each git-spice invocation.
+Headers are attached to forge API requests only;
+Git operations like push and fetch
+continue to use the `http.extraHeader` Git configuration.
+
+!!! note
+
+    This option is not scoped to a specific forge or host.
+    A header configured in the global Git configuration
+    is sent to whatever forge the current repository resolves to.
+    Scope host-specific tokens to a repository
+    with [conditional includes](https://git-scm.com/docs/git-config#_conditional_includes),
+    or set them at the repository level.
+
 ## Safety
 
 By default, git-spice stores your authentication token

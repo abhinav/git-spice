@@ -344,6 +344,16 @@ type forgeOptions struct {
 	// It is hidden from command help because forge selection is a repository
 	// or environment setting rather than a per-invocation control.
 	Kind string `name:"forge-kind" hidden:"" config:"forge.kind" env:"GIT_SPICE_FORGE_KIND" configHelp:"-" help:"Forge kind to use when remote URLs do not identify a supported Git host."`
+
+	// HTTPHeaders are extra HTTP headers to attach to forge API requests.
+	// Values take the form "Name: value",
+	// or "Name: !command" to source the value from a command's stdout.
+	//
+	// It is hidden from command help because headers are a repository
+	// or environment setting rather than a per-invocation control.
+	// The separator is a newline because header values may contain commas,
+	// and git config values cannot contain raw newlines.
+	HTTPHeaders []string `name:"forge-http-header" hidden:"" config:"forge.httpHeader" sep:"\n" help:"Extra HTTP headers for API requests"`
 }
 
 func (cmd *mainCmd) AfterApply(
@@ -414,9 +424,10 @@ func (cmd *mainCmd) AfterApply(
 			forges *forge.Registry,
 		) *remoteResolver {
 			return &remoteResolver{
-				Forges:     forges,
-				Repository: repo,
-				ForgeKind:  cmd.Forge.Kind,
+				Forges:      forges,
+				Repository:  repo,
+				ForgeKind:   cmd.Forge.Kind,
+				HTTPHeaders: cmd.Forge.HTTPHeaders,
 			}
 		}),
 		kctx.BindSingletonProvider(func(repo *git.Repository, wt *git.Worktree) (*state.Store, error) {
@@ -591,7 +602,9 @@ func (cmd *mainCmd) AfterApply(
 						return nil, false
 					}
 
-					f, err := forges.New(id, parsedRemoteURL)
+					f, err := forges.New(id, parsedRemoteURL, &forge.NewOptions{
+						HTTPHeaders: cmd.Forge.HTTPHeaders,
+					})
 					return f, err == nil
 				},
 				HighlightStyle: _highlightStyle,

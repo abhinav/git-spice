@@ -321,6 +321,20 @@ so this option alone supports self-hosted Bitbucket instances.
 Alternatively, set this option with the `GIT_SPICE_FORGE_KIND`
 environment variable.
 
+### spice.forge.httpHeader
+
+<!-- gs:version unreleased -->
+
+Extra HTTP headers to attach to forge API requests
+for the forge that the current repository resolves to.
+Repeat the option once per header.
+
+Values take the form `Name: value`.
+A value beginning with `!` is treated as a command,
+and its stdout (trimmed to a single line) provides the header value.
+
+See [Extra HTTP headers](../setup/auth.md#extra-http-headers).
+
 ### spice.forge.azuredevops.url
 
 <!-- gs:version unreleased -->

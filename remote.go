@@ -57,6 +57,10 @@ type remoteResolver struct {
 	//
 	// If unset, remote URLs must identify their forge by host.
 	ForgeKind string // required
+
+	// HTTPHeaders are extra HTTP header specifications
+	// to attach to the forge's API requests.
+	HTTPHeaders []string
 }
 
 // Resolve identifies the forge and repository for a configured Git remote.
@@ -85,7 +89,9 @@ func (r *remoteResolver) Resolve(
 			return nil, nil, fmt.Errorf("parse resolved remote URL: %w", err)
 		}
 
-		f, err := r.Forges.New(r.ForgeKind, parsedResolvedRemoteURL)
+		f, err := r.Forges.New(r.ForgeKind, parsedResolvedRemoteURL, &forge.NewOptions{
+			HTTPHeaders: r.HTTPHeaders,
+		})
 		if err != nil {
 			if errors.Is(err, forge.ErrUnknown) {
 				var available []string
@@ -110,7 +116,9 @@ func (r *remoteResolver) Resolve(
 		return f, repoID, nil
 	}
 
-	f, repoID, ok := forge.InferFromRemoteURL(r.Forges, parsedRemoteURL)
+	f, repoID, ok := forge.InferFromRemoteURL(r.Forges, parsedRemoteURL, &forge.NewOptions{
+		HTTPHeaders: r.HTTPHeaders,
+	})
 	if !ok {
 		return nil, nil, &unsupportedForgeError{
 			Remote:    remote,
