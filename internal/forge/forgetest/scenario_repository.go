@@ -25,7 +25,7 @@ func (s *integrationSuite) TestSubmitChangeFromPushRepository(t *testing.T) {
 	branchName := branchFixture.Get(t)
 	t.Logf("Creating fork branch: %s", branchName)
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
@@ -93,7 +93,7 @@ func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
 
 	t.Run("NoTemplates", func(t *testing.T) {
 		if Update() {
-			testRepo := newTestRepository(t, s.RemoteURL)
+			testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 			t.Logf("Removing all templates from main")
 			var deleted bool
@@ -146,7 +146,7 @@ func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
 		}
 
 		if Update() {
-			testRepo := newTestRepository(t, s.RemoteURL)
+			testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 			if templateDir != "" {
 				testRepo.WriteFile(filepath.Join(templateDir, emptyTemplateName))
@@ -234,7 +234,7 @@ func (s *integrationSuite) TestSubmitEditLabels(t *testing.T) {
 	t.Logf("Creating branch: %s", branchName)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
@@ -304,7 +304,7 @@ func (s *integrationSuite) TestSubmitBaseDoesNotExist(t *testing.T) {
 	t.Logf("Creating branch %s with base branch %s", branchName, baseBranchName)
 
 	if Update() {
-		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo := NewRepositoryBuilder(t, s.RemoteURL)
 
 		testRepo.CreateBranch(branchName)
 		testRepo.CheckoutBranch(branchName)
