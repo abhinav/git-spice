@@ -34,6 +34,9 @@ func (r *Repository) PlanStackUpdate(
 	ctx context.Context,
 	changes []forge.StackChange,
 ) (forge.StackUpdatePlan, error) {
+	if !r.stacksEnabled {
+		return nil, forge.ErrUnsupported
+	}
 	if err := r.gateway.CheckPullRequestStacks(ctx, r.owner, r.repo); err != nil {
 		if errors.Is(err, github.ErrNotFound) {
 			return nil, errors.Join(forge.ErrUnsupported, err)

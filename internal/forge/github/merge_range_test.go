@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/github"
+	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.uber.org/mock/gomock"
 )
 
@@ -232,6 +233,25 @@ func TestRepository_MergeRangeUnsupported(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, forge.ErrUnsupported)
 	assert.ErrorIs(t, err, github.ErrNotFound)
+}
+
+func TestRepository_PlanMergeRangesDisabled(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	repo, err := newRepository(
+		t.Context(),
+		new(Forge),
+		"acme",
+		"repo",
+		silogtest.New(t),
+		gateway,
+		"repo-id",
+	)
+	require.NoError(t, err)
+
+	// Disabled stack operations take precedence over request validation.
+	plans, err := repo.PlanMergeRanges(t.Context(), nil)
+	assert.Nil(t, plans)
+	require.ErrorIs(t, err, forge.ErrUnsupported)
 }
 
 func newMergeRangePlan(
