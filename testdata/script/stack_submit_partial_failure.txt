@@ -1,0 +1,60 @@
+# A partially successful stack submit still updates navigation comments,
+# but does not reconcile an incomplete native stack component.
+
+as 'Test <test@example.com>'
+at '2026-08-11T15:00:00Z'
+
+cd repo
+git init
+git config spice.forge.shamhub.stacks on
+git commit --allow-empty -m 'Initial commit'
+
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add bottom.txt
+gs branch create bottom -m 'Add bottom'
+git add top.txt
+gs branch create top -m 'Add top'
+
+# Let the bottom branch publish, then fail the top branch's push.
+mkdir -p .git/hooks
+cp $WORK/extra/pre-push .git/hooks/pre-push
+chmod 755 .git/hooks/pre-push
+
+! gs stack submit --fill
+stderr 'Created #1'
+stderr 'transient pre-push failure'
+
+shamhub dump stacks alice/example
+cmpenvJSON stdout $WORK/golden/stacks.json
+
+shamhub dump comments
+cmp stdout $WORK/golden/comments.txt
+
+-- repo/bottom.txt --
+bottom
+-- repo/top.txt --
+top
+-- extra/pre-push --
+#!/bin/sh
+if test -e .git/hooks/first-push-complete; then
+    echo 'transient pre-push failure' >&2
+    exit 1
+fi
+touch .git/hooks/first-push-complete
+-- golden/stacks.json --
+[]
+-- golden/comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

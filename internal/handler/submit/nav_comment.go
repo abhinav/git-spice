@@ -16,6 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/stacknav"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
@@ -69,6 +70,32 @@ func (f NavCommentWhen) String() string {
 	}
 }
 
+// navigationCommentUpdate captures the complete post-submit view used to
+// render and persist navigation comments. The submit finalizer copies the
+// navigation choices and loads the branch graph and repository before launch,
+// so this concurrent operation does not retain the broader mutable submit
+// options.
+type navigationCommentUpdate struct {
+	store            Store
+	graph            *spice.BranchGraph
+	log              *silog.Logger
+	remoteRepository forge.Repository
+
+	when          NavCommentWhen
+	sync          NavCommentSync
+	downstack     NavCommentDownstack
+	marker        string
+	layout        string
+	trunkLink     NavCommentTrunkLink
+	trunkLinkText string
+
+	submittedBranches []string
+
+	// The push repository is resolved only when trunk comparison links are
+	// enabled and the forge supports them.
+	pushRepositoryID func(context.Context) (forge.RepositoryID, error)
+}
+
 // For each branch in the list of submitted branches,
 // we'll add or update a comment in the form:
 //
@@ -85,31 +112,20 @@ func (f NavCommentWhen) String() string {
 // we'll need to also update the store to record the comment ID for later.
 func updateNavigationComments(
 	ctx context.Context,
-	store Store,
-	svc Service,
-	log *silog.Logger,
-	navComment NavCommentWhen,
-	navCommentSync NavCommentSync,
-	navCommentDownstack NavCommentDownstack,
-	navCommentMarker string,
-	navCommentLayout string,
-	navCommentTrunkLink NavCommentTrunkLink,
-	navCommentTrunkLinkText string,
-	submittedBranches []string,
-	getRemoteRepo func(context.Context) (forge.Repository, error),
-	getPushRepositoryID func(context.Context) (forge.RepositoryID, error),
+	update navigationCommentUpdate,
 ) error {
+	store := update.store
+	graph := update.graph
+	log := update.log
+	remoteRepo := update.remoteRepository
+	submittedBranches := update.submittedBranches
+
 	if len(submittedBranches) == 0 {
 		return nil
 	}
 
-	if navComment == NavCommentNever {
+	if update.when == NavCommentNever {
 		return nil // nothing to do
-	}
-
-	remoteRepo, err := getRemoteRepo(ctx)
-	if err != nil {
-		return fmt.Errorf("get remote repository: %w", err)
 	}
 
 	// Build a reference formatter for forges that customize navigation.
@@ -130,33 +146,28 @@ func updateNavigationComments(
 	// each comment gets a link comparing the branch against trunk.
 	// Forges that don't implement WithComparisonURL simply omit the link.
 	var comparisonRepo forge.WithComparisonURL
-	if navCommentTrunkLink != NavCommentTrunkLinkOff {
+	if update.trunkLink != NavCommentTrunkLinkOff {
 		if r, ok := remoteRepo.(forge.WithComparisonURL); ok {
 			comparisonRepo = r
 		}
 	}
 	var headRepository forge.RepositoryID
-	if comparisonRepo != nil && getPushRepositoryID != nil {
-		headRepository, err = getPushRepositoryID(ctx)
+	if comparisonRepo != nil && update.pushRepositoryID != nil {
+		var err error
+		headRepository, err = update.pushRepositoryID(ctx)
 		if err != nil {
 			return fmt.Errorf("get push repository: %w", err)
 		}
 	}
-	trunkLinkText := navCommentTrunkLinkText
+	trunkLinkText := update.trunkLinkText
 	if trunkLinkText == "" {
 		trunkLinkText = _defaultTrunkComparisonLinkText
 	}
-	trunk := store.Trunk()
-	printOpts := &stacknav.PrintOptions{Marker: navCommentMarker}
-	if navCommentLayout == "simple" {
+	trunk := graph.Trunk()
+	printOpts := &stacknav.PrintOptions{Marker: update.marker}
+	if update.layout == "simple" {
 		printOpts.Simple = true
 		printOpts.Trunk = trunk
-	}
-
-	// Look up branch graph once, and share between all syncs.
-	trackedBranches, err := svc.LoadBranches(ctx)
-	if err != nil {
-		return fmt.Errorf("list tracked branches: %w", err)
 	}
 
 	type branchInfo struct {
@@ -172,7 +183,7 @@ func updateNavigationComments(
 	idxByBranch := make(map[string]int) // branch -> index in nodes
 
 	// First pass: add nodes but don't connect.
-	for _, b := range trackedBranches {
+	for b := range graph.All() {
 		if b.Change == nil {
 			continue
 		}
@@ -194,7 +205,7 @@ func updateNavigationComments(
 	//
 	// - Add merged downstacks as separate nodes (if enabled).
 	// - Connect Aboves if this is a base to another node.
-	for _, b := range trackedBranches {
+	for b := range graph.All() {
 		nodeIdx, ok := idxByBranch[b.Name]
 		if !ok {
 			continue
@@ -208,7 +219,7 @@ func updateNavigationComments(
 		//
 		// Skip merged downstack branches if navCommentDownstack is Open.
 		lastDownstackIdx := -1
-		if navCommentDownstack == NavCommentDownstackAll {
+		if update.downstack == NavCommentDownstackAll {
 			for _, crJSON := range b.MergedDownstack {
 				downstackCR, err := remoteRepo.Forge().UnmarshalChangeID(crJSON)
 				if err != nil {
@@ -256,7 +267,7 @@ func updateNavigationComments(
 	// Third pass:
 	// Compute list of branches to sync based on the navCommentSync.
 	var branchesToSync []int
-	switch navCommentSync {
+	switch update.sync {
 	case NavCommentSyncBranch:
 		// Only submitted branches get commented on.
 		for _, branch := range submittedBranches {
@@ -418,7 +429,7 @@ func updateNavigationComments(
 	// Open CRs occupy the first len(infos) nodes, so a node whose base
 	// falls in that range is stacked on another open CR.
 	trunkLinks := trunkComparison{
-		mode:           navCommentTrunkLink,
+		mode:           update.trunkLink,
 		comparisonRepo: comparisonRepo,
 		trunk:          trunk,
 		linkText:       trunkLinkText,
@@ -431,7 +442,7 @@ func updateNavigationComments(
 		// If we're only posting on multiple,
 		// we'll need to check if the branch is part of a stack
 		// that has at least one other branch.
-		if navComment == NavCommentOnMultiple {
+		if update.when == NavCommentOnMultiple {
 			if len(nodes[idx].Aboves) == 0 && nodes[idx].Base == -1 {
 				continue
 			}
@@ -440,7 +451,13 @@ func updateNavigationComments(
 		info := infos[idx]
 		head := cmp.Or(info.UpstreamBranch, info.Branch)
 		trunkLink := trunkLinks.link(nodes[idx], head)
-		commentBody := generateStackNavigationComment(nodes, idx, printOpts, remoteRepo.Forge(), trunkLink)
+		commentBody := generateStackNavigationComment(
+			nodes,
+			idx,
+			printOpts,
+			remoteRepo.Forge(),
+			trunkLink,
+		)
 		if info.Meta.NavigationCommentID() == nil {
 			postc <- &postComment{
 				Branch: info.Branch,
