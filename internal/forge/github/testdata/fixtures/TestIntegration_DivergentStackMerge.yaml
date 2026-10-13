@@ -1,0 +1,451 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 142
+        host: api.github.com
+        body: |
+            {"query":"query($owner:String!$repo:String!){repository(owner: $owner, name: $repo){id}}","variables":{"owner":"test-owner","repo":"test-repo"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"id":"R_kgDOMVd0xg"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 321.368667ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 344
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"divergent-stack-a-pO7wJfwF","title":"Divergent native stack A divergent-stack-a-pO7wJfwF","body":"Divergent native stack integration test"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7-FQFU","number":170,"url":"https://github.com/test-owner/test-repo/pull/170"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 1.330168625s
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 366
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"divergent-stack-a-pO7wJfwF","headRefName":"divergent-stack-b-9iT5TOLK","title":"Divergent native stack B divergent-stack-b-9iT5TOLK","body":"Divergent native stack integration test"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7-FQHm","number":171,"url":"https://github.com/test-owner/test-repo/pull/171"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 935.200041ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 366
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"divergent-stack-b-9iT5TOLK","headRefName":"divergent-stack-c-iXygp4Wc","title":"Divergent native stack C divergent-stack-c-iXygp4Wc","body":"Divergent native stack integration test"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7-FQJT","number":172,"url":"https://github.com/test-owner/test-repo/pull/172"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 1.0237815s
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 366
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"divergent-stack-b-9iT5TOLK","headRefName":"divergent-stack-d-HtiSetd4","title":"Divergent native stack D divergent-stack-d-HtiSetd4","body":"Divergent native stack integration test"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7-FQMA","number":173,"url":"https://github.com/test-owner/test-repo/pull/173"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 1.515385583s
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 443
+        host: api.github.com
+        body: |
+            {"query":"query($owner:String!,$repo:String!,$pr0:Int!,$pr1:Int!,$pr2:Int!){repository(owner: $owner, name: $repo){pr0:pullRequest(number: $pr0){state,headRepository{owner{login},name},stack{id}},pr1:pullRequest(number: $pr1){state,headRepository{owner{login},name},stack{id}},pr2:pullRequest(number: $pr2){state,headRepository{owner{login},name},stack{id}}}}","variables":{"owner":"test-owner","pr0":170,"pr1":171,"pr2":172,"repo":"test-repo"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"pr0":{"state":"OPEN","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":null},"pr1":{"state":"OPEN","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":null},"pr2":{"state":"OPEN","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":null}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 428.405333ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 32
+        host: api.github.com
+        body: |
+            {"pull_requests":[170,171,172]}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/repos/test-owner/test-repo/stacks
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 4979
+        body: '{"id":313473,"number":174,"node_id":"PRS_kwDOMVd0xs4ABMiB","url":"https://api.github.com/repos/test-owner/test-repo/stacks/174","base":{"ref":"main"},"open":true,"created_at":"2026-08-12T13:40:09Z","pull_requests":[{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/170","id":4262789460,"number":170,"head":{"ref":"divergent-stack-a-pO7wJfwF","sha":"cbba7e8dcfec641a88f530c0ccc7c8ce535aeeae","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"main","sha":"671f333e4fd471ee58f11ed382670d7f4ff92995","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs7-FQFU","title":"Divergent native stack A divergent-stack-a-pO7wJfwF","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/170","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}},{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/171","id":4262789606,"number":171,"head":{"ref":"divergent-stack-b-9iT5TOLK","sha":"04f50ba691258ef2c136849b1ad0a9e45a6d964a","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"divergent-stack-a-pO7wJfwF","sha":"cbba7e8dcfec641a88f530c0ccc7c8ce535aeeae","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs7-FQHm","title":"Divergent native stack B divergent-stack-b-9iT5TOLK","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/171","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}},{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/172","id":4262789715,"number":172,"head":{"ref":"divergent-stack-c-iXygp4Wc","sha":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"divergent-stack-b-9iT5TOLK","sha":"04f50ba691258ef2c136849b1ad0a9e45a6d964a","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs7-FQJT","title":"Divergent native stack C divergent-stack-c-iXygp4Wc","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/172","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}}]}'
+        headers:
+            Content-Length:
+                - "4979"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 514.412625ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 197
+        host: api.github.com
+        body: |
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state,headRefOid}}}","variables":{"ids":["PR_kwDOMVd0xs7-FQFU","PR_kwDOMVd0xs7-FQHm","PR_kwDOMVd0xs7-FQJT","PR_kwDOMVd0xs7-FQMA"]}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"nodes":[{"state":"OPEN","headRefOid":"cbba7e8dcfec641a88f530c0ccc7c8ce535aeeae"},{"state":"OPEN","headRefOid":"04f50ba691258ef2c136849b1ad0a9e45a6d964a"},{"state":"OPEN","headRefOid":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2"},{"state":"OPEN","headRefOid":"e6ea6d4b4f57a71e97e5a2c3d9d4a8325a56bc77"}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 289.063708ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 572
+        host: api.github.com
+        body: |
+            {"query":"query($owner:String!,$repo:String!,$pr0:Int!,$pr1:Int!,$pr2:Int!){repository(owner: $owner, name: $repo){pr0:pullRequest(number: $pr0){state,isDraft,baseRefName,headRefName,headRefOid,headRepository{owner{login},name},stack{id}},pr1:pullRequest(number: $pr1){state,isDraft,baseRefName,headRefName,headRefOid,headRepository{owner{login},name},stack{id}},pr2:pullRequest(number: $pr2){state,isDraft,baseRefName,headRefName,headRefOid,headRepository{owner{login},name},stack{id}}}}","variables":{"owner":"test-owner","pr0":170,"pr1":171,"pr2":172,"repo":"test-repo"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"pr0":{"state":"OPEN","isDraft":false,"baseRefName":"main","headRefName":"divergent-stack-a-pO7wJfwF","headRefOid":"cbba7e8dcfec641a88f530c0ccc7c8ce535aeeae","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ABMiB"}},"pr1":{"state":"OPEN","isDraft":false,"baseRefName":"divergent-stack-a-pO7wJfwF","headRefName":"divergent-stack-b-9iT5TOLK","headRefOid":"04f50ba691258ef2c136849b1ad0a9e45a6d964a","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ABMiB"}},"pr2":{"state":"OPEN","isDraft":false,"baseRefName":"divergent-stack-b-9iT5TOLK","headRefName":"divergent-stack-c-iXygp4Wc","headRefOid":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ABMiB"}}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 319.684375ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 184
+        host: api.github.com
+        body: |
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequestStack{id,number,entries(first: 100){nodes{pullRequest{number,state}}}}}}","variables":{"ids":["PRS_kwDOMVd0xs4ABMiB"]}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"nodes":[{"id":"PRS_kwDOMVd0xs4ABMiB","number":174,"entries":{"nodes":[{"pullRequest":{"number":170,"state":"OPEN"}},{"pullRequest":{"number":171,"state":"OPEN"}},{"pullRequest":{"number":172,"state":"OPEN"}}]}}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 410.232083ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 100
+        host: api.github.com
+        body: |
+            {"sha":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2","merge_method":"squash","merge_action":"default"}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/repos/test-owner/test-repo/pulls/172/merge-async
+        method: PUT
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 226
+        body: '{"status":"pending","details":{"message":"Merge request enqueued.","uuid":"c414aa90-f853-4746-ac39-13f27c62ac22","merge_method":"squash","merge_action":"default","expected_head_sha":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2"}}'
+        headers:
+            Content-Length:
+                - "226"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 202 Accepted
+        code: 202
+        duration: 285.034041ms
+    - id: 11
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        url: https://api.github.com/repos/test-owner/test-repo/pulls/172/merge-async/c414aa90-f853-4746-ac39-13f27c62ac22
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"status":"pending","details":{"message":"Merge request is in progress.","uuid":"c414aa90-f853-4746-ac39-13f27c62ac22","merge_method":"squash","merge_action":"default","expected_head_sha":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2"}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 193.626208ms
+    - id: 12
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        url: https://api.github.com/repos/test-owner/test-repo/pulls/172/merge-async/c414aa90-f853-4746-ac39-13f27c62ac22
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"status":"merged","details":{"message":"Pull request was merged.","sha":"64adfb2f4b54a69373ea283c80837cc220eb94ba"}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 232.69575ms
+    - id: 13
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 175
+        host: api.github.com
+        body: |
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state,headRefOid}}}","variables":{"ids":["PR_kwDOMVd0xs7-FQFU","PR_kwDOMVd0xs7-FQHm","PR_kwDOMVd0xs7-FQJT"]}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"nodes":[{"state":"MERGED","headRefOid":"cbba7e8dcfec641a88f530c0ccc7c8ce535aeeae"},{"state":"MERGED","headRefOid":"04f50ba691258ef2c136849b1ad0a9e45a6d964a"},{"state":"MERGED","headRefOid":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2"}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 341.735667ms
+    - id: 14
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 131
+        host: api.github.com
+        body: |
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state,headRefOid}}}","variables":{"ids":["PR_kwDOMVd0xs7-FQMA"]}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"nodes":[{"state":"OPEN","headRefOid":"e6ea6d4b4f57a71e97e5a2c3d9d4a8325a56bc77"}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 273.861042ms
+    - id: 15
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 284
+        host: api.github.com
+        body: |
+            {"query":"query($owner:String!,$repo:String!,$pr0:Int!){repository(owner: $owner, name: $repo){pr0:pullRequest(number: $pr0){state,isDraft,baseRefName,headRefName,headRefOid,headRepository{owner{login},name},stack{id}}}}","variables":{"owner":"test-owner","pr0":173,"repo":"test-repo"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"pr0":{"state":"OPEN","isDraft":false,"baseRefName":"divergent-stack-b-9iT5TOLK","headRefName":"divergent-stack-d-HtiSetd4","headRefOid":"e6ea6d4b4f57a71e97e5a2c3d9d4a8325a56bc77","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":null}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 314.393959ms
+    - id: 16
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 139
+        host: api.github.com
+        body: |
+            {"query":"query($id:ID!){node(id: $id){... on PullRequest{mergeable,mergeStateStatus,isDraft}}}","variables":{"id":"PR_kwDOMVd0xs7-FQMA"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"node":{"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","isDraft":false}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 776.866875ms
