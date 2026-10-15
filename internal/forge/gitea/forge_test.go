@@ -44,7 +44,7 @@ func TestForge_URLs(t *testing.T) {
 			remoteURL, err := giturl.Parse("https://gitea.example.com/owner/repo")
 			require.NoError(t, err)
 
-			f, err := (&Definition{Options: tt.opts}).New(remoteURL)
+			f, err := (&Definition{Options: tt.opts}).New(remoteURL, nil)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.wantURL, f.BaseURL())

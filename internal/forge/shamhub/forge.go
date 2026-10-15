@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
@@ -54,15 +55,21 @@ func (d *Definition) BaseURL() string {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs a ShamHub Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
 	if err := forge.ValidateRemoteURL(d.URL, remoteURL); err != nil {
 		return nil, err
 	}
 
+	var httpHeaders []string
+	if opts != nil {
+		httpHeaders = opts.HTTPHeaders
+	}
+
 	return &Forge{
-		Options: d.Options,
-		baseURL: d.BaseURL(),
-		Log:     d.Log,
+		Options:     d.Options,
+		baseURL:     d.BaseURL(),
+		httpHeaders: httpHeaders,
+		Log:         d.Log,
 	}, nil
 }
 
@@ -73,6 +80,9 @@ type Forge struct {
 
 	Options
 	baseURL string
+
+	// httpHeaders are extra header specifications for API requests.
+	httpHeaders []string
 
 	// Log is the logger to use for logging.
 	Log *silog.Logger
@@ -113,8 +123,23 @@ func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 }
 
 // OpenRepository opens the repository that this repository ID points to.
-func (f *Forge) OpenRepository(_ context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
-	return newRepository(f, token.(*AuthenticationToken), id.(*RepositoryID), http.DefaultClient)
+func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.httpHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
+	return newRepository(f, token.(*AuthenticationToken), id.(*RepositoryID),
+		extraheader.Client(http.DefaultClient, headers))
+}
+
+func (f *Forge) logger() *silog.Logger {
+	if f.Log == nil {
+		return silog.Nop()
+	}
+	return f.Log
 }
 
 // newRepository creates a new repository instance with the given HTTP client.

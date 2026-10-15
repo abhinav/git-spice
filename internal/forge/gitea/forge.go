@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	giteagw "go.abhg.dev/gs/internal/gateway/gitea"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
@@ -58,15 +59,21 @@ func (d *Definition) BaseURL() string {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs a Gitea Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
 	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
 		return nil, err
 	}
 
+	var httpHeaders []string
+	if opts != nil {
+		httpHeaders = opts.HTTPHeaders
+	}
+
 	return &Forge{
-		Options: d.Options,
-		baseURL: d.BaseURL(),
-		Log:     d.Log,
+		Options:     d.Options,
+		baseURL:     d.BaseURL(),
+		httpHeaders: httpHeaders,
+		Log:         d.Log,
 	}, nil
 }
 
@@ -76,6 +83,9 @@ type Forge struct {
 
 	Options Options
 	baseURL string
+
+	// httpHeaders are extra header specifications for API requests.
+	httpHeaders []string
 
 	// Log specifies the logger to use.
 	Log *silog.Logger
@@ -132,13 +142,21 @@ func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
 	rid := mustRepositoryID(id)
 
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.httpHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
 	tokenSource, err := newGatewayTokenSource(token.(*AuthenticationToken))
 	if err != nil {
 		return nil, fmt.Errorf("build Gitea token source: %w", err)
 	}
 
 	gc, err := giteagw.NewClient(tokenSource, &giteagw.ClientOptions{
-		BaseURL: f.apiURL(),
+		BaseURL:    f.apiURL(),
+		HTTPClient: extraheader.Client(nil, headers),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create Gitea client: %w", err)

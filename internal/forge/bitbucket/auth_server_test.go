@@ -148,7 +148,7 @@ func TestForge_AuthenticationFlow_missingServerURL(t *testing.T) {
 	_, err = (&Definition{
 		Log:     silog.Nop(),
 		Options: Options{Kind: KindDataCenter},
-	}).New(remoteURL)
+	}).New(remoteURL, nil)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "no Bitbucket Data Center URL configured")
 }

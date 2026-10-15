@@ -33,6 +33,7 @@ func TestResolveForge_explicitForgeWins(t *testing.T) {
 		ui.NewFileView(io.Discard),
 		"gitlab",
 		"github",
+		nil,
 	)
 	require.NoError(t, err)
 
@@ -51,7 +52,7 @@ func TestResolveForge_explicitForgeWithoutRepositoryRemote(t *testing.T) {
 	var forges forge.Registry
 	forges.Register(testDefinition{
 		id: "github",
-		new: func(remoteURL *giturl.URL) (forge.Forge, error) {
+		new: func(remoteURL *giturl.URL, _ *forge.NewOptions) (forge.Forge, error) {
 			gotRemoteURL = remoteURL
 			return github, nil
 		},
@@ -64,6 +65,7 @@ func TestResolveForge_explicitForgeWithoutRepositoryRemote(t *testing.T) {
 		ui.NewFileView(io.Discard),
 		"github",
 		"",
+		nil,
 	)
 	require.NoError(t, err)
 
@@ -91,6 +93,7 @@ func TestResolveForge_configuredKind(t *testing.T) {
 		ui.NewFileView(io.Discard),
 		"",
 		"github",
+		nil,
 	)
 	require.NoError(t, err)
 
@@ -108,6 +111,7 @@ func TestResolveForge_requiresGitRemote(t *testing.T) {
 		ui.NewFileView(io.Discard),
 		"",
 		"",
+		nil,
 	)
 	require.Error(t, err)
 

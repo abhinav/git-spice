@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	"go.abhg.dev/gs/internal/gateway/gitlab"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
@@ -71,15 +72,21 @@ func (d *Definition) BaseURL() string {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs a GitLab Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
 	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
 		return nil, err
 	}
 
+	var httpHeaders []string
+	if opts != nil {
+		httpHeaders = opts.HTTPHeaders
+	}
+
 	return &Forge{
-		Options: d.Options,
-		baseURL: d.BaseURL(),
-		Log:     d.Log,
+		Options:     d.Options,
+		baseURL:     d.BaseURL(),
+		httpHeaders: httpHeaders,
+		Log:         d.Log,
 	}, nil
 }
 
@@ -89,6 +96,9 @@ type Forge struct {
 
 	Options Options
 	baseURL string
+
+	// httpHeaders are extra header specifications for API requests.
+	httpHeaders []string
 
 	// Log specifies the logger to use.
 	Log *silog.Logger
@@ -142,12 +152,22 @@ func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
 	rid := mustRepositoryID(id)
 
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.httpHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
 	tokenSource, err := newGatewayTokenSource(token.(*AuthenticationToken))
 	if err != nil {
 		return nil, fmt.Errorf("build GitLab token source: %w", err)
 	}
 
-	glc, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{BaseURL: f.APIURL()})
+	glc, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{
+		BaseURL:    f.APIURL(),
+		HTTPClient: extraheader.Client(nil, headers),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}

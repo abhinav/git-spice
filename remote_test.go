@@ -100,7 +100,7 @@ func TestRemoteResolver_Resolve_configuredKindConstructsWithResolvedURL(t *testi
 	var forges forge.Registry
 	forges.Register(testDefinition{
 		id: "github",
-		new: func(remoteURL *giturl.URL) (forge.Forge, error) {
+		new: func(remoteURL *giturl.URL, _ *forge.NewOptions) (forge.Forge, error) {
 			gotRemoteURL = remoteURL
 			return testForge, nil
 		},
@@ -174,7 +174,7 @@ func TestResolveRemoteRepository_unsupportedRecommendsForgeKind(t *testing.T) {
 func registerTestForge(r *forge.Registry, id string, f forge.Forge) {
 	r.Register(testDefinition{
 		id: id,
-		new: func(*giturl.URL) (forge.Forge, error) {
+		new: func(*giturl.URL, *forge.NewOptions) (forge.Forge, error) {
 			return f, nil
 		},
 	})
@@ -182,7 +182,7 @@ func registerTestForge(r *forge.Registry, id string, f forge.Forge) {
 
 type testDefinition struct {
 	id  string
-	new func(*giturl.URL) (forge.Forge, error)
+	new func(*giturl.URL, *forge.NewOptions) (forge.Forge, error)
 }
 
 func (d testDefinition) ID() string { return d.id }
@@ -199,8 +199,8 @@ func (testDefinition) UnmarshalChangeMetadata(jsontext.Value) (forge.ChangeMetad
 	return nil, nil
 }
 
-func (d testDefinition) New(remoteURL *giturl.URL) (forge.Forge, error) {
-	return d.new(remoteURL)
+func (d testDefinition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	return d.new(remoteURL, opts)
 }
 
 type remoteURLMap map[string]string

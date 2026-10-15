@@ -35,7 +35,8 @@ func (c *authCmd) AfterApply(
 	cmd *mainCmd,
 	view ui.View,
 ) error {
-	f, err := resolveForge(ctx, forges, log, view, c.Forge, cmd.Forge.Kind)
+	f, err := resolveForge(ctx, forges, log, view, c.Forge,
+		cmd.Forge.Kind, cmd.Forge.HTTPHeaders)
 	if err != nil {
 		return err
 	}
@@ -56,7 +57,10 @@ func resolveForge(
 	view ui.View,
 	forgeID string,
 	configuredKind string,
+	httpHeaders []string,
 ) (forge.Forge, error) {
+	newOpts := &forge.NewOptions{HTTPHeaders: httpHeaders}
+
 	if wantForge := cmp.Or(forgeID, configuredKind); wantForge != "" {
 		d, ok := forges.Lookup(wantForge)
 		if !ok {
@@ -78,7 +82,7 @@ func resolveForge(
 			}
 		}
 
-		f, err := d.New(remoteURL)
+		f, err := d.New(remoteURL, newOpts)
 		if err != nil {
 			return nil, fmt.Errorf("construct forge %q: %w", wantForge, err)
 		}
@@ -90,7 +94,7 @@ func resolveForge(
 		return nil, err
 	}
 
-	f, _, ok := forge.InferFromRemoteURL(forges, remoteURL)
+	f, _, ok := forge.InferFromRemoteURL(forges, remoteURL, newOpts)
 	if ok {
 		return f, nil
 	}
@@ -108,7 +112,7 @@ func resolveForge(
 
 	// If there's only one known Forge, there's no need to prompt.
 	if len(opts) == 1 {
-		return opts[0].Value.New(remoteURL)
+		return opts[0].Value.New(remoteURL, newOpts)
 	}
 
 	if !ui.Interactive(view) {
@@ -126,7 +130,7 @@ func resolveForge(
 	if err != nil {
 		return nil, err
 	}
-	return selected.New(remoteURL)
+	return selected.New(remoteURL, newOpts)
 }
 
 func currentRemoteURL(ctx context.Context, log *silog.Logger) (*giturl.URL, string, error) {

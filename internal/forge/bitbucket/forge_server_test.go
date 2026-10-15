@@ -184,7 +184,7 @@ func TestForge_OpenRepository_requiresURL(t *testing.T) {
 	remoteURL, err := giturl.Parse("https://bitbucket.org/ws/repo.git")
 	require.NoError(t, err)
 
-	_, err = (&Definition{Options: Options{Kind: KindDataCenter}}).New(remoteURL)
+	_, err = (&Definition{Options: Options{Kind: KindDataCenter}}).New(remoteURL, nil)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "no Bitbucket Data Center URL configured")
 }

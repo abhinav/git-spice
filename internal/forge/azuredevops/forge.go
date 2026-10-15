@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	"go.abhg.dev/gs/internal/gateway/azuredevops"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
@@ -74,15 +75,21 @@ func (d *Definition) MatchesRemoteURL(remoteURL *giturl.URL) bool {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs an Azure DevOps Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
 	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
 		return nil, err
+	}
+
+	var httpHeaders []string
+	if opts != nil {
+		httpHeaders = opts.HTTPHeaders
 	}
 
 	return &Forge{
 		Options:            d.Options,
 		baseURL:            d.BaseURL(),
 		legacyOrganization: legacyOrganization(remoteURL),
+		httpHeaders:        httpHeaders,
 		Log:                d.Log,
 	}, nil
 }
@@ -94,6 +101,9 @@ type Forge struct {
 	Options            Options
 	baseURL            string
 	legacyOrganization string
+
+	// httpHeaders are extra header specifications for API requests.
+	httpHeaders []string
 
 	// Log specifies the logger to use.
 	Log *silog.Logger
@@ -169,6 +179,13 @@ func (f *Forge) OpenRepository(
 	rid := mustRepositoryID(id)
 	adt := tok.(*AuthenticationToken)
 
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.httpHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
 	// For Azure CLI auth, refresh the token
 	// by calling 'az account get-access-token'.
 	// Azure CLI tokens expire after ~1 hour,
@@ -202,7 +219,10 @@ func (f *Forge) OpenRepository(
 	// not just the base URL.
 	orgURL := f.URL() + "/" + rid.organization
 	gateway, err := azuredevops.NewGateway(
-		ctx, orgURL, gatewayAuthentication(adt), adt.AccessToken, nil,
+		ctx, orgURL, gatewayAuthentication(adt), adt.AccessToken,
+		&azuredevops.Options{
+			HTTPClient: extraheader.Client(nil, headers),
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create Azure DevOps client: %w", err)
