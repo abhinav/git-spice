@@ -29,8 +29,7 @@ stderr 'Drafted comment 2 on main.go'
 
 # Text and JSON output preserve each draft's complete anchor.
 gs review list --draft-only
-stderr 'main\.go:4-5'
-stderr 'main\.go$'
+cmp stdout $WORK/golden/drafts.txt
 gs review list --draft-only --json
 cmp stdout $WORK/golden/drafts.ndjson
 
@@ -47,6 +46,20 @@ func main() {
 	println("hello")
 	println("world")
 }
+-- golden/drafts.txt --
+Draft comments
+
+  1  main.go:4-5
+      1 | package main
+      2 |
+      3 | func main() {
+    > 4 | 	println("hello")
+    > 5 | 	println("world")
+      6 | }
+    Range draft.
+
+  2  main.go
+    File draft.
 -- golden/drafts.ndjson --
 {"kind":"draft","id":"1","scope":"line","path":"main.go","line":4,"range":{"start":4,"end":5},"side":"right","body":"Range draft."}
 {"kind":"draft","id":"2","scope":"file","path":"main.go","body":"File draft."}

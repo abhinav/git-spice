@@ -92,6 +92,7 @@ func updateNavigationComments(
 	navCommentSync NavCommentSync,
 	navCommentDownstack NavCommentDownstack,
 	navCommentMarker string,
+	navCommentLayout string,
 	navCommentTrunkLink NavCommentTrunkLink,
 	navCommentTrunkLinkText string,
 	submittedBranches []string,
@@ -115,8 +116,6 @@ func updateNavigationComments(
 	// Forges like GitHub auto-link "#123" and need no formatter.
 	// GitLab implements WithNavigationReference to append "+" so the MR
 	// title is rendered inline.
-	// Bitbucket doesn't auto-link "#123", so WithChangeURL wraps the
-	// reference in an explicit markdown link.
 	var urlFormatter func(forge.ChangeID) string
 	switch r := remoteRepo.(type) {
 	case forge.WithNavigationReference:
@@ -148,6 +147,11 @@ func updateNavigationComments(
 		trunkLinkText = _defaultTrunkComparisonLinkText
 	}
 	trunk := store.Trunk()
+	printOpts := &stacknav.PrintOptions{Marker: navCommentMarker}
+	if navCommentLayout == "simple" {
+		printOpts.Simple = true
+		printOpts.Trunk = trunk
+	}
 
 	// Look up branch graph once, and share between all syncs.
 	trackedBranches, err := svc.LoadBranches(ctx)
@@ -436,7 +440,7 @@ func updateNavigationComments(
 		info := infos[idx]
 		head := cmp.Or(info.UpstreamBranch, info.Branch)
 		trunkLink := trunkLinks.link(nodes[idx], head)
-		commentBody := generateStackNavigationComment(nodes, idx, navCommentMarker, remoteRepo.Forge(), trunkLink)
+		commentBody := generateStackNavigationComment(nodes, idx, printOpts, remoteRepo.Forge(), trunkLink)
 		if info.Meta.NavigationCommentID() == nil {
 			postc <- &postComment{
 				Branch: info.Branch,
@@ -580,7 +584,7 @@ var _navCommentRegexes = []*regexp.Regexp{
 func generateStackNavigationComment(
 	nodes []*stackedChange,
 	current int,
-	marker string,
+	printOpts *stacknav.PrintOptions,
 	f forge.Forge,
 	trunkLink string,
 ) string {
@@ -600,11 +604,7 @@ func generateStackNavigationComment(
 	sb.WriteString(_commentHeader)
 	sb.WriteString("\n\n")
 
-	var opts *stacknav.PrintOptions
-	if marker != "" {
-		opts = &stacknav.PrintOptions{Marker: marker}
-	}
-	stacknav.Print(&sb, nodes, current, opts)
+	stacknav.Print(&sb, nodes, current, printOpts)
 
 	// The trunk comparison link, if any, goes in its own paragraph
 	// between the stack listing and the footer.

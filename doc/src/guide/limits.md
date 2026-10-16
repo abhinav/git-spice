@@ -175,7 +175,7 @@ These are platform limitations, not git-spice limitations.
 
 ## Azure DevOps limitations
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.32.0 -->
 
 Azure DevOps support has some limitations
 compared to GitHub and GitLab:

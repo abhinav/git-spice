@@ -39,6 +39,31 @@ func TestRepository_ChangeURL(t *testing.T) {
 		repo.ChangeURL(&PR{Number: 42}))
 }
 
+func TestRepository_NavigationReference(t *testing.T) {
+	newRepo := func(t *testing.T, kind Kind) *Repository {
+		mockGateway := NewMockGateway(gomock.NewController(t))
+		mockGateway.EXPECT().
+			ChangeURL(int64(42)).
+			Return("https://example.com/pr/42")
+
+		return newRepository(&Forge{kind: kind}, silog.Nop(), mockGateway)
+	}
+
+	t.Run("Cloud", func(t *testing.T) {
+		repo := newRepo(t, KindCloud)
+		assert.Equal(t,
+			"[#42](https://example.com/pr/42){: data-inline-card='' }",
+			repo.NavigationReference(&PR{Number: 42}))
+	})
+
+	t.Run("DataCenter", func(t *testing.T) {
+		repo := newRepo(t, KindDataCenter)
+		assert.Equal(t,
+			"[#42](https://example.com/pr/42)",
+			repo.NavigationReference(&PR{Number: 42}))
+	})
+}
+
 func TestRepository_NewChangeMetadata(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 

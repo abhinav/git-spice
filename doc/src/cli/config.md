@@ -323,7 +323,7 @@ environment variable.
 
 ### spice.forge.azuredevops.url
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.32.0 -->
 
 Base URL of the Azure DevOps instance used for Azure DevOps requests.
 Defaults to `$AZURE_DEVOPS_URL` if set,
@@ -785,7 +785,7 @@ This option has no effect when $$spice.restack.method$$ is `rebase`.
 
 ### spice.reviewComment.draft
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.32.0 -->
 
 Whether $$gs review comment$$ and $$gs review reply$$ save comments as local
 drafts or post them immediately by default.
@@ -1007,6 +1007,37 @@ This will render navigation comments like:
         - #125
 ```
 
+### spice.submit.navigationCommentStyle.layout
+
+<!-- gs:version v0.32.0 -->
+
+Specifies how navigation comments lay out the stack.
+
+**Accepted values:**
+
+- `tree` (*default*):
+  list the stack from the bottom up, indenting each change.
+- `simple`:
+  list the stack from the top down with no indentation,
+  ending with the trunk branch.
+  If the stack forks above the change,
+  that comment uses the `tree` layout instead.
+
+**Example:**
+
+```bash
+git config spice.submit.navigationCommentStyle.layout simple
+```
+
+This will render navigation comments like:
+
+```
+- #125
+- #124 ◀
+- #123
+- `main`
+```
+
 ### spice.submit.navigationComment.downstack
 
 <!-- gs:version v0.20.0 -->
@@ -1027,7 +1058,7 @@ are included in navigation comments posted to CRs.
 
 ### spice.submit.navigationComment.trunkComparison
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.32.0 -->
 
 Whether navigation comments should include a link
 comparing a CR's branch against the trunk branch,
@@ -1051,7 +1082,7 @@ if the forge can construct comparison URLs
 
 ### spice.submit.navigationCommentStyle.trunkComparisonText
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.32.0 -->
 
 Text to use for the trunk comparison link
 enabled by [`spice.submit.navigationComment.trunkComparison`](#spicesubmitnavigationcommenttrunkcomparison).
@@ -1165,7 +1196,7 @@ The branch will remain on the system.
 
 ### spice.repoSync.detachWorktrees
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.32.0 -->
 
 Whether $$gs repo sync$$ detaches other worktrees
 before deleting their merged branches.

@@ -1,15 +1,13 @@
-# List comments on a change request.
+# List local drafts and published review threads.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
 
-# setup
 cd repo
 git init
 git commit --allow-empty -m 'Initial commit'
 gs repo init
 
-# set up a fake GitHub remote
 shamhub-setup
 shamhub new origin alice/example.git
 shamhub register alice
@@ -18,32 +16,134 @@ git push origin main
 env SHAMHUB_USERNAME=alice
 gs auth login
 
-# create a branch with a file and submit it
 git add main.go
 gs bc -m 'Add main' feature1
 gs branch submit --fill
 stderr 'Created #'
 
-# add an inline comment so there is something to list
-gs review comment main.go:3 -m 'Consider using a constant.' --no-draft
-stderr 'Posted comment'
+# Root drafts are listed separately, including file-level drafts.
+gs review comment main.go:4 -m 'Use a helper here.'
+stderr 'Drafted comment 1'
+gs review comment main.go -m 'Consider splitting this file.'
+stderr 'Drafted comment 2'
 
-# list should show the comment
+# Published replies and local draft replies remain grouped with their thread.
+shamhub review comment post --id 100 --author alice --path main.go --range 5:12 --side right --resolved --outdated alice/example 1 'This block is doing too much.'
+stdout '100'
+shamhub review comment reply --id 101 --author bob alice/example 1 thread-100 'Agreed. I would extract it.'
+stdout '101'
+gs review reply thread-100 -m 'I will send a follow-up.'
+stderr 'Drafted reply 3'
+
+# File-level threads do not show source excerpts.
+shamhub review comment post --id 200 --author carol --path main.go alice/example 1 'The file name is too broad.'
+stdout '200'
+
 gs review list
-cmp stderr $WORK/golden/list.txt
+cmp stdout $WORK/golden/list.txt
 
-# list on a branch with no CR should say so
+# Draft-only output retains the thread that owns a pending draft reply.
+gs review list --draft-only
+cmp stdout $WORK/golden/draft-only.txt
+
+# A branch without a change request still reports that fact as a diagnostic.
 gs bc -m 'Another branch' feature2
 gs review list
+cmp stdout $WORK/golden/no-comments.txt
 stderr 'No change request'
 
 -- repo/main.go --
 package main
 
+import "fmt"
+
 func main() {
-	println("hello")
+	message := greeting()
+	fmt.Println(message)
+}
+
+func greeting() string {
+	return "hello"
+}
+
+func farewell() string {
+	return "goodbye"
 }
 -- golden/list.txt --
-INF Comments:
-INF   2            main.go:3  alice  open [thread-2]
-INF     Consider using a constant.
+Draft comments
+
+  1  main.go:4
+      1 | package main
+      2 |
+      3 | import "fmt"
+    > 4 |
+      5 | func main() {
+      6 | 	message := greeting()
+      7 | 	fmt.Println(message)
+    Use a helper here.
+
+  2  main.go
+    Consider splitting this file.
+
+Review threads
+
+  thread-100  main.go:5-12  [resolved, outdated]
+       2 |
+       3 | import "fmt"
+       4 |
+    >  5 | func main() {
+    >  6 | 	message := greeting()
+    >  7 | 	fmt.Println(message)
+         | ...
+    > 10 | func greeting() string {
+    > 11 | 	return "hello"
+    > 12 | }
+      13 |
+      14 | func farewell() string {
+      15 | 	return "goodbye"
+    alice:
+      This block is doing too much.
+    bob:
+      Agreed. I would extract it.
+    draft 3:
+      I will send a follow-up.
+
+  thread-200  main.go
+    carol:
+      The file name is too broad.
+-- golden/draft-only.txt --
+Draft comments
+
+  1  main.go:4
+      1 | package main
+      2 |
+      3 | import "fmt"
+    > 4 |
+      5 | func main() {
+      6 | 	message := greeting()
+      7 | 	fmt.Println(message)
+    Use a helper here.
+
+  2  main.go
+    Consider splitting this file.
+
+Review threads
+
+  thread-100  main.go:5-12  [resolved, outdated]
+       2 |
+       3 | import "fmt"
+       4 |
+    >  5 | func main() {
+    >  6 | 	message := greeting()
+    >  7 | 	fmt.Println(message)
+         | ...
+    > 10 | func greeting() string {
+    > 11 | 	return "hello"
+    > 12 | }
+      13 |
+      14 | func farewell() string {
+      15 | 	return "goodbye"
+    draft 3:
+      I will send a follow-up.
+-- golden/no-comments.txt --
+No review comments on feature2.

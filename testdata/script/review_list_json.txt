@@ -38,7 +38,7 @@ stdout '"status":"open"'
 
 # text mode shows the full body without truncation
 gs review list
-stderr 'Consider using a constant here because it would make the code much more maintainable and readable.'
+cmp stdout $WORK/golden/list.txt
 
 # draft a comment
 gs review comment main.go:5 -m 'Add error handling here.'
@@ -60,5 +60,17 @@ func main() {
 	println("hello")
 }
 
+-- golden/list.txt --
+Review threads
+
+  thread-2  main.go:3
+      1 | package main
+      2 |
+    > 3 | func main() {
+      4 | 	println("hello")
+      5 | }
+      6 |
+    alice:
+      Consider using a constant here because it would make the code much more maintainable and readable.
 -- golden/draft_only.json --
 {"kind":"draft","id":"1","scope":"line","path":"main.go","line":5,"side":"right","body":"Add error handling here."}

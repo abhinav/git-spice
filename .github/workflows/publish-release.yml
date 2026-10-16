@@ -172,7 +172,7 @@ jobs:
         fi
 
     - name: Update Homebrew Formula
-      uses: dawidd6/action-homebrew-bump-formula@v7
+      uses: dawidd6/action-homebrew-bump-formula@b12d2bc99c46444125e606142f28200ec71a1214 # v10
       if: inputs.skip_homebrew == false
       with:
         token: ${{ secrets.ROBOT_PAT }}

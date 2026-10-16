@@ -52,6 +52,7 @@ type ThreadHandler struct {
 type Worktree interface {
 	OpenBranchDiff(context.Context, string, string) (io.ReadCloser, error)
 	OpenCommitDiff(context.Context, string, string) (io.ReadCloser, error)
+	OpenFileAt(context.Context, git.Hash, string) (io.ReadCloser, error)
 	PeelToCommit(context.Context, string) (git.Hash, error)
 }
 

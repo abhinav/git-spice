@@ -99,6 +99,103 @@ func TestPrinter(t *testing.T) {
 	}
 }
 
+func TestPrinter_simple(t *testing.T) {
+	tests := []struct {
+		name    string
+		graph   []Item
+		current int
+		trunk   string
+		want    string
+	}{
+		{
+			name:    "Single",
+			graph:   []Item{{value: "#123", base: -1}},
+			current: 0,
+			trunk:   "main",
+			want: joinLines(
+				"- #123 ◀",
+				"- `main`",
+			),
+		},
+		{
+			name: "MidStack",
+			graph: []Item{
+				{value: "#123", base: -1},
+				{value: "#124", base: 0},
+				{value: "#125", base: 1},
+			},
+			current: 1,
+			trunk:   "trunk",
+			want: joinLines(
+				"- #125",
+				"- #124 ◀",
+				"- #123",
+				"- `trunk`",
+			),
+		},
+		{
+			name: "NoTrunk",
+			graph: []Item{
+				{value: "#123", base: -1},
+				{value: "#124", base: 0},
+			},
+			current: 1,
+			want: joinLines(
+				"- #124 ◀",
+				"- #123",
+			),
+		},
+		{
+			// Forks above the current change fall back to the tree layout.
+			name: "Fork",
+			graph: []Item{
+				{value: "#123", base: -1}, // 0
+				{value: "#124", base: 0},  // 1
+				{value: "#125", base: 0},  // 2
+				{value: "#126", base: 1},  // 3
+			},
+			current: 0,
+			trunk:   "main",
+			want: joinLines(
+				"- #123 ◀",
+				"    - #124",
+				"        - #126",
+				"    - #125",
+			),
+		},
+		{
+			// Forks off the downstack aren't shown,
+			// so they don't prevent the simple layout.
+			name: "DownstackFork",
+			graph: []Item{
+				{value: "#123", base: -1}, // 0
+				{value: "#124", base: 0},  // 1
+				{value: "#125", base: 0},  // 2
+				{value: "#126", base: 1},  // 3
+			},
+			current: 3,
+			trunk:   "main",
+			want: joinLines(
+				"- #126 ◀",
+				"- #124",
+				"- #123",
+				"- `main`",
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got strings.Builder
+			Print(&got, tt.graph, tt.current, &PrintOptions{
+				Simple: true,
+				Trunk:  tt.trunk,
+			})
+			assert.Equal(t, tt.want, got.String())
+		})
+	}
+}
+
 type Item struct {
 	value string
 	base  int
