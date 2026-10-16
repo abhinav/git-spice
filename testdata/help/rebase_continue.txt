@@ -1,6 +1,6 @@
 Usage: gs rebase (rb) continue (c) [flags]
 
-Continue an interrupted operation
+Continue an interrupted operation (rebase or merge)
 
 Continues an ongoing git-spice operation interrupted by a git rebase after
 all conflicts have been resolved. For example, if 'gs upstack restack' gets

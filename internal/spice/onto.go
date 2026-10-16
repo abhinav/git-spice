@@ -131,14 +131,28 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	}
 
 	if rebaseBranch {
-		if err := s.wt.Rebase(ctx, git.RebaseRequest{
-			Branch:    req.Branch,
-			Upstream:  string(fromHash),
-			Onto:      ontoHash.String(),
-			Autostash: true,
-			Quiet:     true, // TODO: if verbose, disable this
-		}); err != nil {
-			return fmt.Errorf("rebase: %w", err)
+		switch s.restackMethod {
+		case RestackMethodRebase:
+			if err := s.wt.Rebase(ctx, git.RebaseRequest{
+				Branch:    req.Branch,
+				Upstream:  string(fromHash),
+				Onto:      ontoHash.String(),
+				Autostash: true,
+				Quiet:     true, // TODO: if verbose, disable this
+			}); err != nil {
+				return fmt.Errorf("rebase: %w", err)
+			}
+
+		case RestackMethodMerge:
+			// fromHash only matters for rebase.
+			// If ontoHash is already in the branch, the merge is a no-op,
+			// but the state update below still applies.
+			if err := s.mergeIntoBranch(ctx, req.Branch, req.Onto, ontoHash); err != nil {
+				return err
+			}
+
+		default:
+			must.Failf("unknown restack method: %v", s.restackMethod)
 		}
 	}
 
