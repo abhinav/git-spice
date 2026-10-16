@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	"go.abhg.dev/gs/internal/gateway/gitlab"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
@@ -41,6 +42,11 @@ type Options struct {
 	// RemoveSourceBranch specifies whether a branch should be deleted
 	// after its Merge Request is merged.
 	RemoveSourceBranch bool `name:"gitlab-remove-source-branch" hidden:"" config:"forge.gitlab.removeSourceBranch" default:"true" help:"Remove source branch after merging a merge request"`
+
+	// HTTPHeaders are extra HTTP headers to attach to API requests.
+	// Values take the form "Name: value",
+	// or "Name: !command" to source the value from a command's stdout.
+	HTTPHeaders []string `name:"gitlab-http-header" hidden:"" config:"forge.gitlab.httpHeader" sep:"\n" help:"Extra HTTP headers for API requests"`
 }
 
 // Definition configures GitLab forge instances.
@@ -142,12 +148,22 @@ func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
 	rid := mustRepositoryID(id)
 
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.Options.HTTPHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
 	tokenSource, err := newGatewayTokenSource(token.(*AuthenticationToken))
 	if err != nil {
 		return nil, fmt.Errorf("build GitLab token source: %w", err)
 	}
 
-	glc, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{BaseURL: f.APIURL()})
+	glc, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{
+		BaseURL:    f.APIURL(),
+		HTTPClient: extraheader.Client(nil, headers),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}

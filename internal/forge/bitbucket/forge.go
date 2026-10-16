@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	"go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/gateway/bitbucket/cloud"
 	"go.abhg.dev/gs/internal/gateway/bitbucket/server"
@@ -108,12 +109,13 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 	}
 
 	return &Forge{
-		baseURL: baseURL,
-		apiURL:  apiURL,
-		kind:    kind,
-		token:   options.Token,
-		product: product,
-		Log:     d.Log,
+		baseURL:     baseURL,
+		apiURL:      apiURL,
+		kind:        kind,
+		token:       options.Token,
+		httpHeaders: options.HTTPHeaders,
+		product:     product,
+		Log:         d.Log,
 	}, nil
 }
 
@@ -121,11 +123,12 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 type Forge struct {
 	changeMetadataCodec
 
-	baseURL string
-	apiURL  string
-	kind    Kind
-	token   string
-	product bitbucketProduct
+	baseURL     string
+	apiURL      string
+	kind        Kind
+	token       string
+	httpHeaders []string
+	product     bitbucketProduct
 
 	// Log specifies the logger to use.
 	Log *silog.Logger
@@ -182,7 +185,18 @@ func (f *Forge) OpenRepository(
 	id forge.RepositoryID,
 ) (forge.Repository, error) {
 	tok := token.(*AuthenticationToken)
-	gateway, err := f.product.openGateway(ctx, tok, mustRepositoryID(id))
+
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.httpHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
+	gateway, err := f.product.openGateway(
+		ctx, tok, mustRepositoryID(id),
+		extraheader.Client(nil, headers),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +209,15 @@ func (f *Forge) OpenRepository(
 // selected during Definition.New.
 type bitbucketProduct interface {
 	parseRepositoryPath(path string) (*RepositoryID, error)
-	openGateway(context.Context, *AuthenticationToken, *RepositoryID) (bitbucket.Gateway, error)
+
+	// openGateway builds the product's gateway for the given repository.
+	// httpClient attaches extra HTTP headers to API requests; may be nil.
+	openGateway(
+		context.Context,
+		*AuthenticationToken,
+		*RepositoryID,
+		*http.Client,
+	) (bitbucket.Gateway, error)
 }
 
 type bitbucketCloudProduct struct {
@@ -222,6 +244,7 @@ func (p bitbucketCloudProduct) openGateway(
 	_ context.Context,
 	tok *AuthenticationToken,
 	rid *RepositoryID,
+	httpClient *http.Client,
 ) (bitbucket.Gateway, error) {
 	var ctok *cloud.Token
 	if tok != nil {
@@ -231,7 +254,7 @@ func (p bitbucketCloudProduct) openGateway(
 	return cloud.New(
 		p.apiURL, p.baseURL,
 		rid.workspace, rid.name,
-		p.log, ctok, http.DefaultClient,
+		p.log, ctok, httpClient,
 	)
 }
 
@@ -281,6 +304,7 @@ func (p bitbucketDataCenterProduct) openGateway(
 	_ context.Context,
 	tok *AuthenticationToken,
 	rid *RepositoryID,
+	httpClient *http.Client,
 ) (bitbucket.Gateway, error) {
 	var stok *server.Token
 	if tok != nil {
@@ -290,7 +314,7 @@ func (p bitbucketDataCenterProduct) openGateway(
 	return server.New(
 		p.apiURL, rid.url,
 		rid.projectKey, rid.slug, rid.personal,
-		p.log, stok,
+		p.log, stok, httpClient,
 	)
 }
 

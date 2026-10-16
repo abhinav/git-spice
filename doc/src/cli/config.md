@@ -329,6 +329,15 @@ Base URL of the Azure DevOps instance used for Azure DevOps requests.
 Defaults to `$AZURE_DEVOPS_URL` if set,
 or `https://dev.azure.com` otherwise.
 
+### spice.forge.azuredevops.httpHeader
+
+<!-- gs:version unreleased -->
+
+Extra HTTP headers to attach to Azure DevOps API requests.
+Repeat the option once per header.
+
+See [Extra HTTP headers](../setup/auth.md#extra-http-headers).
+
 ### spice.forge.github.apiUrl
 
 URL at which the GitHub API is available.
@@ -343,6 +352,15 @@ URL of the GitHub instance used for GitHub requests.
 Defaults to `$GITHUB_URL` if set, or `https://github.com` otherwise.
 
 See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
+
+### spice.forge.github.httpHeader
+
+<!-- gs:version unreleased -->
+
+Extra HTTP headers to attach to GitHub API requests.
+Repeat the option once per header.
+
+See [Extra HTTP headers](../setup/auth.md#extra-http-headers).
 
 ### spice.forge.bitbucket.apiURL
 
@@ -396,6 +414,15 @@ Set $$spice.forge.bitbucket.kind$$ to `cloud` to keep the Cloud API.
 See also
 [Bitbucket Data Center / Server](../setup/auth.md#bitbucket-data-center-server).
 
+### spice.forge.bitbucket.httpHeader
+
+<!-- gs:version unreleased -->
+
+Extra HTTP headers to attach to Bitbucket API requests.
+Repeat the option once per header.
+
+See [Extra HTTP headers](../setup/auth.md#extra-http-headers).
+
 ### spice.forge.gitlab.url
 
 <!-- gs:version v0.9.0 -->
@@ -438,6 +465,15 @@ Whether to remove the source branch when a Merge Request is merged.
 - `true` (default)
 - `false`
 
+### spice.forge.gitlab.httpHeader
+
+<!-- gs:version unreleased -->
+
+Extra HTTP headers to attach to GitLab API requests.
+Repeat the option once per header.
+
+See [Extra HTTP headers](../setup/auth.md#extra-http-headers).
+
 ### spice.forge.gitea.apiURL
 
 <!-- gs:version v0.30.0 -->
@@ -464,6 +500,15 @@ for git-spice to detect and connect to your instance.
 
 See also [Gitea](../setup/auth.md#gitea).
 
+### spice.forge.gitea.httpHeader
+
+<!-- gs:version unreleased -->
+
+Extra HTTP headers to attach to Gitea API requests.
+Repeat the option once per header.
+
+See [Extra HTTP headers](../setup/auth.md#extra-http-headers).
+
 ### spice.forge.forgejo.apiURL
 
 <!-- gs:version v0.30.0 -->
@@ -483,6 +528,15 @@ Defaults to `$FORGEJO_URL` if set,
 or `https://codeberg.org` otherwise.
 
 See also [Forgejo](../setup/auth.md#forgejo).
+
+### spice.forge.forgejo.httpHeader
+
+<!-- gs:version unreleased -->
+
+Extra HTTP headers to attach to Forgejo API requests.
+Repeat the option once per header.
+
+See [Extra HTTP headers](../setup/auth.md#extra-http-headers).
 
 ### spice.git.indexLockTimeout
 

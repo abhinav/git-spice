@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	giteagw "go.abhg.dev/gs/internal/gateway/gitea"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
@@ -28,6 +29,11 @@ type Options struct {
 	// Token is a fixed token used to authenticate with Gitea.
 	// This may be used to skip the login flow.
 	Token string `name:"gitea-token" hidden:"" env:"GITEA_TOKEN" help:"Gitea API token"`
+
+	// HTTPHeaders are extra HTTP headers to attach to API requests.
+	// Values take the form "Name: value",
+	// or "Name: !command" to source the value from a command's stdout.
+	HTTPHeaders []string `name:"gitea-http-header" hidden:"" config:"forge.gitea.httpHeader" sep:"\n" help:"Extra HTTP headers for API requests"`
 }
 
 // Definition configures Gitea forge instances.
@@ -132,13 +138,21 @@ func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
 	rid := mustRepositoryID(id)
 
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.Options.HTTPHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
 	tokenSource, err := newGatewayTokenSource(token.(*AuthenticationToken))
 	if err != nil {
 		return nil, fmt.Errorf("build Gitea token source: %w", err)
 	}
 
 	gc, err := giteagw.NewClient(tokenSource, &giteagw.ClientOptions{
-		BaseURL: f.apiURL(),
+		BaseURL:    f.apiURL(),
+		HTTPClient: extraheader.Client(nil, headers),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create Gitea client: %w", err)

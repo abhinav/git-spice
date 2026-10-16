@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/extraheader"
 	"go.abhg.dev/gs/internal/gateway/forgejo"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
@@ -33,6 +34,11 @@ type Options struct {
 	// Token is a fixed token used to authenticate with Forgejo.
 	// This may be used to skip the login flow.
 	Token string `name:"forgejo-token" hidden:"" env:"FORGEJO_TOKEN" help:"Forgejo API token"`
+
+	// HTTPHeaders are extra HTTP headers to attach to API requests.
+	// Values take the form "Name: value",
+	// or "Name: !command" to source the value from a command's stdout.
+	HTTPHeaders []string `name:"forgejo-http-header" hidden:"" config:"forge.forgejo.httpHeader" sep:"\n" help:"Extra HTTP headers for API requests"`
 }
 
 // Definition configures Forgejo forge instances.
@@ -139,13 +145,21 @@ func (f *Forge) OpenRepository(
 ) (forge.Repository, error) {
 	rid := mustRepositoryID(id)
 
+	log := f.logger()
+	headers, err := extraheader.Resolve(ctx,
+		f.Options.HTTPHeaders, extraheader.ExecRunner(log), log)
+	if err != nil {
+		return nil, fmt.Errorf("resolve extra HTTP headers: %w", err)
+	}
+
 	tokenSource, err := newGatewayTokenSource(token.(*AuthenticationToken))
 	if err != nil {
 		return nil, fmt.Errorf("build Forgejo token source: %w", err)
 	}
 
 	client, err := forgejo.NewClient(tokenSource, &forgejo.ClientOptions{
-		BaseURL: f.APIURL(),
+		BaseURL:    f.APIURL(),
+		HTTPClient: extraheader.Client(nil, headers),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create Forgejo client: %w", err)

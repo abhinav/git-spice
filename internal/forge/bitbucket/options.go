@@ -27,4 +27,9 @@ type Options struct {
 	// Kind selects the Bitbucket product.
 	// If unset, the product is inferred from URL.
 	Kind Kind `name:"bitbucket-kind" hidden:"" config:"forge.bitbucket.kind" env:"BITBUCKET_KIND" help:"Bitbucket product"`
+
+	// HTTPHeaders are extra HTTP headers to attach to API requests.
+	// Values take the form "Name: value",
+	// or "Name: !command" to source the value from a command's stdout.
+	HTTPHeaders []string `name:"bitbucket-http-header" hidden:"" config:"forge.bitbucket.httpHeader" sep:"\n" help:"Extra HTTP headers for API requests"`
 }
