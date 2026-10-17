@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/http"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/gitlab"
@@ -71,21 +72,32 @@ func (d *Definition) BaseURL() string {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs a GitLab Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	opts = cmp.Or(opts, &forge.NewOptions{})
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
 		return nil, err
 	}
 
 	return &Forge{
-		Options: d.Options,
-		baseURL: d.BaseURL(),
-		Log:     d.Log,
+		HTTPClient: httpClient,
+		Options:    d.Options,
+		baseURL:    d.BaseURL(),
+		Log:        d.Log,
 	}, nil
 }
 
 // Forge provides a GitLab forge instance.
 type Forge struct {
 	changeMetadataCodec
+
+	// HTTPClient sends API and authentication requests.
+	// If nil, the default HTTP client is used.
+	HTTPClient *http.Client
 
 	Options Options
 	baseURL string
@@ -147,7 +159,7 @@ func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationTo
 		return nil, fmt.Errorf("build GitLab token source: %w", err)
 	}
 
-	glc, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{BaseURL: f.APIURL()})
+	glc, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{BaseURL: f.APIURL(), HTTPClient: f.HTTPClient})
 	if err != nil {
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}

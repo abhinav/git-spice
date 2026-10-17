@@ -20,7 +20,7 @@ func TestNew_requiresURL(t *testing.T) {
 		"", "",
 		"KEY", "repo", false,
 		silog.Nop(),
-		&Token{AccessToken: "tok"},
+		&Token{AccessToken: "tok"}, nil,
 	)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "no Bitbucket Data Center URL configured")
@@ -32,7 +32,7 @@ func TestNew_nilToken(t *testing.T) {
 		"https://bitbucket.example.com",
 		"ENG", "warp-core", false,
 		silog.Nop(),
-		nil,
+		nil, nil,
 	)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "nil authentication token")
@@ -384,7 +384,7 @@ func newTestServerGateway(
 		serverURL+"/rest/api/1.0", serverURL,
 		rid.projectKey, rid.slug, rid.personal,
 		log,
-		&Token{AccessToken: "test-token"},
+		&Token{AccessToken: "test-token"}, nil,
 	)
 	require.NoError(t, err)
 	return gw

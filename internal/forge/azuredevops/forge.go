@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -74,12 +75,19 @@ func (d *Definition) MatchesRemoteURL(remoteURL *giturl.URL) bool {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs an Azure DevOps Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	opts = cmp.Or(opts, &forge.NewOptions{})
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
 		return nil, err
 	}
 
 	return &Forge{
+		HTTPClient:         httpClient,
 		Options:            d.Options,
 		baseURL:            d.BaseURL(),
 		legacyOrganization: legacyOrganization(remoteURL),
@@ -90,6 +98,10 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 // Forge builds an Azure DevOps Forge.
 type Forge struct {
 	changeMetadataCodec
+
+	// HTTPClient sends API and authentication requests.
+	// If nil, the default HTTP client is used.
+	HTTPClient *http.Client
 
 	Options            Options
 	baseURL            string
@@ -202,7 +214,7 @@ func (f *Forge) OpenRepository(
 	// not just the base URL.
 	orgURL := f.URL() + "/" + rid.organization
 	gateway, err := azuredevops.NewGateway(
-		ctx, orgURL, gatewayAuthentication(adt), adt.AccessToken, nil,
+		ctx, orgURL, gatewayAuthentication(adt), adt.AccessToken, &azuredevops.Options{HTTPClient: f.HTTPClient},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create Azure DevOps client: %w", err)

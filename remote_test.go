@@ -199,7 +199,7 @@ func (testDefinition) UnmarshalChangeMetadata(jsontext.Value) (forge.ChangeMetad
 	return nil, nil
 }
 
-func (d testDefinition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d testDefinition) New(remoteURL *giturl.URL, _ *forge.NewOptions) (forge.Forge, error) {
 	return d.new(remoteURL)
 }
 

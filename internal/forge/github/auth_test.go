@@ -213,12 +213,13 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 		}
 	})
 
-	srv := httptest.NewServer(mux)
+	srv := httptest.NewTLSServer(mux)
 	defer srv.Close()
 
 	tok, err := (&DeviceFlowAuthenticator{
-		ClientID: "client-id",
-		Scopes:   []string{"scope"},
+		HTTPClient: srv.Client(),
+		ClientID:   "client-id",
+		Scopes:     []string{"scope"},
 		Endpoint: oauth2.Endpoint{
 			DeviceAuthURL: srv.URL + "/device/code",
 			TokenURL:      srv.URL + "/oauth/access_token",

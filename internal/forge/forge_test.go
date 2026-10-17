@@ -102,9 +102,9 @@ func TestRegistry_New(t *testing.T) {
 		},
 	})()
 
-	first, err := registry.New("a", remoteURL)
+	first, err := registry.New("a", remoteURL, nil)
 	require.NoError(t, err)
-	second, err := registry.New("a", remoteURL)
+	second, err := registry.New("a", remoteURL, nil)
 	require.NoError(t, err)
 
 	assert.Same(t, remoteURL, gotRemoteURL)
@@ -122,7 +122,7 @@ func TestRegistry_New_requiresRemoteURL(t *testing.T) {
 		},
 	})()
 
-	_, err := registry.New("a", nil)
+	_, err := registry.New("a", nil, nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, forge.ErrUnsupportedURL)
 }
@@ -134,7 +134,7 @@ func TestInferFromRemoteURL_codebergForgejo(t *testing.T) {
 	remoteURL, err := giturl.Parse("git@codeberg.org:example/repo.git")
 	require.NoError(t, err)
 
-	f, rid, ok := forge.InferFromRemoteURL(&registry, remoteURL)
+	f, rid, ok := forge.InferFromRemoteURL(&registry, remoteURL, nil)
 	require.True(t, ok, "forge not found")
 	assert.Equal(t, "forgejo", f.ID())
 	assert.Equal(t, "example/repo", rid.String())
@@ -188,7 +188,7 @@ func TestDefinition_New_rejectsMismatchedConfiguredURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.def.New(remoteURL)
+			_, err := tt.def.New(remoteURL, nil)
 			require.Error(t, err)
 			assert.ErrorIs(t, err, forge.ErrUnsupportedURL)
 		})
@@ -246,7 +246,7 @@ func TestInferFromRemoteURL(t *testing.T) {
 			remoteURL, err := giturl.Parse(tt.remoteURL)
 			require.NoError(t, err)
 
-			f, h, ok := forge.InferFromRemoteURL(&registry, remoteURL)
+			f, h, ok := forge.InferFromRemoteURL(&registry, remoteURL, nil)
 			assert.True(t, ok, "forge not found")
 			assert.Equal(t, "a", f.ID(), "forge ID mismatch")
 			assert.Same(t, mockHandle, h, "repository ID mismatch")
@@ -301,7 +301,7 @@ func TestInferFromRemoteURL_noMatch(t *testing.T) {
 			remoteURL, err := giturl.Parse(tt.remoteURL)
 			require.NoError(t, err)
 
-			_, _, ok := forge.InferFromRemoteURL(&registry, remoteURL)
+			_, _, ok := forge.InferFromRemoteURL(&registry, remoteURL, nil)
 			assert.False(t, ok, "unexpected forge match")
 		})
 	}
@@ -328,7 +328,7 @@ func TestInferFromRemoteURL_unsupportedRepositoryPath(t *testing.T) {
 	remoteURL, err := giturl.Parse("https://example.com/foo")
 	require.NoError(t, err)
 
-	_, _, ok := forge.InferFromRemoteURL(&registry, remoteURL)
+	_, _, ok := forge.InferFromRemoteURL(&registry, remoteURL, nil)
 	assert.False(t, ok, "unexpected forge match")
 }
 
@@ -438,7 +438,7 @@ func (testDefinition) UnmarshalChangeMetadata(jsontext.Value) (forge.ChangeMetad
 	return nil, nil
 }
 
-func (d testDefinition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d testDefinition) New(remoteURL *giturl.URL, _ *forge.NewOptions) (forge.Forge, error) {
 	return d.new(remoteURL)
 }
 

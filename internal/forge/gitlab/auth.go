@@ -7,6 +7,7 @@ import (
 	json "encoding/json/v2"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -150,9 +151,10 @@ func (f *Forge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.Aut
 	}
 
 	auth, err := selectAuthenticator(view, authenticatorOptions{
-		Endpoint: oauthEndpoint,
-		ClientID: f.Options.ClientID,
-		Hostname: hostname,
+		HTTPClient: f.HTTPClient,
+		Endpoint:   oauthEndpoint,
+		ClientID:   f.Options.ClientID,
+		Hostname:   hostname,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("select authenticator: %w", err)
@@ -254,9 +256,10 @@ var _authenticationMethods = []struct {
 		Description: oauthDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				ClientID: a.oauth2ClientID(),
-				Endpoint: a.Endpoint,
-				Scopes:   []string{"api"},
+				HTTPClient: a.HTTPClient,
+				ClientID:   a.oauth2ClientID(),
+				Endpoint:   a.Endpoint,
+				Scopes:     []string{"api"},
 			}
 		},
 	},
@@ -289,9 +292,10 @@ var _authenticationMethods = []struct {
 // authenticatorOptions presents the user with multiple authentication methods,
 // prompts them to choose one, and executes the chosen method.
 type authenticatorOptions struct {
-	Endpoint oauth2.Endpoint // required
-	ClientID string          // required
-	Hostname string          // required
+	HTTPClient *http.Client
+	Endpoint   oauth2.Endpoint // required
+	ClientID   string          // required
+	Hostname   string          // required
 }
 
 func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, error) {
@@ -411,6 +415,10 @@ func (a *PATAuthenticator) Authenticate(_ context.Context, view ui.View) (*Authe
 // DeviceFlowAuthenticator implements the OAuth device flow for GitHub.
 // This is used for OAuth and GitHub App authentication.
 type DeviceFlowAuthenticator struct {
+	// HTTPClient sends device authorization and token requests.
+	// If nil, OAuth uses its default HTTP client.
+	HTTPClient *http.Client
+
 	// Endpoint is the OAuth endpoint to use.
 	Endpoint oauth2.Endpoint
 
@@ -423,6 +431,9 @@ type DeviceFlowAuthenticator struct {
 
 // Authenticate executes the OAuth authentication flow.
 func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context, view ui.View) (*AuthenticationToken, error) {
+	if a.HTTPClient != nil {
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, a.HTTPClient)
+	}
 	cfg := oauth2.Config{
 		ClientID:    a.ClientID,
 		Endpoint:    a.Endpoint,

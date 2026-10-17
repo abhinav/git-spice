@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -34,8 +35,9 @@ func (c *authCmd) AfterApply(
 	forges *forge.Registry,
 	cmd *mainCmd,
 	view ui.View,
+	httpClient *http.Client,
 ) error {
-	f, err := resolveForge(ctx, forges, log, view, c.Forge, cmd.Forge.Kind)
+	f, err := resolveForge(ctx, forges, log, view, c.Forge, cmd.Forge.Kind, &forge.NewOptions{HTTPClient: httpClient})
 	if err != nil {
 		return err
 	}
@@ -56,6 +58,7 @@ func resolveForge(
 	view ui.View,
 	forgeID string,
 	configuredKind string,
+	newOpts *forge.NewOptions,
 ) (forge.Forge, error) {
 	if wantForge := cmp.Or(forgeID, configuredKind); wantForge != "" {
 		d, ok := forges.Lookup(wantForge)
@@ -78,7 +81,7 @@ func resolveForge(
 			}
 		}
 
-		f, err := d.New(remoteURL)
+		f, err := d.New(remoteURL, newOpts)
 		if err != nil {
 			return nil, fmt.Errorf("construct forge %q: %w", wantForge, err)
 		}
@@ -90,7 +93,7 @@ func resolveForge(
 		return nil, err
 	}
 
-	f, _, ok := forge.InferFromRemoteURL(forges, remoteURL)
+	f, _, ok := forge.InferFromRemoteURL(forges, remoteURL, newOpts)
 	if ok {
 		return f, nil
 	}
@@ -108,7 +111,7 @@ func resolveForge(
 
 	// If there's only one known Forge, there's no need to prompt.
 	if len(opts) == 1 {
-		return opts[0].Value.New(remoteURL)
+		return opts[0].Value.New(remoteURL, newOpts)
 	}
 
 	if !ui.Interactive(view) {
@@ -126,7 +129,7 @@ func resolveForge(
 	if err != nil {
 		return nil, err
 	}
-	return selected.New(remoteURL)
+	return selected.New(remoteURL, newOpts)
 }
 
 func currentRemoteURL(ctx context.Context, log *silog.Logger) (*giturl.URL, string, error) {

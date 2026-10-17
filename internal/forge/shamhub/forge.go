@@ -2,6 +2,7 @@ package shamhub
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	json "encoding/json/v2"
 	"fmt"
@@ -54,15 +55,22 @@ func (d *Definition) BaseURL() string {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs a ShamHub Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	opts = cmp.Or(opts, &forge.NewOptions{})
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	if err := forge.ValidateRemoteURL(d.URL, remoteURL); err != nil {
 		return nil, err
 	}
 
 	return &Forge{
-		Options: d.Options,
-		baseURL: d.BaseURL(),
-		Log:     d.Log,
+		HTTPClient: httpClient,
+		Options:    d.Options,
+		baseURL:    d.BaseURL(),
+		Log:        d.Log,
 	}, nil
 }
 
@@ -70,8 +78,12 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 // server.
 type Forge struct {
 	changeMetadataCodec
-
 	Options
+
+	// HTTPClient sends API and authentication requests.
+	// If nil, the default HTTP client is used.
+	HTTPClient *http.Client
+
 	baseURL string
 
 	// Log is the logger to use for logging.
@@ -81,7 +93,7 @@ type Forge struct {
 func (f *Forge) jsonHTTPClient() *jsonHTTPClient {
 	return &jsonHTTPClient{
 		log:    f.Log,
-		client: http.DefaultClient,
+		client: cmp.Or(f.HTTPClient, http.DefaultClient),
 	}
 }
 
@@ -114,7 +126,7 @@ func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 
 // OpenRepository opens the repository that this repository ID points to.
 func (f *Forge) OpenRepository(_ context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
-	return newRepository(f, token.(*AuthenticationToken), id.(*RepositoryID), http.DefaultClient)
+	return newRepository(f, token.(*AuthenticationToken), id.(*RepositoryID), cmp.Or(f.HTTPClient, http.DefaultClient))
 }
 
 // newRepository creates a new repository instance with the given HTTP client.

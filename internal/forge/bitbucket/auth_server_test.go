@@ -103,7 +103,7 @@ func TestForge_tokenHelp(t *testing.T) {
 
 func TestForge_validateToken(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "Bearer tok", r.Header.Get("Authorization"))
 			w.Header().Set("X-AUSERNAME", "jcaptain")
 			writeJSON(t, w, http.StatusOK, map[string]any{
@@ -117,12 +117,13 @@ func TestForge_validateToken(t *testing.T) {
 			Options{Kind: KindDataCenter, URL: srv.URL},
 			srv.URL+"/scm/KEY/repo.git")
 		f.Log = silog.Nop()
+		f.HTTPClient = srv.Client()
 		require.NoError(t, f.validateToken(t.Context(),
 			&AuthenticationToken{AccessToken: "tok"}))
 	})
 
 	t.Run("Unauthorized", func(t *testing.T) {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			writeJSON(t, w, http.StatusUnauthorized, map[string]any{
 				"errors": []map[string]any{
 					{"message": "You are not permitted to access this resource."},
@@ -135,6 +136,7 @@ func TestForge_validateToken(t *testing.T) {
 			Options{Kind: KindDataCenter, URL: srv.URL},
 			srv.URL+"/scm/KEY/repo.git")
 		f.Log = silog.Nop()
+		f.HTTPClient = srv.Client()
 		err := f.validateToken(t.Context(),
 			&AuthenticationToken{AccessToken: "bad"})
 		require.Error(t, err)
@@ -148,7 +150,7 @@ func TestForge_AuthenticationFlow_missingServerURL(t *testing.T) {
 	_, err = (&Definition{
 		Log:     silog.Nop(),
 		Options: Options{Kind: KindDataCenter},
-	}).New(remoteURL)
+	}).New(remoteURL, nil)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "no Bitbucket Data Center URL configured")
 }

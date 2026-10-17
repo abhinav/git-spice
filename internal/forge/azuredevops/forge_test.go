@@ -25,7 +25,7 @@ func newForgeForTest(t *testing.T, options Options, rawRemoteURL string) *Forge 
 	remoteURL, err := giturl.Parse(rawRemoteURL)
 	require.NoError(t, err)
 
-	f, err := (&Definition{Options: options}).New(remoteURL)
+	f, err := (&Definition{Options: options}).New(remoteURL, nil)
 	require.NoError(t, err)
 	return f.(*Forge)
 }
@@ -136,7 +136,7 @@ func TestInferFromRemoteURL_legacyOrganizationURL(t *testing.T) {
 
 	var registry rootforge.Registry
 	registry.Register(&Definition{})
-	_, id, ok := rootforge.InferFromRemoteURL(&registry, remoteURL)
+	_, id, ok := rootforge.InferFromRemoteURL(&registry, remoteURL, nil)
 	require.True(t, ok)
 
 	rid := id.(*RepositoryID)

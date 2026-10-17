@@ -630,7 +630,7 @@ func newConformanceGateway(
 			srv.URL+"/rest/api/1.0", srv.URL,
 			testProjectKey, testSlug, false,
 			silog.Nop(),
-			&server.Token{AccessToken: "test-token"},
+			&server.Token{AccessToken: "test-token"}, nil,
 		)
 		require.NoError(t, err)
 		return gw

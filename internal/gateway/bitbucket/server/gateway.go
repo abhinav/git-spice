@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,6 +42,7 @@ type serverRepositoryID struct {
 
 	// personal reports whether this is a personal ("~user") repository;
 	// when true, projectKey holds the username.
+	// A nil httpClient uses [http.DefaultClient].
 	personal bool
 }
 
@@ -110,12 +112,14 @@ var _ bitbucket.Gateway = (*Gateway)(nil)
 // personal reports whether the repository
 // is a personal ("~user") repository;
 // when true, projectKey holds the username.
+// A nil httpClient uses [http.DefaultClient].
 func New(
 	apiURL, baseURL string,
 	projectKey, slug string,
 	personal bool,
 	log *silog.Logger,
 	token *Token,
+	httpClient *http.Client,
 ) (*Gateway, error) {
 	if baseURL == "" {
 		return nil, errNoServerURL
@@ -131,7 +135,7 @@ func New(
 		StaticTokenSource(Token{
 			AccessToken: token.AccessToken,
 		}),
-		&ClientOptions{BaseURL: apiURL},
+		&ClientOptions{BaseURL: apiURL, HTTPClient: httpClient},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create Bitbucket Data Center client: %w", err)
