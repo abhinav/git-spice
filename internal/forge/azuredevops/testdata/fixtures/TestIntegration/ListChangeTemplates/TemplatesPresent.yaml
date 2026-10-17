@@ -457,3 +457,17 @@ interactions:
         status: 404 Not Found
         code: 404
         duration: 43.928917ms
+
+# Modeled SDK discovery response; service origins come from recorded traffic.
+    - id: 9999
+      request:
+        method: GET
+        url: https://dev.azure.example.com/azure-org/_apis/ResourceAreas
+        headers: {}
+      response:
+        code: 200
+        status: 200 OK
+        headers:
+          Content-Type:
+          - application/json
+        body: '{"value":[{"id":"4e080c62-fa21-4fbc-8fef-2a10a2b38049","locationUrl":"https://dev.azure.example.com/azure-org"},{"id":"8a3d49b8-91f0-46ef-b33d-dda338c25db3","locationUrl":"https://vssps.azure.example.com/azure-org"}]}'

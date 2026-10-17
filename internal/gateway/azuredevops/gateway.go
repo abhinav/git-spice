@@ -10,6 +10,7 @@
 package azuredevops
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"net/http"
@@ -100,40 +101,58 @@ func NewGateway(
 	token string,
 	opts *Options,
 ) (*Gateway, error) {
+	opts = cmp.Or(opts, &Options{})
 	connection := newConnection(organizationURL, auth, token)
-	if opts == nil || opts.HTTPClient == nil {
-		gitClient, err := git.NewClient(ctx, connection)
-		if err != nil {
-			return nil, fmt.Errorf("create git client: %w", err)
-		}
-		identityClient, err := identity.NewClient(ctx, connection)
-		if err != nil {
-			return nil, fmt.Errorf("create identity client: %w", err)
-		}
-		return &Gateway{
-			gitClient:      gitClient,
-			identityClient: identityClient,
-			locationClient: location.NewClient(ctx, connection),
-		}, nil
+	if opts.HTTPClient == nil {
+		opts.HTTPClient = http.DefaultClient
 	}
 
-	client := azuredevops.NewClientWithOptions(
-		connection,
-		organizationURL,
-		azuredevops.WithHTTPClient(opts.HTTPClient),
-	)
+	// The SDK's service constructors discover endpoints with internally created
+	// HTTP clients. Resolve the service URLs here so discovery and service
+	// requests both use the supplied HTTP client.
+	client := azuredevops.NewClientWithOptions(connection, organizationURL,
+		azuredevops.WithHTTPClient(opts.HTTPClient))
+
+	areas, err := client.GetResourceAreas(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("discover resource areas: %w", err)
+	}
+
+	var gitURL, identityURL string
+	if len(*areas) == 0 {
+		// On-premises servers use the organization URL for all services.
+		gitURL = organizationURL
+		identityURL = organizationURL
+	} else {
+		for _, area := range *areas {
+			switch derefZero(area.Id) {
+			case git.ResourceAreaId:
+				gitURL = derefZero(area.LocationUrl)
+			case identity.ResourceAreaId:
+				identityURL = derefZero(area.LocationUrl)
+			}
+		}
+	}
+
+	if gitURL == "" {
+		return nil, fmt.Errorf("git resource area (%q) is not registered on %q", git.ResourceAreaId, organizationURL)
+	}
+	if identityURL == "" {
+		return nil, fmt.Errorf("identity resource area (%q) is not registered on %q", identity.ResourceAreaId, organizationURL)
+	}
+
 	return &Gateway{
-		gitClient:      &git.ClientImpl{Client: *client},
-		identityClient: &identity.ClientImpl{Client: *client},
+		gitClient: &git.ClientImpl{Client: *azuredevops.NewClientWithOptions(
+			connection, gitURL, azuredevops.WithHTTPClient(opts.HTTPClient),
+		)},
+		identityClient: &identity.ClientImpl{Client: *azuredevops.NewClientWithOptions(
+			connection, identityURL, azuredevops.WithHTTPClient(opts.HTTPClient),
+		)},
 		locationClient: &location.ClientImpl{Client: *client},
 	}, nil
 }
 
-func newConnection(
-	organizationURL string,
-	auth Authentication,
-	token string,
-) *azuredevops.Connection {
+func newConnection(organizationURL string, auth Authentication, token string) *azuredevops.Connection {
 	if auth == AuthenticationPAT {
 		return azuredevops.NewPatConnection(organizationURL, token)
 	}
@@ -141,4 +160,11 @@ func newConnection(
 	connection := azuredevops.NewAnonymousConnection(organizationURL)
 	connection.AuthorizationString = "Bearer " + token
 	return connection
+}
+
+func derefZero[T any](ptr *T) (zero T) {
+	if ptr != nil {
+		return *ptr
+	}
+	return zero
 }
