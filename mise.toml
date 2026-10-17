@@ -15,7 +15,7 @@ go = "latest"
 # Test runner with prettier output.
 # https://github.com/gotestyourself/gotestsum/pull/568
 "github:abhinav/gotestsum" = "v1.14.0-beta.1+github-actions-fails"
-golangci-lint = "latest"
+"aqua:golangci/golangci-lint" = "latest"
 
 "github:joshka/betamax" = { version = "latest", os = ["linux", "macos"] }
 

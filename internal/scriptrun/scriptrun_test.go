@@ -115,7 +115,9 @@ func TestRunner_Run_streamsOutputBeforeExit(t *testing.T) {
 	cancel()
 
 	select {
-	case <-done:
+	case err := <-done:
+		_ = err
+
 	case <-time.After(5 * time.Second):
 		t.Fatal("script did not exit after context cancellation")
 	}
