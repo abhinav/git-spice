@@ -536,6 +536,49 @@ The $$gs auth login$$ operation will always fail if you use this method.
 and the least secure method. End users should typically never pick this.
 It is intended only for CI/CD environments where you have no other choice.
 
+## Access gateways
+
+<!-- gs:version unreleased -->
+
+If an access gateway such as Cloudflare Access guards your forge,
+configure extra HTTP headers alongside the forge's normal authentication.
+
+Use [`spice.http.$host.header`](../cli/config.md#spicehttphostheader)
+for literal values or
+[`spice.http.$host.headerFromEnv`](../cli/config.md#spicehttphostheaderfromenv)
+for values supplied through the environment.
+
+For example, to configure a Cloudflare Access token for one HTTPS origin:
+
+```freeze language="terminal"
+{green}${reset} git config --local --add \
+    {red}spice.http."https://git.example.com".headerFromEnv{reset} \
+    {mag}'cf-access-token: $CF_ACCESS_TOKEN'{reset}
+```
+
+Single quotes preserve `$CF_ACCESS_TOKEN` in Git configuration
+as a literal string
+At runtime, git-spice will expand the `$CF_ACCESS_TOKEN` environment variable
+and send it as a header with the request to `https://git.example.com`.
+
+To inject the token into the environment only for git-spice,
+wrap the `git-spice` command in a shell script or function.
+For example:
+
+```bash
+gs() {
+    local token
+    token="$(cloudflared access token -app=https://git.example.com)"
+    CF_ACCESS_TOKEN="$token" command git-spice "$@"
+}
+```
+
+Redirected requests receive only the headers configured for their destination.
+
+These settings apply to git-spice's direct HTTP requests only.
+HTTP requests made by `git` or other programs invoked by git-spice,
+including `gh` `glab`, and `az`, do not inherit these headers.
+
 ## Aliased SSH remotes
 
 <!-- gs:version v0.30.0 -->

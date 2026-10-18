@@ -180,7 +180,7 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &forges, &sigStack, &cmd),
+		kong.Bind(logger, &forges, &sigStack, &cmd, spiceConfig),
 		kong.BindTo(&cmd.Forge, (*forgeOptions)(nil)),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
@@ -393,7 +393,6 @@ func (cmd *mainCmd) AfterApply(
 	}
 	kctx.BindTo(secretStash, (*secret.Stash)(nil))
 	kctx.BindTo(&cmd.Forge, (*forgeOptions)(nil))
-	kctx.Bind(http.DefaultClient)
 
 	// TODO: bind interfaces, not values
 	// TODO:
@@ -402,6 +401,9 @@ func (cmd *mainCmd) AfterApply(
 	// just to get the current branch name.
 
 	return errors.Join(
+		kctx.BindSingletonProvider(func(config *spice.Config) (*http.Client, error) {
+			return newHTTPClient(config, nil)
+		}),
 		kctx.BindSingletonProvider(func() (*git.Worktree, error) {
 			return git.OpenWorktree(ctx, ".", git.OpenOptions{
 				Log:              logger,

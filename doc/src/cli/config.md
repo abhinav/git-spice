@@ -501,6 +501,34 @@ Set to `0` to disable these retries entirely.
 
 Defaults to `5s`.
 
+### spice.http.$host.header
+
+<!-- gs:version unreleased -->
+
+Additional literal HTTP header in `Name: value` form.
+Applies only to HTTP requests made directly by git-spice.
+
+`$host` must be an HTTPS origin, such as `https://git.example.com`,
+and must not include a path or query string.
+The port is assumed to be `443` if omitted.
+
+This option may be repeated for distinct header names.
+
+See [Access gateways](../setup/auth.md#access-gateways)
+for usage, destination matching, and redirects.
+
+### spice.http.$host.headerFromEnv
+
+<!-- gs:version unreleased -->
+
+Like [`spice.http.$host.header`](#spicehttphostheader),
+but `$NAME` and `${NAME}` in the value are expanded from the environment.
+
+Header names and origins remain literal.
+`$$` expands to a single `$`.
+Unset variables produce empty strings
+and substituted values are not expanded again.
+
 ### spice.secret.backend
 
 <!-- gs:version v0.26.0 -->
