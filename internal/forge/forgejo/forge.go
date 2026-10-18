@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/http"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/forgejo"
@@ -63,21 +64,32 @@ func (d *Definition) BaseURL() string {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs a Forgejo Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	opts = cmp.Or(opts, &forge.NewOptions{})
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
 		return nil, err
 	}
 
 	return &Forge{
-		Options: d.Options,
-		baseURL: d.BaseURL(),
-		Log:     d.Log,
+		HTTPClient: httpClient,
+		Options:    d.Options,
+		baseURL:    d.BaseURL(),
+		Log:        d.Log,
 	}, nil
 }
 
 // Forge provides a Forgejo forge instance.
 type Forge struct {
 	changeMetadataCodec
+
+	// HTTPClient sends API and authentication requests.
+	// If nil, the default HTTP client is used.
+	HTTPClient *http.Client
 
 	Options Options
 	baseURL string
@@ -145,7 +157,8 @@ func (f *Forge) OpenRepository(
 	}
 
 	client, err := forgejo.NewClient(tokenSource, &forgejo.ClientOptions{
-		BaseURL: f.APIURL(),
+		BaseURL:    f.APIURL(),
+		HTTPClient: f.HTTPClient,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create Forgejo client: %w", err)

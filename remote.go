@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -47,6 +48,9 @@ var _ remoteURLer = (*git.Repository)(nil)
 
 // remoteResolver resolves git-spice remotes to forge repository identities.
 type remoteResolver struct {
+	// HTTPClient sends forge requests; nil uses each forge's default client.
+	HTTPClient *http.Client
+
 	// Forges is the registry of forge implementations that may own a remote.
 	Forges *forge.Registry // required
 
@@ -85,7 +89,7 @@ func (r *remoteResolver) Resolve(
 			return nil, nil, fmt.Errorf("parse resolved remote URL: %w", err)
 		}
 
-		f, err := r.Forges.New(r.ForgeKind, parsedResolvedRemoteURL)
+		f, err := r.Forges.New(r.ForgeKind, parsedResolvedRemoteURL, &forge.NewOptions{HTTPClient: r.HTTPClient})
 		if err != nil {
 			if errors.Is(err, forge.ErrUnknown) {
 				var available []string
@@ -110,7 +114,7 @@ func (r *remoteResolver) Resolve(
 		return f, repoID, nil
 	}
 
-	f, repoID, ok := forge.InferFromRemoteURL(r.Forges, parsedRemoteURL)
+	f, repoID, ok := forge.InferFromRemoteURL(r.Forges, parsedRemoteURL, &forge.NewOptions{HTTPClient: r.HTTPClient})
 	if !ok {
 		return nil, nil, &unsupportedForgeError{
 			Remote:    remote,

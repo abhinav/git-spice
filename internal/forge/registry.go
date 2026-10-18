@@ -45,7 +45,7 @@ func (r *Registry) Lookup(id string) (Definition, bool) {
 }
 
 // New constructs a registered forge by ID.
-func (r *Registry) New(id string, remoteURL *giturl.URL) (Forge, error) {
+func (r *Registry) New(id string, remoteURL *giturl.URL, opts *NewOptions) (Forge, error) {
 	if remoteURL == nil {
 		return nil, fmt.Errorf("%w: remote URL is required", ErrUnsupportedURL)
 	}
@@ -54,12 +54,12 @@ func (r *Registry) New(id string, remoteURL *giturl.URL) (Forge, error) {
 	if !ok {
 		return nil, fmt.Errorf("%w: %q", ErrUnknown, id)
 	}
-	return d.New(remoteURL)
+	return d.New(remoteURL, opts)
 }
 
 // InferFromRemoteURL attempts to infer the forge for the given remote URL.
 // It returns the matched forge and information about the matched repository.
-func InferFromRemoteURL(r *Registry, remoteURL *giturl.URL) (forge Forge, rid RepositoryID, ok bool) {
+func InferFromRemoteURL(r *Registry, remoteURL *giturl.URL, opts *NewOptions) (forge Forge, rid RepositoryID, ok bool) {
 	for d := range r.All() {
 		matches := remoteURLMatches(d.BaseURL(), remoteURL)
 		if matcher, ok := d.(interface {
@@ -71,7 +71,7 @@ func InferFromRemoteURL(r *Registry, remoteURL *giturl.URL) (forge Forge, rid Re
 			continue
 		}
 
-		f, err := d.New(remoteURL)
+		f, err := d.New(remoteURL, opts)
 		if err != nil {
 			continue
 		}

@@ -46,7 +46,13 @@ func (d *Definition) BaseURL() string {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs a Bitbucket Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	opts = cmp.Or(opts, &forge.NewOptions{})
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
 		return nil, err
 	}
@@ -108,18 +114,23 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 	}
 
 	return &Forge{
-		baseURL: baseURL,
-		apiURL:  apiURL,
-		kind:    kind,
-		token:   options.Token,
-		product: product,
-		Log:     d.Log,
+		HTTPClient: httpClient,
+		baseURL:    baseURL,
+		apiURL:     apiURL,
+		kind:       kind,
+		token:      options.Token,
+		product:    product,
+		Log:        d.Log,
 	}, nil
 }
 
 // Forge provides a Bitbucket forge instance.
 type Forge struct {
 	changeMetadataCodec
+
+	// HTTPClient sends API and authentication requests.
+	// If nil, the default HTTP client is used.
+	HTTPClient *http.Client
 
 	baseURL string
 	apiURL  string
@@ -182,7 +193,7 @@ func (f *Forge) OpenRepository(
 	id forge.RepositoryID,
 ) (forge.Repository, error) {
 	tok := token.(*AuthenticationToken)
-	gateway, err := f.product.openGateway(ctx, tok, mustRepositoryID(id))
+	gateway, err := f.product.openGateway(ctx, tok, mustRepositoryID(id), f.HTTPClient)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +206,7 @@ func (f *Forge) OpenRepository(
 // selected during Definition.New.
 type bitbucketProduct interface {
 	parseRepositoryPath(path string) (*RepositoryID, error)
-	openGateway(context.Context, *AuthenticationToken, *RepositoryID) (bitbucket.Gateway, error)
+	openGateway(context.Context, *AuthenticationToken, *RepositoryID, *http.Client) (bitbucket.Gateway, error)
 }
 
 type bitbucketCloudProduct struct {
@@ -222,6 +233,7 @@ func (p bitbucketCloudProduct) openGateway(
 	_ context.Context,
 	tok *AuthenticationToken,
 	rid *RepositoryID,
+	httpClient *http.Client,
 ) (bitbucket.Gateway, error) {
 	var ctok *cloud.Token
 	if tok != nil {
@@ -231,7 +243,7 @@ func (p bitbucketCloudProduct) openGateway(
 	return cloud.New(
 		p.apiURL, p.baseURL,
 		rid.workspace, rid.name,
-		p.log, ctok, http.DefaultClient,
+		p.log, ctok, httpClient,
 	)
 }
 
@@ -281,6 +293,7 @@ func (p bitbucketDataCenterProduct) openGateway(
 	_ context.Context,
 	tok *AuthenticationToken,
 	rid *RepositoryID,
+	httpClient *http.Client,
 ) (bitbucket.Gateway, error) {
 	var stok *server.Token
 	if tok != nil {
@@ -290,7 +303,7 @@ func (p bitbucketDataCenterProduct) openGateway(
 	return server.New(
 		p.apiURL, rid.url,
 		rid.projectKey, rid.slug, rid.personal,
-		p.log, stok,
+		p.log, stok, httpClient,
 	)
 }
 

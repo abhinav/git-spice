@@ -7,6 +7,7 @@ import (
 	"encoding/json/jsontext"
 	"errors"
 	"iter"
+	"net/http"
 	"net/url"
 
 	"go.abhg.dev/gs/internal/git/giturl"
@@ -46,7 +47,15 @@ type Definition interface {
 	// The remote URL must be non-nil.
 	// Implementations may use it to derive instance configuration
 	// that is not known when command-line options are registered.
-	New(remoteURL *giturl.URL) (Forge, error)
+	New(remoteURL *giturl.URL, opts *NewOptions) (Forge, error)
+}
+
+// NewOptions configures application-scoped dependencies for a forge.
+// A nil options value uses the default HTTP client.
+type NewOptions struct {
+	// HTTPClient sends forge API and authentication requests.
+	// If nil, the forge uses its default HTTP client.
+	HTTPClient *http.Client
 }
 
 // Forge is a forge that hosts Git repositories.

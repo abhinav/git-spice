@@ -5,6 +5,7 @@ import (
 	json "encoding/json/v2"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -199,8 +200,9 @@ func (f *Forge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.Aut
 	}
 
 	auth, err := selectAuthenticator(view, authenticatorOptions{
-		Endpoint: oauthEndpoint,
-		ForgeURL: f.URL(),
+		HTTPClient: f.HTTPClient,
+		Endpoint:   oauthEndpoint,
+		ForgeURL:   f.URL(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("select authenticator: %w", err)
@@ -278,9 +280,10 @@ var _authenticationMethods = []struct {
 		Description: oauthDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				Endpoint: a.Endpoint,
-				ClientID: _oauthAppClientID,
-				Scopes:   []string{"repo", "read:org"},
+				HTTPClient: a.HTTPClient,
+				Endpoint:   a.Endpoint,
+				ClientID:   _oauthAppClientID,
+				Scopes:     []string{"repo", "read:org"},
 			}
 		},
 	},
@@ -289,9 +292,10 @@ var _authenticationMethods = []struct {
 		Description: oauthPublicDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				Endpoint: a.Endpoint,
-				ClientID: _oauthAppClientID,
-				Scopes:   []string{"public_repo"},
+				HTTPClient: a.HTTPClient,
+				Endpoint:   a.Endpoint,
+				ClientID:   _oauthAppClientID,
+				Scopes:     []string{"public_repo"},
 			}
 		},
 	},
@@ -300,8 +304,9 @@ var _authenticationMethods = []struct {
 		Description: githubAppDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				Endpoint: a.Endpoint,
-				ClientID: _githubAppClientID,
+				HTTPClient: a.HTTPClient,
+				Endpoint:   a.Endpoint,
+				ClientID:   _githubAppClientID,
 				// No scopes needed for GitHub App.
 			}
 		},
@@ -343,8 +348,9 @@ var _authenticationMethods = []struct {
 // authenticatorOptions presents the user with multiple authentication methods,
 // prompts them to choose one, and executes the chosen method.
 type authenticatorOptions struct {
-	Endpoint oauth2.Endpoint // required
-	ForgeURL string          // required
+	HTTPClient *http.Client
+	Endpoint   oauth2.Endpoint // required
+	ForgeURL   string          // required
 }
 
 func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, error) {
@@ -473,6 +479,10 @@ var (
 // DeviceFlowAuthenticator implements the OAuth device flow for GitHub.
 // This is used for OAuth and GitHub App authentication.
 type DeviceFlowAuthenticator struct {
+	// HTTPClient sends device authorization and token requests.
+	// If nil, OAuth uses its default HTTP client.
+	HTTPClient *http.Client
+
 	// Endpoint is the OAuth endpoint to use.
 	Endpoint oauth2.Endpoint
 
@@ -485,6 +495,9 @@ type DeviceFlowAuthenticator struct {
 
 // Authenticate executes the OAuth authentication flow.
 func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context, view ui.View) (*AuthenticationToken, error) {
+	if a.HTTPClient != nil {
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, a.HTTPClient)
+	}
 	cfg := oauth2.Config{
 		ClientID:    a.ClientID,
 		Endpoint:    a.Endpoint,

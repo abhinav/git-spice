@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -65,21 +66,32 @@ func (d *Definition) BaseURL() string {
 func (d *Definition) CLIPlugin() any { return &d.Options }
 
 // New constructs a GitHub Forge from the configured options.
-func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	opts = cmp.Or(opts, &forge.NewOptions{})
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
 		return nil, err
 	}
 
 	return &Forge{
-		Options: d.Options,
-		baseURL: d.BaseURL(),
-		Log:     d.Log,
+		HTTPClient: httpClient,
+		Options:    d.Options,
+		baseURL:    d.BaseURL(),
+		Log:        d.Log,
 	}, nil
 }
 
 // Forge provides a GitHub forge instance.
 type Forge struct {
 	changeMetadataCodec
+
+	// HTTPClient sends API and authentication requests.
+	// If nil, the default HTTP client is used.
+	HTTPClient *http.Client
 
 	Options Options
 	baseURL string
@@ -153,7 +165,7 @@ func (f *Forge) OpenRepository(ctx context.Context, tok forge.AuthenticationToke
 	}
 
 	gatewayTokens := newGatewayTokenSource(tokenSource)
-	gatewayClient, err := github.NewGateway(f.APIURL(), nil, gatewayTokens)
+	gatewayClient, err := github.NewGateway(f.APIURL(), f.HTTPClient, gatewayTokens)
 	if err != nil {
 		return nil, fmt.Errorf("create GitHub gateway: %w", err)
 	}

@@ -58,7 +58,7 @@ func (f *Forge) validateToken(ctx context.Context, tok *AuthenticationToken) err
 		server.StaticTokenSource(server.Token{
 			AccessToken: tok.AccessToken,
 		}),
-		&server.ClientOptions{BaseURL: f.APIURL()},
+		&server.ClientOptions{BaseURL: f.APIURL(), HTTPClient: f.HTTPClient},
 	)
 	if err != nil {
 		return fmt.Errorf("create Bitbucket Data Center client: %w", err)

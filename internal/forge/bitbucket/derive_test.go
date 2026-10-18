@@ -70,7 +70,7 @@ func TestDefinition_New(t *testing.T) {
 			require.NoError(t, err)
 
 			d := &Definition{Options: Options{URL: tt.presetURL}}
-			got, err := d.New(remoteURL)
+			got, err := d.New(remoteURL, nil)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.presetURL, d.Options.URL)

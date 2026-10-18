@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -392,6 +393,7 @@ func (cmd *mainCmd) AfterApply(
 	}
 	kctx.BindTo(secretStash, (*secret.Stash)(nil))
 	kctx.BindTo(&cmd.Forge, (*forgeOptions)(nil))
+	kctx.Bind(http.DefaultClient)
 
 	// TODO: bind interfaces, not values
 	// TODO:
@@ -412,9 +414,11 @@ func (cmd *mainCmd) AfterApply(
 		kctx.BindSingletonProvider(func(
 			repo *git.Repository,
 			forges *forge.Registry,
+			httpClient *http.Client,
 		) *remoteResolver {
 			return &remoteResolver{
 				Forges:     forges,
+				HTTPClient: httpClient,
 				Repository: repo,
 				ForgeKind:  cmd.Forge.Kind,
 			}
@@ -568,6 +572,7 @@ func (cmd *mainCmd) AfterApply(
 			store *state.Store,
 			svc *spice.Service,
 			forges *forge.Registry,
+			httpClient *http.Client,
 		) (SplitHandler, error) {
 			return &split.Handler{
 				Log:        log,
@@ -591,7 +596,7 @@ func (cmd *mainCmd) AfterApply(
 						return nil, false
 					}
 
-					f, err := forges.New(id, parsedRemoteURL)
+					f, err := forges.New(id, parsedRemoteURL, &forge.NewOptions{HTTPClient: httpClient})
 					return f, err == nil
 				},
 				HighlightStyle: _highlightStyle,

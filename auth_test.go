@@ -32,7 +32,7 @@ func TestResolveForge_explicitForgeWins(t *testing.T) {
 		silogtest.New(t),
 		ui.NewFileView(io.Discard),
 		"gitlab",
-		"github",
+		"github", nil,
 	)
 	require.NoError(t, err)
 
@@ -63,7 +63,7 @@ func TestResolveForge_explicitForgeWithoutRepositoryRemote(t *testing.T) {
 		silogtest.New(t),
 		ui.NewFileView(io.Discard),
 		"github",
-		"",
+		"", nil,
 	)
 	require.NoError(t, err)
 
@@ -90,7 +90,7 @@ func TestResolveForge_configuredKind(t *testing.T) {
 		silogtest.New(t),
 		ui.NewFileView(io.Discard),
 		"",
-		"github",
+		"github", nil,
 	)
 	require.NoError(t, err)
 
@@ -107,7 +107,7 @@ func TestResolveForge_requiresGitRemote(t *testing.T) {
 		silogtest.New(t),
 		ui.NewFileView(io.Discard),
 		"",
-		"",
+		"", nil,
 	)
 	require.Error(t, err)
 
