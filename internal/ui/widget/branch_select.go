@@ -429,22 +429,33 @@ func (b *BranchTreeSelect) updateSelectable() {
 		return
 	}
 
-	if selectedIdx := slices.Index(b.selectable, selected); selectedIdx >= 0 {
-		b.focused = selectedIdx
-		return
-	}
+	filter := string(b.filter)
+	selectedIdx := slices.Index(b.selectable, selected)
+	b.focused = max(selectedIdx, 0)
 
-	// rank the selectable branches
 	branches := make([]string, len(b.selectable))
 	for i, idx := range b.selectable {
 		branches[i] = b.all[idx].Branch
 	}
-	matches := fuzzy.Find(string(b.filter), branches)
-	bestSelectable := b.selectable[0]
-	if len(matches) > 0 {
-		bestSelectable = b.selectable[matches[0].Index]
+	matches := fuzzy.Find(filter, branches)
+	if len(matches) == 0 {
+		// Metadata-only matches tie; keep focus if it is still selectable.
+		return
 	}
-	b.focused = max(slices.Index(b.selectable, bestSelectable), 0)
+
+	bestMatch := matches[0]
+	b.focused = bestMatch.Index
+
+	// Preserve focus only when it is tied for the highest score.
+	for _, match := range matches {
+		if match.Score != bestMatch.Score {
+			break
+		}
+		if match.Index == selectedIdx {
+			b.focused = selectedIdx
+			break
+		}
+	}
 }
 
 func (b *BranchTreeSelect) matchesFilter(bi *branchInfo) bool {

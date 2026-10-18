@@ -1,0 +1,19 @@
+# Typing main selects it over the lower-scoring current branch.
+# https://github.com/abhinav/git-spice/issues/1446
+
+init
+
+await 'my-awesome-improvement-new ◀'
+
+feed main
+feed <Enter>
+
+-- branches --
+[
+  {"branch": "main"},
+  {"branch": "my-awesome-improvement-new", "base": "main"}
+]
+-- selected --
+my-awesome-improvement-new
+-- want --
+main
