@@ -113,8 +113,9 @@ func TestGateway_PullRequestsForStackUpdate(t *testing.T) {
 	require.NotNil(t, got[0].Stack)
 	assert.Equal(t, 42, got[0].Stack.Number)
 	assert.Equal(t, []PullRequestStackMember{
-		{Number: 1},
-		{Number: 2, Locked: true},
+		{Number: 1, State: PullRequestStateOpen},
+		{Number: 2, State: PullRequestStateOpen, Locked: true},
+		{Number: 5, State: PullRequestStateMerged},
 	}, got[0].Stack.Members)
 	require.NotNil(t, got[1].Stack)
 	assert.Equal(t, 42, got[1].Stack.Number)
@@ -198,8 +199,9 @@ func TestGateway_PullRequestsForStackUpdate_paginatesStackEntries(t *testing.T) 
 	require.Len(t, got, 1)
 	require.NotNil(t, got[0].Stack)
 	assert.Equal(t, []PullRequestStackMember{
-		{Number: 1},
-		{Number: 3, Locked: true},
+		{Number: 1, State: PullRequestStateOpen},
+		{Number: 2, State: PullRequestStateMerged},
+		{Number: 3, State: PullRequestStateOpen, Locked: true},
 	}, got[0].Stack.Members)
 	assert.Equal(t, 3, requestNumber)
 }
