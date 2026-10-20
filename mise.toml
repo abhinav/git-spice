@@ -157,7 +157,7 @@ go build -o bin/git-spice -tags="
   {%- if usage.pprof -%}
     profile
   {%- endif -%}
-" go.abhg.dev/gs
+" go.abhg.dev/git-spice
 ln -sf git-spice {{ config_root }}/bin/gs
 """
 wait_for = ["generate"]
