@@ -118,12 +118,33 @@ func (b secretBackend) String() string {
 
 func main() {
 	stderr := ui.NewOutputWriter(os.Stderr)
+
+	// Colored output can be disabled with color.ui
+	// or the git-spice specific spice.color in git configuration.
+	colorPref := resolveColorPreference(context.Background(), git.NewConfig(git.ConfigOptions{}))
+	colorProfile := colorprofile.Detect(stderr.Unwrap(), os.Environ())
+	switch colorPref {
+	case colorOff:
+		colorProfile = plainColorProfile(stderr.Unwrap())
+	case colorOn:
+		// The user explicitly asked for color:
+		// force it even if the environment detection
+		// found no color support.
+		colorProfile = colorprofile.TrueColor
+	}
 	logger := silog.New(&colorprofile.Writer{
 		Forward: stderr,
-		Profile: colorprofile.Detect(stderr.Unwrap(), os.Environ()),
+		Profile: colorProfile,
 	}, &silog.Options{
 		Level: silog.LevelInfo,
 	})
+
+	// The view writes through a filter that strips color
+	// when the user disabled it; otherwise it writes as-is.
+	var viewWriter io.Writer = stderr
+	if colorPref != colorUnset {
+		viewWriter = &colorprofile.Writer{Forward: stderr, Profile: colorProfile}
+	}
 
 	// Register supported forges.
 	var forges forge.Registry
@@ -190,7 +211,7 @@ func main() {
 		},
 		kong.UsageOnError(),
 		kong.Help(helpPrinter),
-		kong.Writers(os.Stdout, stderr),
+		kong.Writers(os.Stdout, viewWriter),
 	)
 	if err != nil {
 		panic(err)

@@ -1,0 +1,39 @@
+# 'color.ui' and 'spice.color' control colored output.
+
+as 'Test <test@example.com>'
+at '2026-05-26T10:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+# By default, colored output follows terminal detection.
+# Output is not a terminal in tests, so it is not colored.
+gs log short
+! stderr '\x1b'
+
+# color.ui=always forces colored output.
+git config color.ui always
+gs log short
+stderr '\x1b\['
+
+# color.ui=false disables colored output,
+# even when the environment requests it.
+git config color.ui false
+env CLICOLOR_FORCE=1
+gs log short
+! stderr '\x1b'
+
+# spice.color overrides color.ui.
+git config spice.color always
+gs log short
+stderr '\x1b\['
+
+git config color.ui always
+git config spice.color never
+gs log short
+! stderr '\x1b'
+
+-- repo/README.md --
+# Test repository
