@@ -473,6 +473,101 @@ func TestHandler_Restack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 0, count)
 	})
+
+	t.Run("MergeAutostash", func(t *testing.T) {
+		log := silog.Nop()
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Build(t), nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(&spice.RestackResponse{Base: "main"}, nil)
+		mockService.EXPECT().
+			RestackMethod().
+			Return(spice.RestackMethodMerge)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+		mockWorktree.EXPECT().
+			CheckoutBranch(gomock.Any(), "feature").
+			Return(nil)
+
+		var cleanupCalled bool
+		mockAutostash := NewMockAutostashHandler(ctrl)
+		mockAutostash.EXPECT().
+			BeginMergeAutostash(gomock.Any(), spice.RestackMethodMerge, gomock.Any()).
+			Return(func(errPtr *error) {
+				cleanupCalled = true
+				assert.NoError(t, *errPtr)
+			}, nil)
+
+		handler := &Handler{
+			Log:       log,
+			Worktree:  mockWorktree,
+			Store:     statetest.NewMemoryStore(t, "main", "", log),
+			Service:   mockService,
+			Autostash: mockAutostash,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 1, count)
+		assert.True(t, cleanupCalled, "autostash cleanup must run")
+	})
+
+	t.Run("MergeInterrupt", func(t *testing.T) {
+		log := silog.Nop()
+		ctrl := gomock.NewController(t)
+
+		mergeErr := &git.MergeInterruptError{
+			State: &git.MergeState{Branch: "feature"},
+			Err:   errors.New("conflict"),
+		}
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Build(t), nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(nil, mergeErr)
+		mockService.EXPECT().
+			RebaseRescue(gomock.Any(), gomock.Any()).
+			Return(nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeBranch,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 0, count)
+	})
 }
 
 func TestHandler_Restack_trunk(t *testing.T) {

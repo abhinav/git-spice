@@ -1,0 +1,3 @@
+kind: Added
+body: Add top-level 'gs continue' and 'gs abort' commands that resume or cancel an operation interrupted by a rebase or merge conflict.
+time: 2026-06-09T20:55:53.8077644+02:00

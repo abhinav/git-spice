@@ -75,13 +75,31 @@ func TestGitCmd_WithExtraConfig(t *testing.T) {
 			Editor:              "vim",
 			MergeConflictStyle:  "zdiff3",
 			AdviceMergeConflict: new(false),
+			RerereEnabled:       new(true),
+			RerereAutoUpdate:    new(true),
 		})
 
 		assert.Equal(t, []string{
 			"-c", "core.editor=vim",
 			"-c", "merge.conflictStyle=zdiff3",
 			"-c", "advice.mergeConflict=false",
+			"-c", "rerere.enabled=true",
+			"-c", "rerere.autoupdate=true",
 			"rebase", "--continue",
+		}, cmd.Args())
+	})
+
+	t.Run("RerereAbsentWhenUnset", func(t *testing.T) {
+		cmd := newGitCmd(
+			t.Context(), silog.Nop(), _realExec,
+			"merge", "topic",
+		).WithExtraConfig(&extraConfig{
+			AdviceMergeConflict: new(false),
+		})
+
+		assert.Equal(t, []string{
+			"-c", "advice.mergeConflict=false",
+			"merge", "topic",
 		}, cmd.Args())
 	})
 
