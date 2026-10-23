@@ -2,9 +2,10 @@ package shamhub
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -279,18 +280,27 @@ func rejectGitSubcommand(t *testing.T, realGit, rejected string) string {
 	t.Helper()
 
 	gitWrapper := filepath.Join(t.TempDir(), "git")
-	require.NoError(t, os.WriteFile(
-		gitWrapper,
-		fmt.Appendf(nil, `#!/bin/sh
-for arg in "$@"; do
-	if [ "$arg" = "%s" ]; then
-		exit 1
-	fi
-done
-exec "%s" "$@"
-`, rejected, realGit),
-		0o755,
-	))
+	if runtime.GOOS == "windows" {
+		gitWrapper += ".exe"
+	}
+	t.Setenv("SHAMHUB_TEST_REAL_GIT", realGit)
+	t.Setenv("SHAMHUB_TEST_REJECT_GIT_COMMAND", rejected)
+
+	testExe, err := os.Executable()
+	require.NoError(t, err)
+	if err := os.Symlink(testExe, gitWrapper); err == nil {
+		return gitWrapper
+	}
+
+	src, err := os.Open(testExe)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, src.Close()) }()
+	dst, err := os.Create(gitWrapper)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, dst.Close()) }()
+	_, err = io.Copy(dst, src)
+	require.NoError(t, err)
+	require.NoError(t, os.Chmod(gitWrapper, 0o755))
 	return gitWrapper
 }
 
