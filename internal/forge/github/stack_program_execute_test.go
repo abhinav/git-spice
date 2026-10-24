@@ -90,10 +90,10 @@ func TestExecuteGitHubStackProgram_retainedMembersBlockReplacement(t *testing.T)
 		&github.UnstackPullRequestStackInput{
 			Owner: "acme", Repo: "repo", StackNumber: 42,
 		},
-	).Return(&github.UnstackPullRequestStackResult{RemainingPullRequests: []int{1}}, nil)
+	).Return(&github.UnstackPullRequestStackResult{RemainingPullRequests: []int{1, 2}}, nil)
 	program := githubStackProgram{
 		githubStackTry{Body: []githubStackInstruction{
-			githubStackUnstack{StackNumber: 42},
+			githubStackUnstack{StackNumber: 42, MergedPullRequests: []int{1}},
 			githubStackTry{Body: []githubStackInstruction{
 				githubStackChangeBase{PullRequestNumber: 2, PullRequestID: "PR_2", BaseBranch: "main"},
 				githubStackCreate{PullRequests: []int{2, 3}},
@@ -108,7 +108,7 @@ func TestExecuteGitHubStackProgram_retainedMembersBlockReplacement(t *testing.T)
 	}
 
 	err := executeGitHubStackProgram(t.Context(), repository, program)
-	require.EqualError(t, err, "unstack GitHub native stack #42: GitHub retained pull requests [1]")
+	require.EqualError(t, err, "unstack GitHub native stack #42: GitHub retained pull requests [2]")
 }
 
 func TestExecuteGitHubStackProgram_nestedFailuresDoNotEscapeTry(t *testing.T) {

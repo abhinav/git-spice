@@ -128,6 +128,42 @@ func TestRepository_UpdateStackRemovesMember(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestRepository_UpdateStackRemovesMemberAfterMergedPrefix(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := &github.PullRequestStack{
+		Number: 42,
+		Members: []github.PullRequestStackMember{
+			{Number: 1, State: github.PullRequestStateMerged},
+			{Number: 2, State: github.PullRequestStateOpen},
+			{Number: 3, State: github.PullRequestStateOpen},
+			{Number: 4, State: github.PullRequestStateOpen},
+		},
+	}
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		2: stackPullRequest("PR_2", "main", stack),
+		4: stackPullRequest("PR_4", "removed", stack),
+	})
+	// Drop #3 from the active chain without including historical #1 in either
+	// the request or the replacement stack. GitHub may retain #1 on unstack.
+	gomock.InOrder(
+		gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), &github.UnstackPullRequestStackInput{
+			Owner: "acme", Repo: "repo", StackNumber: 42,
+		}).Return(&github.UnstackPullRequestStackResult{RemainingPullRequests: []int{1}}, nil),
+		gateway.EXPECT().UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+			PullRequestID: "PR_4", BaseRefName: new("bottom"),
+		}).Return(nil),
+		gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+			Owner: "acme", Repo: "repo", PullRequests: []int{2, 4},
+		}).Return(nil),
+	)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 2}, BaseBranch: "main"},
+		{Change: &PR{Number: 4}, BaseChange: &PR{Number: 2}, BaseBranch: "bottom"},
+	})
+	require.NoError(t, err)
+}
+
 func TestRepository_UpdateStackSplitsExistingStack(t *testing.T) {
 	gateway := NewMockGithubGateway(gomock.NewController(t))
 	stack := newPullRequestStack(42, 1, 2)
@@ -154,6 +190,7 @@ func TestRepository_UpdateStackLeavesLockedStackUnchanged(t *testing.T) {
 	stack := &github.PullRequestStack{
 		Number: 42,
 		Members: []github.PullRequestStackMember{
+			{Number: 4, State: github.PullRequestStateMerged},
 			{Number: 1, State: github.PullRequestStateOpen},
 			{Number: 2, State: github.PullRequestStateOpen, Locked: true},
 		},
@@ -174,10 +211,10 @@ func TestRepository_UpdateStackLeavesLockedStackUnchanged(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Contains(t, logs.String(),
-		"#1: Leaving pull request and its upstack in existing GitHub native stack #42: merged, queued, or auto-merge pull requests prevent restructuring")
+		"#1: Leaving pull request and its upstack in existing GitHub native stack #42: queued or auto-merge pull requests prevent restructuring")
 }
 
-func TestRepository_UpdateStackLeavesMergedMemberStackUnchanged(t *testing.T) {
+func TestRepository_UpdateStackReplacesStackWithMergedPrefix(t *testing.T) {
 	gateway := NewMockGithubGateway(gomock.NewController(t))
 	stack := &github.PullRequestStack{
 		Number: 42,
@@ -193,6 +230,17 @@ func TestRepository_UpdateStackLeavesMergedMemberStackUnchanged(t *testing.T) {
 		2: stackPullRequest("PR_2", "a", stack),
 		3: stackPullRequest("PR_3", "a", nil),
 	})
+	gomock.InOrder(
+		gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), &github.UnstackPullRequestStackInput{
+			Owner: "acme", Repo: "repo", StackNumber: 42,
+		}).Return(&github.UnstackPullRequestStackResult{}, nil),
+		gateway.EXPECT().UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+			PullRequestID: "PR_2", BaseRefName: new("c"),
+		}).Return(nil),
+		gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+			Owner: "acme", Repo: "repo", PullRequests: []int{3, 2},
+		}).Return(nil),
+	)
 
 	var logs strings.Builder
 	repo := newStackRepository(t, gateway)
@@ -203,8 +251,7 @@ func TestRepository_UpdateStackLeavesMergedMemberStackUnchanged(t *testing.T) {
 		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 3}, BaseBranch: "c"},
 	})
 	require.NoError(t, err)
-	assert.Contains(t, logs.String(),
-		"#3: Leaving pull request and its upstack in existing GitHub native stack #42: merged, queued, or auto-merge pull requests prevent restructuring")
+	assert.NotContains(t, logs.String(), "Leaving pull request")
 }
 
 func TestRepository_PlanStackUpdateDoesNotWrite(t *testing.T) {

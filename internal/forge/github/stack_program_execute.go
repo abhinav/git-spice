@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/gateway/github"
 )
@@ -81,17 +82,22 @@ func (e *githubStackExecutor) unstack(ctx context.Context, instruction githubSta
 	if err != nil {
 		return fmt.Errorf("unstack GitHub native stack #%d: %w", instruction.StackNumber, err)
 	}
-	// GitHub can successfully unstack only part of a resource:
-	// it releases eligible members but retains merged or locked members.
-	// The compiled replacement assumes complete dissolution, not an arbitrary
-	// released subset, so API success alone does not satisfy its prerequisite.
-	// Report retained membership as failure before dependent writes can run;
-	// any members already released remain released.
-	if len(result.RemainingPullRequests) > 0 {
+	// Only the released PRs participate in the replacement.
+	// Historical members known to be merged cannot become open again,
+	// so their remaining in the old resource does not invalidate the plan.
+	// Any other remainder may still block a base or membership write;
+	// stop before dependent instructions run, even though some PRs were released.
+	var retained []int
+	for _, number := range result.RemainingPullRequests {
+		if !slices.Contains(instruction.MergedPullRequests, number) {
+			retained = append(retained, number)
+		}
+	}
+	if len(retained) > 0 {
 		return fmt.Errorf(
 			"unstack GitHub native stack #%d: GitHub retained pull requests %v",
 			instruction.StackNumber,
-			result.RemainingPullRequests,
+			retained,
 		)
 	}
 	return nil

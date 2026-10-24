@@ -2,7 +2,6 @@ package github
 
 import (
 	"fmt"
-	"slices"
 
 	"go.abhg.dev/gs/internal/gateway/github"
 )
@@ -46,7 +45,7 @@ func (c *githubStackCompiler) try(body func()) {
 
 // selection emits an append or new membership for the selected paths.
 // Incompatible existing membership is dissolved first;
-// if GitHub would retain members, it emits only a warning.
+// queued or auto-merge members prevent replacement and produce a warning.
 func (c *githubStackCompiler) selection(selection githubStackSelection) {
 	// GitHub can grow a native stack at its top, but cannot insert, remove,
 	// or reorder individual members in place.
@@ -64,20 +63,24 @@ func (c *githubStackCompiler) selection(selection githubStackSelection) {
 	}
 
 	if remoteStack := selection.remoteStack; remoteStack != nil {
-		// GitHub retains merged and locked members when unstacking.
-		// A replacement must dissolve the whole object before any base
-		// or new membership write can use the desired topology.
-		if slices.ContainsFunc(remoteStack.Members, func(member github.PullRequestStackMember) bool {
-			return member.Locked || member.State == github.PullRequestStateMerged
-		}) {
-			c.warnings = append(c.warnings, fmt.Sprintf(
-				"#%d: Leaving pull request and its upstack in existing GitHub native stack #%d: merged, queued, or auto-merge pull requests prevent restructuring",
-				selection.paths[0][0].number,
-				remoteStack.Number,
-			))
-			return
+		// Unstack can leave historical merged members in the old resource.
+		// Replacement needs the open PRs released, not that history erased.
+		// Record the merged IDs so execution can distinguish harmless history
+		// from members that GitHub could not release.
+		unstack := githubStackUnstack{StackNumber: remoteStack.Number}
+		for _, member := range remoteStack.Members {
+			if member.State == github.PullRequestStateMerged {
+				unstack.MergedPullRequests = append(unstack.MergedPullRequests, member.Number)
+			} else if member.Locked {
+				c.warnings = append(c.warnings, fmt.Sprintf(
+					"#%d: Leaving pull request and its upstack in existing GitHub native stack #%d: queued or auto-merge pull requests prevent restructuring",
+					selection.paths[0][0].number,
+					remoteStack.Number,
+				))
+				return
+			}
 		}
-		c.instructions = append(c.instructions, githubStackUnstack{StackNumber: remoteStack.Number})
+		c.instructions = append(c.instructions, unstack)
 	}
 
 	// Unstack shares the selection's scope, so its failure skips all paths.

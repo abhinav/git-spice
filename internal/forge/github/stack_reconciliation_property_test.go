@@ -88,6 +88,12 @@ func TestReconcileGitHubStacks_validTransitions(t *testing.T) {
 			}
 		}
 		for number, pr := range model.pullRequests {
+			// Replacing an active suffix must not rewrite its merged history,
+			// even when those historical PRs also appear in the desired forest.
+			if pr.state == github.PullRequestStateMerged {
+				assert.Equal(t, beforeBases[number], pr.base, "changed merged PR #%d base", number)
+				continue
+			}
 			if pr.base == beforeBases[number] {
 				continue
 			}
@@ -138,6 +144,36 @@ func TestStackResourceModel_restructure(t *testing.T) {
 		Owner: "acme", Repo: "repo",
 		PullRequests: []int{1, 3, 2},
 	}))
+}
+
+func TestStackResourceModel_restructureAfterMergedPrefix(t *testing.T) {
+	model := &stackResourceModel{
+		pullRequests: map[int]*stackResourceModelPR{
+			1: {head: "a", base: "main", state: github.PullRequestStateMerged, headInRepository: true},
+			2: {head: "b", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			3: {head: "c", base: "b", state: github.PullRequestStateOpen, headInRepository: true},
+			4: {head: "d", base: "c", state: github.PullRequestStateOpen, headInRepository: true},
+		},
+		stacks:    map[int][]int{42: {1, 2, 3, 4}},
+		nextStack: 42,
+	}
+	result, err := model.UnstackPullRequestStack(t.Context(), &github.UnstackPullRequestStackInput{
+		Owner: "acme", Repo: "repo", StackNumber: 42,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []int{1}, result.RemainingPullRequests)
+	assert.Equal(t, []int{1}, model.stacks[42])
+
+	// Historical membership on #1 does not prevent recreating the released
+	// active suffix without #3. Removing #3 leaves its PR and base unchanged.
+	require.NoError(t, model.UpdatePullRequest(t.Context(), &github.UpdatePullRequestInput{
+		PullRequestID: "4", BaseRefName: new("b"),
+	}))
+	require.NoError(t, model.CreatePullRequestStack(t.Context(), &github.CreatePullRequestStackInput{
+		Owner: "acme", Repo: "repo", PullRequests: []int{2, 4},
+	}))
+	assert.Equal(t, map[int][]int{42: {1}, 43: {2, 4}}, model.stacks)
+	assert.Equal(t, "b", model.pullRequests[3].base)
 }
 
 // stackResourceModel models GitHub's native stack operations.
