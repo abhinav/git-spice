@@ -63,7 +63,6 @@ var _ Store = (*state.Store)(nil)
 // Service provides access to the Spice service.
 type Service interface {
 	BranchGraph(context.Context, *spice.BranchGraphOptions) (*spice.BranchGraph, error)
-	LoadBranches(context.Context) ([]spice.LoadBranchItem, error)
 	VerifyRestacked(ctx context.Context, name string) error
 	UnusedBranchName(ctx context.Context, remote string, branch string) (string, error)
 	ListChangeTemplates(context.Context, string, forge.Repository) ([]*forge.ChangeTemplate, error)
@@ -213,7 +212,10 @@ type BatchRequest struct {
 
 // SubmitBatch submits a batch of branches to a remote repository,
 // creating or updating change requests as needed.
-func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
+func (h *Handler) SubmitBatch(
+	ctx context.Context,
+	req *BatchRequest,
+) (retErr error) {
 	opts := cmp.Or(req.Options, &Options{})
 	mergeConfiguredOptions(opts)
 
@@ -237,7 +239,26 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 	}
 
 	resolvedUpstreams := make(map[string]string)
-	var branchesToComment []string
+	stackUpdates := submitStackUpdates{
+		requestedBranches: slices.Clone(req.Branches),
+	}
+	var submittedBranches, completedBranches []string
+	// A later branch failure must not strand earlier published changes without
+	// their stack representations. Synchronize every completed submission on
+	// every exit from the loop.
+	defer func() {
+		retErr = errors.Join(
+			retErr,
+			h.updateStackRepresentations(
+				ctx,
+				opts,
+				&stackUpdates,
+				submittedBranches,
+				completedBranches,
+			),
+		)
+	}()
+
 	for _, branch := range req.Branches {
 		branchInfo, ok := graph.Lookup(branch)
 		if !ok {
@@ -253,35 +274,22 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 			&submitOptions{
 				Options:      &opts,
 				upstreamBase: resolvedUpstreams[branchInfo.Base],
+				stackUpdates: &stackUpdates,
 			},
 		)
+		if status.Submitted {
+			submittedBranches = append(submittedBranches, branch)
+		}
 		if err != nil {
 			return fmt.Errorf("submit branch %s: %w", branch, err)
 		}
 		resolvedUpstreams[branch] = status.upstreamBranch
 		if status.Submitted {
-			branchesToComment = append(branchesToComment, branch)
+			completedBranches = append(completedBranches, branch)
 		}
 	}
 
-	if len(branchesToComment) == 0 || opts.DryRun {
-		return nil // nothing to do
-	}
-
-	return updateNavigationComments(
-		ctx,
-		h.Store, h.Service, h.Log,
-		opts.NavComment,
-		opts.NavCommentSync,
-		opts.NavCommentDownstack,
-		opts.NavCommentMarker,
-		opts.NavCommentLayout,
-		opts.NavCommentTrunkLink,
-		opts.NavCommentTrunkLinkText,
-		branchesToComment,
-		h.upstreamRepository,
-		h.pushRepositoryID,
-	)
+	return nil
 }
 
 // Request is a request to submit a single branch to a remote repository.
@@ -302,7 +310,7 @@ type Request struct {
 
 // Submit submits a single branch to a remote repository,
 // creating or updating a change request as needed.
-func (h *Handler) Submit(ctx context.Context, req *Request) error {
+func (h *Handler) Submit(ctx context.Context, req *Request) (retErr error) {
 	opts := cmp.Or(req.Options, &Options{})
 	mergeConfiguredOptions(opts)
 	graph := req.BranchGraph
@@ -317,39 +325,42 @@ func (h *Handler) Submit(ctx context.Context, req *Request) error {
 		return err
 	}
 
+	stackUpdates := submitStackUpdates{requestedBranches: []string{req.Branch}}
+	var submittedBranches, completedBranches []string
+	defer func() {
+		retErr = errors.Join(
+			retErr,
+			h.updateStackRepresentations(
+				ctx,
+				opts,
+				&stackUpdates,
+				submittedBranches,
+				completedBranches,
+			),
+		)
+	}()
+
 	status, err := h.submitBranch(
 		ctx,
 		graph,
 		req.Branch,
 		&submitOptions{
-			Options: opts,
-			Title:   req.Title,
-			Body:    req.Body,
+			Options:      opts,
+			Title:        req.Title,
+			Body:         req.Body,
+			stackUpdates: &stackUpdates,
 		},
 	)
+	if status.Submitted {
+		submittedBranches = append(submittedBranches, req.Branch)
+	}
 	if err != nil {
 		return fmt.Errorf("submit branch %s: %w", req.Branch, err)
 	}
-
-	if !status.Submitted || opts.DryRun {
-		// Nothing was submitted, so nothing to do.
-		return nil
+	if status.Submitted {
+		completedBranches = append(completedBranches, req.Branch)
 	}
-
-	return updateNavigationComments(
-		ctx,
-		h.Store, h.Service, h.Log,
-		opts.NavComment,
-		opts.NavCommentSync,
-		opts.NavCommentDownstack,
-		opts.NavCommentMarker,
-		opts.NavCommentLayout,
-		opts.NavCommentTrunkLink,
-		opts.NavCommentTrunkLinkText,
-		[]string{req.Branch},
-		h.upstreamRepository,
-		h.pushRepositoryID,
-	)
+	return nil
 }
 
 type submitStatus struct {
@@ -368,6 +379,7 @@ type submitOptions struct {
 
 	Title, Body  string
 	upstreamBase string
+	stackUpdates *submitStackUpdates
 }
 
 func (h *Handler) submitBranch(
@@ -629,9 +641,10 @@ func (h *Handler) submitBranch(
 				branch.Base,
 				h.Store.Trunk(),
 			) {
-				log.Warnf("Branch %[1]s is not restacked."+
-					" Run '%[2]s branch restack --branch=%[1]s'"+
-					" to fix this.",
+				log.Warnf(
+					"Branch %[1]s is not restacked."+
+						" Run '%[2]s branch restack --branch=%[1]s'"+
+						" to fix this.",
 					branchToSubmit, cli.Name(),
 				)
 			} else {
@@ -948,16 +961,30 @@ func (h *Handler) submitBranch(
 				AddReviewers: reviewers,
 				AddAssignees: opts.Assignees,
 			}
-			// Some forges, including GitHub, treat setting an unchanged base
-			// as a mutation and may trigger redundant CI runs.
-			if pull.BaseName != upstreamBase {
-				editOpts.Base = upstreamBase
-			}
-
 			// remoteRepo is guaranteed to be available at this point.
 			remoteRepo, err := h.upstreamRepository(ctx)
 			if err != nil {
 				return status, fmt.Errorf("edit CR %v: %w", pull.ID, err)
+			}
+
+			// Native stack providers may need to dissolve an existing stack before
+			// changing a pull request base. Defer that base mutation to their
+			// planned transaction; unsupported planning falls back to this same
+			// ordinary EditChange operation after the submit loop.
+			if pull.BaseName != upstreamBase {
+				if _, ok := remoteRepo.(forge.StackRepository); ok && opts.stackUpdates != nil {
+					opts.stackUpdates.deferredBases = append(
+						opts.stackUpdates.deferredBases,
+						deferredBaseUpdate{
+							branch:     branchToSubmit,
+							repository: remoteRepo,
+							change:     pull.ID,
+							base:       upstreamBase,
+						},
+					)
+				} else {
+					editOpts.Base = upstreamBase
+				}
 			}
 
 			if err := remoteRepo.EditChange(ctx, pull.ID, editOpts); err != nil {
@@ -1009,7 +1036,8 @@ func (h *Handler) resolveUpstreamBranch(
 			return "", fmt.Errorf(
 				"refusing to push branch %q to trunk %q; "+
 					"run '%s branch untrack %s' and track the branch again",
-				branch, storedUpstream, cli.Name(), branch)
+				branch, storedUpstream, cli.Name(), branch,
+			)
 		}
 
 		return storedUpstream, nil
@@ -1031,7 +1059,8 @@ func (h *Handler) resolveUpstreamBranch(
 			return "", fmt.Errorf(
 				"refusing to push branch %q to trunk %q; "+
 					"run 'git branch --unset-upstream %s'",
-				branch, b, branch)
+				branch, b, branch,
+			)
 		}
 
 		h.Log.Infof("%v: Using upstream name '%v'", branch, b)
@@ -1086,7 +1115,8 @@ func (h *Handler) prepareBranch(
 				WithDescription(
 					fmt.Sprintf("Branch %s has no changes compared to its base (%s). "+
 						"Submitting it will create an empty change request. "+
-						"This is usually not what you want to do.", branchToSubmit, baseBranch)).
+						"This is usually not what you want to do.", branchToSubmit, baseBranch),
+				).
 				WithValue(&submitNoChanges)
 			if err := ui.Run(h.View, field); err != nil {
 				return nil, fmt.Errorf("run prompt: %w", err)
@@ -1179,7 +1209,8 @@ func (h *Handler) prepareBranch(
 				WithTitle("Recover previously filled information?").
 				WithDescription(
 					"We found previously filled information for this branch.\n" +
-						"Would you like to recover and edit it?")
+						"Would you like to recover and edit it?",
+				)
 			if err := ui.Run(h.View, f); err != nil {
 				return nil, fmt.Errorf("prompt for recovery: %w", err)
 			}
