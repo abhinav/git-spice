@@ -310,6 +310,10 @@ Standard Git boolean values are also accepted:
 `true`, `yes`, `on`, and `1` behave like `always`,
 and `false`, `no`, `off`, and `0` behave like `never`.
 
+In `auto` mode, color is disabled when `NO_COLOR` is nonempty
+or `CLICOLOR` is `0`.
+Explicit `always` configuration overrides these environment defaults.
+
 ### spice.forge.kind
 
 <!-- gs:version v0.30.0 -->

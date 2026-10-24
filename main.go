@@ -122,6 +122,9 @@ func main() {
 	// Colored output can be disabled with color.ui
 	// or the git-spice specific spice.color in git configuration.
 	colorPref := resolveColorPreference(context.Background(), git.NewConfig(git.ConfigOptions{}))
+	if colorPref == colorUnset && (os.Getenv("NO_COLOR") != "" || os.Getenv("CLICOLOR") == "0") {
+		colorPref = colorOff
+	}
 	colorProfile := colorprofile.Detect(stderr.Unwrap(), os.Environ())
 	switch colorPref {
 	case colorOff:
