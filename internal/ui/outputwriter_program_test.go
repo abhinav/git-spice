@@ -2,6 +2,7 @@ package ui_test
 
 import (
 	"bytes"
+	"io"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/hexops/autogold/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/vito/midterm"
@@ -16,52 +18,69 @@ import (
 )
 
 func TestOutputWriter_TeaProgram_printsLines(t *testing.T) {
-	var raw lockedBuffer
-	output := ui.NewOutputWriter(&raw)
-	defer func() {
-		require.NoError(t, output.Close())
-	}()
-	model := new(outputWriterProgramModel)
+	tests := []struct {
+		name    string
+		profile colorprofile.Profile
+	}{
+		{name: "Unwrapped", profile: colorprofile.Unknown},
+		{name: "Color", profile: colorprofile.TrueColor},
+		{name: "Plain", profile: colorprofile.ASCII},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var raw lockedBuffer
+			output := ui.NewOutputWriter(&raw)
+			defer func() {
+				require.NoError(t, output.Close())
+			}()
+			model := new(outputWriterProgramModel)
+			var writer io.Writer = output
+			if tt.profile != colorprofile.Unknown {
+				writer = &colorprofile.Writer{Forward: output, Profile: tt.profile}
+			}
 
-	errc := make(chan error, 1)
-	go func() {
-		errc <- ui.RunModel(model, &ui.RunOptions{
-			Input:          bytes.NewReader(nil),
-			Output:         output,
-			Width:          40,
-			Height:         8,
-			TERM:           "xterm-256color",
-			WithoutSignals: true,
+			errc := make(chan error, 1)
+			go func() {
+				errc <- ui.RunModel(model, &ui.RunOptions{
+					Input:          bytes.NewReader(nil),
+					Output:         writer,
+					Width:          40,
+					Height:         8,
+					TERM:           "xterm-256color",
+					WithoutSignals: true,
+				})
+			}()
+			defer func() {
+				model.Stop()
+				select {
+				case err := <-errc:
+					require.NoError(t, err)
+				case <-time.After(time.Second):
+					t.Error("timed out waiting for program to stop")
+				}
+			}()
+
+			var rows []string
+			require.Eventually(t, func() bool {
+				rows = renderedRowsFrom(t, raw.Bytes())
+				return slices.Contains(rows, "model frame")
+			}, time.Second, 10*time.Millisecond)
+			autogold.Expect([]string{
+				"model frame",
+			}).Equal(t, rows)
+
+			_, err := output.Write([]byte("log line\n"))
+			require.NoError(t, err)
+			require.Eventually(t, func() bool {
+				rows = renderedRowsFrom(t, raw.Bytes())
+				return slices.Contains(rows, "log line") &&
+					slices.Contains(rows, "model frame")
+			}, time.Second, 10*time.Millisecond)
+			autogold.Expect([]string{
+				"log line",
+				"model frame",
+			}).Equal(t, rows)
 		})
-	}()
-
-	var rows []string
-	require.Eventually(t, func() bool {
-		rows = renderedRowsFrom(t, raw.Bytes())
-		return slices.Contains(rows, "model frame")
-	}, time.Second, 10*time.Millisecond)
-	autogold.Expect([]string{
-		"model frame",
-	}).Equal(t, rows)
-
-	_, err := output.Write([]byte("log line\n"))
-	require.NoError(t, err)
-	require.Eventually(t, func() bool {
-		rows = renderedRowsFrom(t, raw.Bytes())
-		return slices.Contains(rows, "log line") &&
-			slices.Contains(rows, "model frame")
-	}, time.Second, 10*time.Millisecond)
-	autogold.Expect([]string{
-		"log line",
-		"model frame",
-	}).Equal(t, rows)
-
-	model.Stop()
-	select {
-	case err := <-errc:
-		require.NoError(t, err)
-	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for program to stop")
 	}
 }
 
