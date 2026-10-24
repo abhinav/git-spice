@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'merge: A race that could abandon branches after preparation is fixed.'
+time: 2026-10-24T16:21:58.859032-07:00
