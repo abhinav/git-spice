@@ -387,6 +387,21 @@ func (mr *MockStoreMockRecorder) LookupBranch(ctx, name any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupBranch", reflect.TypeOf((*MockStore)(nil).LookupBranch), ctx, name)
 }
 
+// LookupBranches mocks base method.
+func (m *MockStore) LookupBranches(ctx context.Context, names []string) ([]*state.LookupResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LookupBranches", ctx, names)
+	ret0, _ := ret[0].([]*state.LookupResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LookupBranches indicates an expected call of LookupBranches.
+func (mr *MockStoreMockRecorder) LookupBranches(ctx, names any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupBranches", reflect.TypeOf((*MockStore)(nil).LookupBranches), ctx, names)
+}
+
 // Remote mocks base method.
 func (m *MockStore) Remote() (state.Remote, error) {
 	m.ctrl.T.Helper()

@@ -9,6 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
 // LookupBranchResponse is the response to a LookupBranch request.
@@ -63,9 +64,87 @@ func (e *DeletedBranchError) Error() string {
 // [state.ErrNotExist] if the branch is not tracked,
 // or a [DeletedBranchError] if the branch is tracked, but was deleted out of band.
 func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchResponse, error) {
-	resp, storeErr := s.store.LookupBranch(ctx, name)
-	head, gitErr := s.repo.PeelToCommit(ctx, name)
+	results, err := s.LookupBranches(ctx, []string{name})
+	if err != nil {
+		return nil, err
+	}
+	return results[0].Response, results[0].Err
+}
 
+// LookupBranchResult is the outcome for one name passed to [Service.LookupBranches].
+type LookupBranchResult struct {
+	// Response holds the branch information when Err is nil.
+	Response *LookupBranchResponse
+
+	// Err reports a branch-specific lookup failure, such as a deleted branch.
+	Err error
+}
+
+// LookupBranches looks up tracked branches in the order requested.
+// It returns one result per name, including repeated names.
+// Branch-specific failures are reported in each result;
+// the returned error reports a failure to load the batch or list local refs.
+func (s *Service) LookupBranches(
+	ctx context.Context,
+	names []string,
+) ([]LookupBranchResult, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	// Load tracked metadata together. Missing keys leave only their own slots
+	// empty; other storage errors make the whole batch unusable.
+	states, storeErr := s.store.LookupBranches(ctx, names)
+	var missing []int
+	if missingErr, ok := errors.AsType[*storage.MissingKeysError](storeErr); ok {
+		missing = missingErr.Indexes
+	} else if storeErr != nil {
+		return nil, fmt.Errorf("load branch state: %w", storeErr)
+	}
+
+	// Resolve local heads in one call for a batch.
+	// Single-name requests retain PeelToCommit's resolution and error behavior.
+	heads := make(map[string]git.Hash)
+	var headErr error
+	if len(names) == 1 {
+		heads[names[0]], headErr = s.repo.PeelToCommit(ctx, names[0])
+	} else {
+		for branch, err := range s.repo.LocalBranches(ctx, &git.LocalBranchesOptions{Patterns: names}) {
+			if err != nil {
+				return nil, fmt.Errorf("list local branches: %w", err)
+			}
+			heads[branch.Name] = branch.Hash
+		}
+	}
+
+	// Combine metadata and refs to distinguish tracked, deleted, and untracked
+	// branches. Missing indexes refer to positions, not unique branch names.
+	results := make([]LookupBranchResult, len(names))
+	for i, name := range names {
+		var stateErr error
+		if len(missing) > 0 && missing[0] == i {
+			stateErr = state.ErrNotExist
+			missing = missing[1:]
+		}
+
+		head, exists := heads[name]
+		gitErr := headErr
+		if !exists {
+			gitErr = git.ErrNotExist
+		}
+		results[i].Response, results[i].Err = s.lookupBranchResponse(ctx, name, states[i], stateErr, head, gitErr)
+	}
+	return results, nil
+}
+
+func (s *Service) lookupBranchResponse(
+	ctx context.Context,
+	name string,
+	resp *state.LookupResponse,
+	storeErr error,
+	head git.Hash,
+	gitErr error,
+) (*LookupBranchResponse, error) {
 	// Handle all scenarios:
 	//
 	// storeErr | gitErr | Result
