@@ -292,6 +292,28 @@ should print a message when switching branches.
 - `true` (default)
 - `false`
 
+### spice.color
+
+<!-- gs:version unreleased -->
+
+Whether git-spice writes colored output.
+This overrides Git's own [`color.ui`](https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorui) setting,
+which git-spice also respects.
+
+**Accepted values:**
+
+- `auto` (default): use colored output when writing to a terminal
+- `always`: always use colored output, even when output is not a terminal
+- `never`: never use colored output
+
+Standard Git boolean values are also accepted:
+`true`, `yes`, `on`, and `1` behave like `always`,
+and `false`, `no`, `off`, and `0` behave like `never`.
+
+In `auto` mode, color is disabled when `NO_COLOR` is nonempty
+or `CLICOLOR` is `0`.
+Explicit `always` configuration overrides these environment defaults.
+
 ### spice.forge.kind
 
 <!-- gs:version v0.30.0 -->

@@ -34,7 +34,8 @@ func TestGitSectionsRequested(t *testing.T) {
 	require.NoError(t, err)
 
 	nodes := []*kong.Node{app.Model.Node}
-	sections := make(map[string]struct{})
+	// color.ui is read during startup rather than resolved from a flag.
+	sections := map[string]struct{}{"color": {}}
 	for len(nodes) > 0 {
 		node := nodes[0]
 		nodes = append(nodes[1:], node.Children...)

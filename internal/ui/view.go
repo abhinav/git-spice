@@ -65,10 +65,7 @@ var _ View = (*FileView)(nil)
 
 // NewFileView builds a non-interactive view for the given writer.
 func NewFileView(w io.Writer) *FileView {
-	detectOutput := w
-	if ow, ok := w.(*OutputWriter); ok {
-		detectOutput = ow.Unwrap()
-	}
+	detectOutput := unwrapOutput(w)
 
 	cpw, ok := w.(*colorprofile.Writer)
 	if !ok {
@@ -104,10 +101,7 @@ var _ InteractiveView = (*TerminalView)(nil)
 
 // NewTerminalView builds an interactive view for the given streams.
 func NewTerminalView(r io.Reader, w io.Writer) *TerminalView {
-	detectOutput := w
-	if ow, ok := w.(*OutputWriter); ok {
-		detectOutput = ow.Unwrap()
-	}
+	detectOutput := unwrapOutput(w)
 
 	return &TerminalView{
 		r: r,
@@ -165,4 +159,14 @@ func (tv *TerminalView) RunModel(
 		opts.Signals = tv.signals
 	}
 	return RunModel(model, opts)
+}
+
+func unwrapOutput(w io.Writer) io.Writer {
+	if cw, ok := w.(*colorprofile.Writer); ok {
+		w = cw.Forward
+	}
+	if ow, ok := w.(*OutputWriter); ok {
+		w = ow.Unwrap()
+	}
+	return w
 }

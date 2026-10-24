@@ -50,6 +50,7 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/xec"
 	"go.abhg.dev/komplete"
+	silogstyle "go.abhg.dev/log/silog"
 )
 
 // Version of git-spice.
@@ -117,13 +118,50 @@ func (b secretBackend) String() string {
 }
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	stderr := ui.NewOutputWriter(os.Stderr)
-	logger := silog.New(&colorprofile.Writer{
+	colorWriter := &colorprofile.Writer{
 		Forward: stderr,
-		Profile: colorprofile.Detect(stderr.Unwrap(), os.Environ()),
-	}, &silog.Options{
+		Profile: plainColorProfile(os.Stderr),
+	}
+	logger := silog.New(colorWriter, &silog.Options{
 		Level: silog.LevelInfo,
+
+		// The filter controls color; startup diagnostics stay plain
+		// until configuration has been loaded.
+		Style: silogstyle.DefaultStyle(),
 	})
+	spiceConfig, err := spice.LoadConfig(
+		ctx,
+		git.NewConfig(git.ConfigOptions{Log: logger}),
+		spice.ConfigOptions{Log: logger},
+	)
+	if err != nil {
+		logger.Error("Error loading spice configuration; continuing without it.", "error", err)
+	}
+
+	// Colored output can be disabled with color.ui
+	// or the git-spice specific spice.color in git configuration.
+	colorPref := colorUnset
+	if spiceConfig != nil {
+		colorPref = parseColorValue(spiceConfig.Color())
+	}
+	if colorPref == colorUnset && (os.Getenv("NO_COLOR") != "" || os.Getenv("CLICOLOR") == "0") {
+		colorPref = colorOff
+	}
+	colorProfile := colorprofile.Detect(stderr.Unwrap(), os.Environ())
+	switch colorPref {
+	case colorOff:
+		colorProfile = plainColorProfile(stderr.Unwrap())
+	case colorOn:
+		// The user explicitly asked for color:
+		// force it even if the environment detection
+		// found no color support.
+		colorProfile = colorprofile.TrueColor
+	}
+	colorWriter.Profile = colorProfile
 
 	// Register supported forges.
 	var forges forge.Registry
@@ -136,9 +174,6 @@ func main() {
 	for _, buildForge := range _extraForges {
 		forges.Register(buildForge(logger))
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	var sigStack sigstack.Stack
 	sigc := make(chan sigstack.Signal, 1)
@@ -153,17 +188,6 @@ func main() {
 		case <-ctx.Done():
 		}
 	}()
-
-	spiceConfig, err := spice.LoadConfig(
-		ctx,
-		git.NewConfig(git.ConfigOptions{Log: logger}),
-		spice.ConfigOptions{
-			Log: logger,
-		},
-	)
-	if err != nil {
-		logger.Error("Error loading spice configuration; continuing without it.", "error", err)
-	}
 
 	var cmd mainCmd
 
@@ -190,7 +214,7 @@ func main() {
 		},
 		kong.UsageOnError(),
 		kong.Help(helpPrinter),
-		kong.Writers(os.Stdout, stderr),
+		kong.Writers(os.Stdout, colorWriter),
 	)
 	if err != nil {
 		panic(err)

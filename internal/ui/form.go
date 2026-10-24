@@ -10,6 +10,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
 	"go.abhg.dev/gs/internal/sigstack"
 )
 
@@ -199,11 +200,21 @@ func RunModel(model tea.Model, opts *RunOptions) (err error) {
 		teaOpts = append(teaOpts, tea.WithInput(i))
 	}
 	if o := opts.Output; o != nil {
+		cw, _ := o.(*colorprofile.Writer)
+		if cw != nil {
+			teaOpts = append(teaOpts, tea.WithColorProfile(cw.Profile))
+			o = cw.Forward
+		}
 		if ow, ok := o.(*OutputWriter); ok {
 			// Bubble Tea renders to the raw terminal stream.
 			// Ordinary writes use printTo below during the active program run.
 			printOutput = ow
 			o = ow.Unwrap()
+		}
+		if cw != nil && cw.Profile == colorprofile.NoTTY {
+			// Bubble Tea still emits terminal controls with a NoTTY profile.
+			// Filter those out without routing frames back through OutputWriter.
+			o = &colorprofile.Writer{Forward: o, Profile: colorprofile.NoTTY}
 		}
 		teaOpts = append(teaOpts, tea.WithOutput(o))
 	}

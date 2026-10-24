@@ -1,0 +1,3 @@
+kind: Added
+body: 'Support `color.ui` and `spice.color` git configuration options to control colored output.'
+time: 2026-10-23T23:11:30Z
