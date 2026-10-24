@@ -13,8 +13,8 @@ import (
 )
 
 // awaitReady checks readiness only after the forge observes the expected head.
-// Readiness must describe the commit being merged,
-// rather than the head from before a branch update.
+// Both ordinary and native merges must check the commit they will request,
+// rather than readiness left over from before a branch update.
 func (e *mergePlanExecutor) awaitReady(
 	ctx context.Context,
 	item *mergeItem,

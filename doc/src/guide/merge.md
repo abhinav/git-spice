@@ -303,6 +303,9 @@ This is not always desirable, as some repositories have custom merge processes.
 git-spice supports custom merge workflows
 with the $$spice.merge.command$$ configuration option.
 
+Custom merge commands run once per CR.
+They do not currently support merging a native stack as one operation.
+
 For example, a GitHub repository may require
 a contributor to comment `/merge` on a PR to request a merge.
 To support this, configure git-spice like this:

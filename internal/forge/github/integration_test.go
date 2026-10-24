@@ -669,10 +669,24 @@ func TestIntegration_DivergentStackMerge(t *testing.T) {
 	dPullRequest := dPullRequests[0]
 	require.NotNil(t, dPullRequest, "change D pull request")
 	assert.Equal(t, githubgateway.PullRequestStateOpen, dPullRequest.State)
-	assert.Equal(t, bBranch, dPullRequest.BaseRefName)
+	assert.Contains(t, []string{bBranch, "main"}, dPullRequest.BaseRefName)
 	assert.Equal(t, dBranch, dPullRequest.HeadRefName)
 	assert.Equal(t, dHeadHash.String(), dPullRequest.HeadRefOID)
 	assert.Nil(t, dPullRequest.Stack)
+
+	_, err = repo.ChangeMergeability(t.Context(), d.ID)
+	require.NoError(t, err, "read initial change D mergeability")
+
+	// GitHub can still be calculating D's mergeability after retargeting it.
+	// Allow that calculation to finish before the one follow-up read.
+	if forgetest.Update() {
+		select {
+		case <-time.After(10 * time.Second):
+
+		case <-t.Context().Done():
+			require.FailNow(t, "divergent stack test context canceled")
+		}
+	}
 
 	mergeability, err := repo.ChangeMergeability(t.Context(), d.ID)
 	require.NoError(t, err, "read change D mergeability")

@@ -2011,6 +2011,57 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 	assert.Contains(t, err.Error(), "blocked")
 }
 
+func TestExecutePlan_nativePlanningFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	stackRepo := &testStackRepository{
+		Repository: forgetest.NewMockRepository(ctrl),
+		planErr:    errors.New("boom"),
+	}
+	h := newTestHandler(t, ctrl, testHandlerOpts{forgeRepo: stackRepo})
+
+	err := h.executePlan(t.Context(), []*mergeItem{
+		testPlanEntry("feat1", "main", "pr-1"),
+	}, mergeExecutionOptions{})
+	require.ErrorContains(t, err, "plan native merge ranges: boom")
+}
+
+func TestExecutePlan_nativePlanningUnsupportedFallsBack(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	changeID := fakeChangeID("pr-1")
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{changeID}).
+		Return([]forge.ChangeStatus{{
+			State:    forge.ChangeOpen,
+			HeadHash: "head-1",
+		}}, nil)
+	mockForge.EXPECT().
+		ChangeMergeability(gomock.Any(), changeID).
+		Return(forge.ChangeMergeability{
+			State: forge.ChangeMergeabilityReady,
+		}, nil)
+	mockForge.EXPECT().
+		MergeChange(gomock.Any(), changeID, gomock.Any()).
+		Return(nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{changeID}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil)
+
+	stackRepo := &testStackRepository{
+		Repository: mockForge,
+		planErr:    forge.ErrUnsupported,
+	}
+	h := newTestHandler(t, ctrl, testHandlerOpts{forgeRepo: stackRepo})
+	item := testPlanEntry("feat1", "main", changeID)
+	item.headHash = "head-1"
+
+	require.NoError(t, h.executePlan(
+		t.Context(),
+		[]*mergeItem{item},
+		mergeExecutionOptions{},
+	))
+}
+
 func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -2214,7 +2265,16 @@ func TestExecutePlan_mergeCommandRequestsThenAwaitsMerge(t *testing.T) {
 		Return(nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
-		forgeRepo: mockForge,
+		forgeRepo: &testStackRepository{
+			Repository: mockForge,
+			planMergeRanges: func(
+				context.Context,
+				[]forge.MergePlanChange,
+			) ([]forge.MergeRangePlan, error) {
+				t.Fatal("custom merge command must bypass native range planning")
+				return nil, nil
+			},
+		},
 		sync:      mockSync,
 		logBuffer: &logBuffer,
 	})
@@ -2557,7 +2617,7 @@ func TestValidateSynced_errorSkipped(t *testing.T) {
 // newTestHandler supplies inert collaborators and an in-memory store
 // for fields left unset.
 type testHandlerOpts struct {
-	forgeRepo *forgetest.MockRepository
+	forgeRepo forge.Repository
 	store     Store
 	service   *MockService
 	restack   *MockRestackHandler

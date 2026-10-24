@@ -38,6 +38,8 @@ type Item interface {
 	// Run blocks until the item is done or fails.
 	//
 	// The scheduler may call Run on multiple items at the same time.
+	// If an item performs queue-wide synchronization within Run,
+	// it may return a [BarrierError] to stop the queue regardless of FailFast.
 	Run(context.Context) error
 }
 
@@ -110,7 +112,9 @@ func (e *ItemError) Unwrap() error {
 	return e.Err
 }
 
-// BarrierError wraps an error returned by Options.Barrier.
+// BarrierError reports a failure of queue-wide synchronization.
+// It wraps an error returned by Options.Barrier or by an item performing
+// that synchronization itself. Either source stops further scheduling.
 type BarrierError struct {
 	Err error // required
 }
@@ -245,8 +249,9 @@ func New(items []Item, opts *Options) (*Scheduler, error) {
 //	prepare failure or run failure marks the item failed
 //	and recursively skips every direct or indirect above.
 //
-// Item failures are wrapped in ItemError and returned with errors.Join.
-// Barrier failures are wrapped in BarrierError and returned with errors.Join.
+// Ordinary item failures are wrapped in ItemError and returned with errors.Join.
+// Barrier failures, including BarrierError returned by an item,
+// stop scheduling and are returned with errors.Join.
 func (s *Scheduler) Run(ctx context.Context) (retErr error) {
 	// Internal cancellation stops item workers after fail-fast or barrier
 	// failure.
@@ -361,8 +366,8 @@ func (s *Scheduler) Run(ctx context.Context) (retErr error) {
 		retErr = errors.Join(retErr, errors.Join(errs...))
 	}()
 
-	// failNode marks the given node as failed
-	// and recursively skips all its pending upstack.
+	// failNode reports an item's failure. Barrier failures stop the queue;
+	// ordinary failures stop only its upstack unless fail-fast is enabled.
 	failNode := func(n *node, err error) {
 		// A barrier failure is already reported as a queue-level error.
 		// Cancellation from that shutdown should not turn unrelated
@@ -377,6 +382,11 @@ func (s *Scheduler) Run(ctx context.Context) (retErr error) {
 		}
 		states[n] = nodeFailed
 		s.observer.Failed(n.item, err)
+		if barrierErr, ok := errors.AsType[*BarrierError](err); ok {
+			errs = append(errs, barrierErr)
+			stopScheduling(SkipBecauseBarrierFailed)
+			return
+		}
 		errs = append(errs, &ItemError{
 			ID:  n.item.ID(),
 			Err: err,

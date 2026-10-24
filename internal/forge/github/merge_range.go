@@ -24,6 +24,15 @@ func (r *Repository) PlanMergeRanges(
 		return nil, forge.ErrUnsupported
 	}
 
+	// Probe the REST capability before querying GraphQL stack fields.
+	// Servers without native stacks may not expose those fields at all.
+	if err := r.gateway.CheckPullRequestStacks(ctx, r.owner, r.repo); err != nil {
+		if errors.Is(err, github.ErrNotFound) {
+			return nil, errors.Join(forge.ErrUnsupported, err)
+		}
+		return nil, fmt.Errorf("check GitHub native stack support: %w", err)
+	}
+
 	type requestedPR struct {
 		PR   *PR
 		Base int
