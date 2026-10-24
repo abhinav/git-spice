@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"io"
 	"os"
 	"strings"
 
 	"github.com/charmbracelet/colorprofile"
 	"github.com/mattn/go-isatty"
-	"go.abhg.dev/gs/internal/git"
 )
 
 // colorPreference is an explicit user choice
@@ -31,8 +29,7 @@ const (
 // for color.ui or spice.color.
 //
 // Besides git's booleans, both accept the color-specific
-// values "always" (on), "never" (off), and "auto" (unset),
-// matching git's own color.ui semantics.
+// values "always" (on), "never" (off), and "auto" (unset).
 func parseColorValue(value string) colorPreference {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "true", "yes", "on", "1", "always":
@@ -44,34 +41,6 @@ func parseColorValue(value string) colorPreference {
 		// leaves the decision to terminal detection.
 		return colorUnset
 	}
-}
-
-// resolveColorPreference reports the user's color preference
-// from git configuration.
-//
-// It reads the standard color.ui and the git-spice specific
-// spice.color; spice.color wins when both are set.
-// An unreadable configuration means no preference,
-// so a broken git installation never changes startup behavior.
-func resolveColorPreference(ctx context.Context, cfg *git.Config) colorPreference {
-	var ui, spice colorPreference
-	var spiceSet bool
-	for entry, err := range cfg.ListRegexp(ctx, `^color\.ui$`, `^spice\.color$`) {
-		if err != nil {
-			continue
-		}
-		switch entry.Key.Canonical() {
-		case "color.ui":
-			ui = parseColorValue(entry.Value)
-		case "spice.color":
-			spice = parseColorValue(entry.Value)
-			spiceSet = true
-		}
-	}
-	if spiceSet {
-		return spice
-	}
-	return ui
 }
 
 // plainColorProfile is the color profile to use

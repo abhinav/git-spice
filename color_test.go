@@ -1,10 +1,14 @@
 package main
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/spice"
 )
 
 func TestParseColorValue(t *testing.T) {
@@ -27,7 +31,7 @@ func TestParseColorValue(t *testing.T) {
 	})
 }
 
-func TestResolveColorPreference(t *testing.T) {
+func TestConfiguredColorPreference(t *testing.T) {
 	configEnv := func(kvs ...string) []string {
 		// Feed git configuration to the git command
 		// through the environment, so the test needs no repository.
@@ -77,12 +81,32 @@ func TestResolveColorPreference(t *testing.T) {
 			env:  configEnv("color.ui", "always", "spice.color", "auto"),
 			want: colorUnset,
 		},
+		{
+			name: "LastSpiceColorWins",
+			env:  configEnv("spice.color", "never", "spice.color", "always"),
+			want: colorOn,
+		},
+		{
+			name: "LastColorUIWins",
+			env:  configEnv("color.ui", "always", "color.ui", "never"),
+			want: colorOff,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := git.NewConfig(git.ConfigOptions{Env: tt.env})
-			assert.Equal(t, tt.want, resolveColorPreference(t.Context(), cfg))
+			log := silogtest.New(t)
+			cfg, err := spice.LoadConfig(t.Context(), git.NewConfig(git.ConfigOptions{
+				Dir: t.TempDir(),
+				Env: append([]string{
+					"GIT_CONFIG_COUNT=0",
+					"GIT_CONFIG_GLOBAL=" + os.DevNull,
+					"GIT_CONFIG_SYSTEM=" + os.DevNull,
+				}, tt.env...),
+				Log: log,
+			}), spice.ConfigOptions{Log: log})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, parseColorValue(cfg.Color()))
 		})
 	}
 }
