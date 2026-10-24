@@ -300,8 +300,11 @@ func TestIntegration_stackReplacementWithMergedMember(t *testing.T) {
 	bottomBranch := fixturetest.New(_fixtures, "bottomBranch", func() string {
 		return "stack-merged-bottom-" + randomString(8)
 	}).Get(t)
-	insertedBranch := fixturetest.New(_fixtures, "insertedBranch", func() string {
-		return "stack-merged-inserted-" + randomString(8)
+	activeBranch := fixturetest.New(_fixtures, "activeBranch", func() string {
+		return "stack-merged-active-" + randomString(8)
+	}).Get(t)
+	removedBranch := fixturetest.New(_fixtures, "removedBranch", func() string {
+		return "stack-merged-removed-" + randomString(8)
 	}).Get(t)
 	topBranch := fixturetest.New(_fixtures, "topBranch", func() string {
 		return "stack-merged-top-" + randomString(8)
@@ -310,25 +313,28 @@ func TestIntegration_stackReplacementWithMergedMember(t *testing.T) {
 	if forgetest.Update() {
 		builder := forgetest.NewRepositoryBuilder(t, remoteURL)
 		t.Cleanup(func() {
-			for _, branch := range []string{topBranch, insertedBranch, bottomBranch} {
+			for _, branch := range []string{topBranch, removedBranch, activeBranch, bottomBranch} {
 				builder.DeleteRemoteBranch(branch)
 			}
 		})
 
-		// Create one linear ancestry.
-		// The initial native stack omits inserted.
-		// After bottom merges, adding inserted would require replacing a stack
-		// whose historical bottom member cannot be removed.
+		// The initial native stack follows this branch ancestry:
 		//
 		//     main
 		//       |
 		//     bottom (merged before replacement)
 		//       |
-		//    inserted
+		//     active
+		//       |
+		//     removed (omitted from the desired stack)
 		//       |
 		//      top
+		//
+		// After bottom merges, reconcile active -> top.
+		// The removed PR must stay open and keep its base;
+		// only its native membership is removed.
 		builder.CheckoutBranch("main")
-		for _, branch := range []string{bottomBranch, insertedBranch, topBranch} {
+		for _, branch := range []string{bottomBranch, activeBranch, removedBranch, topBranch} {
 			builder.CreateBranch(branch)
 			builder.CheckoutBranch(branch)
 			builder.WriteFile(branch+".txt", "commit for "+branch)
@@ -373,18 +379,26 @@ func TestIntegration_stackReplacementWithMergedMember(t *testing.T) {
 	})
 	require.NoError(t, err, "create bottom change")
 	openChanges = append(openChanges, bottom.ID)
-	inserted, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
-		Subject: "Native stack merged-member middle " + insertedBranch,
+	active, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Native stack merged-member active " + activeBranch,
 		Body:    "Native stack merged-member integration test",
 		Base:    bottomBranch,
-		Head:    insertedBranch,
+		Head:    activeBranch,
 	})
-	require.NoError(t, err, "create inserted change")
-	openChanges = append(openChanges, inserted.ID)
+	require.NoError(t, err, "create active change")
+	openChanges = append(openChanges, active.ID)
+	removed, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Native stack merged-member removed " + removedBranch,
+		Body:    "Native stack merged-member integration test",
+		Base:    activeBranch,
+		Head:    removedBranch,
+	})
+	require.NoError(t, err, "create removed change")
+	openChanges = append(openChanges, removed.ID)
 	top, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
 		Subject: "Native stack merged-member top " + topBranch,
 		Body:    "Native stack merged-member integration test",
-		Base:    bottomBranch,
+		Base:    removedBranch,
 		Head:    topBranch,
 	})
 	require.NoError(t, err, "create top change")
@@ -392,7 +406,9 @@ func TestIntegration_stackReplacementWithMergedMember(t *testing.T) {
 
 	plan, err := repo.PlanStackUpdate(t.Context(), []forge.StackChange{
 		{Change: bottom.ID, BaseBranch: "main"},
-		{Change: top.ID, BaseChange: bottom.ID, BaseBranch: bottomBranch},
+		{Change: active.ID, BaseChange: bottom.ID, BaseBranch: bottomBranch},
+		{Change: removed.ID, BaseChange: active.ID, BaseBranch: activeBranch},
+		{Change: top.ID, BaseChange: removed.ID, BaseBranch: removedBranch},
 	})
 	require.NoError(t, err, "plan initial native stack")
 	require.NoError(t, plan.Execute(t.Context()), "create initial native stack")
@@ -420,13 +436,12 @@ func TestIntegration_stackReplacementWithMergedMember(t *testing.T) {
 	openChanges = openChanges[1:]
 
 	desired := []forge.StackChange{
-		{Change: bottom.ID, BaseBranch: "main"},
-		{Change: inserted.ID, BaseChange: bottom.ID, BaseBranch: bottomBranch},
-		{Change: top.ID, BaseChange: inserted.ID, BaseBranch: insertedBranch},
+		{Change: active.ID, BaseBranch: "main"},
+		{Change: top.ID, BaseChange: active.ID, BaseBranch: activeBranch},
 	}
 	plan, err = repo.PlanStackUpdate(t.Context(), desired)
-	require.NoError(t, err, "plan replacement around merged member")
-	require.NoError(t, plan.Execute(t.Context()), "leave merged-member stack unchanged")
+	require.NoError(t, err, "plan removal after merged prefix")
+	require.NoError(t, plan.Execute(t.Context()), "replace the active stack")
 
 	pullRequests, err := gatewayClient.PullRequestsForStackUpdate(
 		t.Context(),
@@ -434,21 +449,31 @@ func TestIntegration_stackReplacementWithMergedMember(t *testing.T) {
 		cfg.Repo,
 		[]int{
 			bottom.ID.(*github.PR).Number,
-			inserted.ID.(*github.PR).Number,
+			active.ID.(*github.PR).Number,
+			removed.ID.(*github.PR).Number,
 			top.ID.(*github.PR).Number,
 		},
 	)
-	require.NoError(t, err, "read native stack after omitted replacement")
-	require.Len(t, pullRequests, 3)
-	require.NotNil(t, pullRequests[1])
-	assert.Nil(t, pullRequests[1].Stack)
+	require.NoError(t, err, "read native stack after removal")
+	require.Len(t, pullRequests, 4)
+	require.NotNil(t, pullRequests[0])
+	assert.Equal(t, githubgateway.PullRequestStateMerged, pullRequests[0].State)
 	require.NotNil(t, pullRequests[2])
-	require.NotNil(t, pullRequests[2].Stack)
-	assert.NotEqual(t, insertedBranch, pullRequests[2].BaseRefName)
-	assert.Equal(t, []githubgateway.PullRequestStackMember{
-		{Number: bottom.ID.(*github.PR).Number, State: githubgateway.PullRequestStateMerged},
-		{Number: top.ID.(*github.PR).Number, State: githubgateway.PullRequestStateOpen},
-	}, pullRequests[2].Stack.Members)
+	assert.Equal(t, githubgateway.PullRequestStateOpen, pullRequests[2].State)
+	assert.Nil(t, pullRequests[2].Stack, "removed PR remains open but unstacked")
+	assert.Equal(t, activeBranch, pullRequests[2].BaseRefName)
+
+	for _, pr := range []*githubgateway.StackUpdatePullRequest{pullRequests[1], pullRequests[3]} {
+		require.NotNil(t, pr)
+		require.NotNil(t, pr.Stack)
+		assert.Equal(t, []githubgateway.PullRequestStackMember{
+			{Number: active.ID.(*github.PR).Number, State: githubgateway.PullRequestStateOpen},
+			{Number: top.ID.(*github.PR).Number, State: githubgateway.PullRequestStateOpen},
+		}, pr.Stack.Members)
+	}
+	assert.Equal(t, pullRequests[1].Stack.Number, pullRequests[3].Stack.Number)
+	assert.Equal(t, "main", pullRequests[1].BaseRefName)
+	assert.Equal(t, activeBranch, pullRequests[3].BaseRefName)
 }
 
 func TestIntegration_DivergentStackMerge(t *testing.T) {

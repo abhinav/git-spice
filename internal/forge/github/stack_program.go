@@ -22,11 +22,17 @@ type githubStackTry struct {
 
 func (githubStackTry) isGitHubStackInstruction() {}
 
-// githubStackUnstack requires complete dissolution of an existing native stack.
-// Retained members count as failure even when the API call succeeds.
+// githubStackUnstack releases an existing stack's unmerged members.
+// Historical merged members may remain in the old resource;
+// retaining any other member blocks the dependent replacement.
 type githubStackUnstack struct {
 	// StackNumber identifies the existing stack within the repository.
 	StackNumber int
+
+	// MergedPullRequests lists members already merged when the plan was built.
+	// Their retained membership cannot prevent retargeting or restacking
+	// the released open PRs.
+	MergedPullRequests []int
 }
 
 func (githubStackUnstack) isGitHubStackInstruction() {}

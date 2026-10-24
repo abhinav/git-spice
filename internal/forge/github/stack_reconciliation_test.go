@@ -198,6 +198,34 @@ func TestReconcileGitHubStacks(t *testing.T) {
 			}},
 		},
 		{
+			name: "ReplaceWithMergedPrefix",
+			give: func() []githubStackChange {
+				stack := &github.PullRequestStack{
+					Number: 42,
+					Members: []github.PullRequestStackMember{
+						{Number: 1, State: github.PullRequestStateMerged},
+						{Number: 2, State: github.PullRequestStateOpen},
+					},
+				}
+				merged := openChange(1, 0, "main", "main", stack)
+				merged.pullRequest.State = github.PullRequestStateMerged
+				return []githubStackChange{
+					merged,
+					openChange(3, 1, "a", "a", nil),
+					openChange(2, 3, "c", "a", stack),
+				}
+			}(),
+			want: githubStackProgram{githubStackTry{
+				Body: []githubStackInstruction{
+					githubStackUnstack{StackNumber: 42, MergedPullRequests: []int{1}},
+					githubStackTry{Body: []githubStackInstruction{
+						githubStackChangeBase{PullRequestNumber: 2, PullRequestID: "PR_2", BaseBranch: "c"},
+						githubStackCreate{PullRequests: []int{3, 2}},
+					}},
+				},
+			}},
+		},
+		{
 			name: "ReconnectAboveMergedChange",
 			give: []githubStackChange{
 				mergedChange(1, 0, "main", "main"),
@@ -557,29 +585,7 @@ func TestReconcileGitHubStacks_errors(t *testing.T) {
 				openChange(2, 3, "c", "a", lockedStack(42, 1, 2)),
 			},
 			wantWarnings: []string{
-				"#1: Leaving pull request and its upstack in existing GitHub native stack #42: merged, queued, or auto-merge pull requests prevent restructuring",
-			},
-		},
-		{
-			name: "LeaveReplacementWithMergedMember",
-			give: func() []githubStackChange {
-				stack := &github.PullRequestStack{
-					Number: 42,
-					Members: []github.PullRequestStackMember{
-						{Number: 1, State: github.PullRequestStateMerged},
-						{Number: 2, State: github.PullRequestStateOpen},
-					},
-				}
-				merged := openChange(1, 0, "main", "main", stack)
-				merged.pullRequest.State = github.PullRequestStateMerged
-				return []githubStackChange{
-					merged,
-					openChange(3, 1, "a", "a", nil),
-					openChange(2, 3, "c", "a", stack),
-				}
-			}(),
-			wantWarnings: []string{
-				"#3: Leaving pull request and its upstack in existing GitHub native stack #42: merged, queued, or auto-merge pull requests prevent restructuring",
+				"#1: Leaving pull request and its upstack in existing GitHub native stack #42: queued or auto-merge pull requests prevent restructuring",
 			},
 		},
 		{
