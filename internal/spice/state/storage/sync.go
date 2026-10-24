@@ -41,6 +41,13 @@ func (s *syncBackend) Snapshot(ctx context.Context) (Snapshot, error) {
 	return s.b.Snapshot(ctx)
 }
 
+func (s *syncBackend) GetMany(ctx context.Context, reqs []GetRequest) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.b.GetMany(ctx, reqs)
+}
+
 func (s *syncBackend) Keys(ctx context.Context, dir string) ([]string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

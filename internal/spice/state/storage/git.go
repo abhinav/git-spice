@@ -25,6 +25,7 @@ type GitRepository interface {
 	HashAt(ctx context.Context, commitish, path string) (git.Hash, error)
 
 	ReadObject(ctx context.Context, typ git.Type, hash git.Hash, dst io.Writer) error
+	ReadObjects(ctx context.Context, hashes []git.Hash) (*git.ObjectBatchReader, error)
 	WriteObject(ctx context.Context, typ git.Type, src io.Reader) (git.Hash, error)
 
 	ListTree(ctx context.Context, tree git.Hash, opts git.ListTreeOptions) iter.Seq2[git.TreeEntry, error]
@@ -148,6 +149,62 @@ func (g *GitBackend) Snapshot(ctx context.Context) (Snapshot, error) {
 		commit:  commit,
 		tree:    tree,
 	}, nil
+}
+
+// GetMany retrieves values from the store and decodes them into request values.
+func (g *GitBackend) GetMany(ctx context.Context, reqs []GetRequest) (err error) {
+	if len(reqs) == 0 {
+		return nil
+	}
+
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	hashes := make([]git.Hash, len(reqs))
+	for i, req := range reqs {
+		hashes[i], err = g.repo.HashAt(ctx, g.ref, req.Key)
+		if err != nil {
+			return ErrNotExist
+		}
+	}
+
+	reader, err := g.repo.ReadObjects(ctx, hashes)
+	if err != nil {
+		return fmt.Errorf("read objects: %w", err)
+	}
+	defer func() {
+		if closeErr := reader.Close(); err == nil && closeErr != nil {
+			err = fmt.Errorf("close object reader: %w", closeErr)
+		}
+	}()
+
+	for _, req := range reqs {
+		info, err := reader.Next()
+		if err != nil {
+			if errors.Is(err, git.ErrNotExist) {
+				return ErrNotExist
+			}
+			return fmt.Errorf("read object %q: %w", req.Key, err)
+		}
+		if info.Type != git.BlobType {
+			return fmt.Errorf(
+				"read object %q: got %s, want %s",
+				req.Key,
+				info.Type,
+				git.BlobType,
+			)
+		}
+
+		if err := json.UnmarshalRead(reader, req.Value); err != nil {
+			return fmt.Errorf("decode JSON for %q: %w", req.Key, err)
+		}
+	}
+
+	if _, err := reader.Next(); err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("read object trailer: %w", err)
+	}
+
+	return nil
 }
 
 // Clear removes all keys from the store.

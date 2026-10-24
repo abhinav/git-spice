@@ -54,6 +54,16 @@ func (m MapBackend) CompareAndSwap(
 	return m.Update(ctx, req)
 }
 
+// GetMany retrieves values from the store.
+func (m MapBackend) GetMany(ctx context.Context, reqs []GetRequest) error {
+	for _, req := range reqs {
+		if err := m.Get(ctx, req.Key, req.Value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Update applies a batch of changes to the store.
 // MapBackend ignores the update message.
 func (m MapBackend) Update(

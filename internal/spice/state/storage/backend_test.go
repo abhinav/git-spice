@@ -47,6 +47,14 @@ func testStorageBackend(t *testing.T, backend Backend) {
 		assert.ErrorIs(t, err, ErrNotExist)
 	})
 
+	t.Run("GetMany/DoesNotExist", func(t *testing.T) {
+		var got string
+		err := db.GetMany(ctx, []GetRequest{
+			{Key: "does/not/exist", Value: &got},
+		})
+		assert.ErrorIs(t, err, ErrNotExist)
+	})
+
 	t.Run("SetAndGet", func(t *testing.T) {
 		defer func() {
 			assert.NoError(t, db.Clear(ctx, "clear"))
@@ -125,6 +133,23 @@ func testStorageBackend(t *testing.T, backend Backend) {
 
 		var got string
 		assert.ErrorIs(t, db.Get(ctx, "new", &got), ErrNotExist)
+	})
+
+	t.Run("SetAndGetMany", func(t *testing.T) {
+		defer func() {
+			assert.NoError(t, db.Clear(ctx, "clear"))
+		}()
+
+		require.NoError(t, db.Set(ctx, "foo", "bar", "set foo"))
+		require.NoError(t, db.Set(ctx, "baz", "qux", "set baz"))
+
+		var got1, got2 string
+		require.NoError(t, db.GetMany(ctx, []GetRequest{
+			{Key: "foo", Value: &got1},
+			{Key: "baz", Value: &got2},
+		}))
+		assert.Equal(t, "bar", got1)
+		assert.Equal(t, "qux", got2)
 	})
 
 	t.Run("SetNested", func(t *testing.T) {
