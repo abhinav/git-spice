@@ -55,6 +55,7 @@ func parseColorValue(value string) colorPreference {
 // so a broken git installation never changes startup behavior.
 func resolveColorPreference(ctx context.Context, cfg *git.Config) colorPreference {
 	var ui, spice colorPreference
+	var spiceSet bool
 	for entry, err := range cfg.ListRegexp(ctx, `^color\.ui$`, `^spice\.color$`) {
 		if err != nil {
 			continue
@@ -64,9 +65,10 @@ func resolveColorPreference(ctx context.Context, cfg *git.Config) colorPreferenc
 			ui = parseColorValue(entry.Value)
 		case "spice.color":
 			spice = parseColorValue(entry.Value)
+			spiceSet = true
 		}
 	}
-	if spice != colorUnset {
+	if spiceSet {
 		return spice
 	}
 	return ui

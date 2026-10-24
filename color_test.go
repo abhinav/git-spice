@@ -68,9 +68,14 @@ func TestResolveColorPreference(t *testing.T) {
 			want: colorOff,
 		},
 		{
-			name: "SpiceColorAutoFallsBackToColorUI",
+			name: "SpiceColorAutoOverridesColorUINever",
 			env:  configEnv("color.ui", "never", "spice.color", "auto"),
-			want: colorOff,
+			want: colorUnset,
+		},
+		{
+			name: "SpiceColorAutoOverridesColorUIAlways",
+			env:  configEnv("color.ui", "always", "spice.color", "auto"),
+			want: colorUnset,
 		},
 	}
 
