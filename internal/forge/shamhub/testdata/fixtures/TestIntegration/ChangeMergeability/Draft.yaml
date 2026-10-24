@@ -7,52 +7,52 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 153
-        host: 127.0.0.1:56373
-        body: '{"subject":"Mergeability draft-head-gvNhoiez","body":"Mergeability scenario test","base":"draft-base-IqJBeOYD","head":"draft-head-gvNhoiez","draft":true}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        host: 127.0.0.1:53776
+        body: '{"subject":"Mergeability draft-head-ixdAOJPP","body":"Mergeability scenario test","base":"draft-base-atFZxOmV","head":"draft-head-ixdAOJPP","draft":true}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 80
-        body: |
+        content_length: 81
+        body: |-
             {
-              "number": 3,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/3"
+              "number": 27,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/27"
             }
         headers:
             Content-Length:
-                - "80"
+                - "81"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 16.79425ms
+        duration: 20.857709ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56373
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/3/mergeability
+        host: 127.0.0.1:53776
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/27/mergeability
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 46
-        body: |
+        content_length: 45
+        body: |-
             {
               "state": "blocked",
               "reason": "draft"
             }
         headers:
             Content-Length:
-                - "46"
+                - "45"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 127.25µs
+        duration: 172.125µs

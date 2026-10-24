@@ -7,97 +7,98 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 133
-        host: 127.0.0.1:56373
-        body: '{"subject":"Testing file review thread nMr9b4Pm","body":"Test change for a file-level review thread","base":"main","head":"nMr9b4Pm"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        host: 127.0.0.1:53776
+        body: '{"subject":"Testing file review thread azR1Lj4K","body":"Test change for a file-level review thread","base":"main","head":"azR1Lj4K"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 79
+        content_length: 81
         body: |-
             {
-              "number": 1,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/1"
+              "number": 31,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/31"
             }
         headers:
             Content-Length:
-                - "79"
+                - "81"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 11.9655ms
+        duration: 12.427541ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 82
-        host: 127.0.0.1:56373
-        body: '{"change":1,"comments":[{"path":"review.go","body":"File-level review comment."}]}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/reviews
+        content_length: 83
+        host: 127.0.0.1:53776
+        body: '{"change":31,"comments":[{"path":"review.go","body":"File-level review comment."}]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/reviews
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 86
+        content_length: 88
         body: |-
             {
               "comments": [
                 {
-                  "threadID": "thread-1",
-                  "commentID": 1
+                  "threadID": "thread-15",
+                  "commentID": 15
                 }
               ]
             }
         headers:
             Content-Length:
-                - "86"
+                - "88"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 291.834µs
+        duration: 22.329ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56373
+        host: 127.0.0.1:53776
         form:
             change:
-                - "1"
-        url: http://127.0.0.1:56373/abhinav/test-repo/review-threads?change=1
+                - "31"
+        url: http://127.0.0.1:53776/abhinav/test-repo/review-threads?change=31
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 280
+        content_length: 347
         body: |-
             {
               "items": [
                 {
-                  "id": 1,
-                  "threadID": "thread-1",
+                  "id": 15,
+                  "threadID": "thread-15",
                   "path": "review.go",
+                  "commitHash": "407eb606d1c3af8188b89935656d5bde864836bf",
                   "body": "File-level review comment.",
                   "author": "test-user",
                   "resolved": false,
                   "outdated": false,
-                  "createdAt": "2026-08-22T21:22:30.48605-07:00"
+                  "createdAt": "2026-10-23T07:07:13.915473-07:00"
                 }
               ]
             }
         headers:
             Content-Length:
-                - "280"
+                - "347"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 254.542µs
+        duration: 13.392333ms

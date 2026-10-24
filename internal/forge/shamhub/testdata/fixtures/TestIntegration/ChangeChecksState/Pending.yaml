@@ -7,68 +7,67 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 88
-        host: 127.0.0.1:56373
-        body: '{"subject":"Checks MGWUNTrV","body":"Checks state test","base":"main","head":"MGWUNTrV"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        host: 127.0.0.1:53776
+        body: '{"subject":"Checks BHRrUDdC","body":"Checks state test","base":"main","head":"BHRrUDdC"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 80
-        body: |
+        content_length: 79
+        body: |-
             {
-              "number": 3,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/3"
+              "number": 5,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/5"
             }
         headers:
             Content-Length:
-                - "80"
+                - "79"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 27.517959ms
+        duration: 48.211708ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 58
-        host: 127.0.0.1:56373
+        host: 127.0.0.1:53776
         body: '{"name":"git-spice integration pending","state":"pending"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/3/checks
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/5/checks
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 3
-        body: |
-            {}
+        content_length: 2
+        body: '{}'
         headers:
             Content-Length:
-                - "3"
+                - "2"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 161.792µs
+        duration: 7.205709ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56373
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/3/checks
+        host: 127.0.0.1:53776
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/5/checks
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 92
-        body: |
+        content_length: 105
+        body: |-
             {
               "checks": [
                 {
@@ -79,9 +78,9 @@ interactions:
             }
         headers:
             Content-Length:
-                - "25"
+                - "105"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 207.709µs
+        duration: 726.75µs
