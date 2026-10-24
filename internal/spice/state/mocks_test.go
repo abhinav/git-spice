@@ -193,6 +193,44 @@ func (c *MockDBGetCall) DoAndReturn(f func(context.Context, string, any) error) 
 	return c
 }
 
+// GetMany mocks base method.
+func (m *MockDB) GetMany(ctx context.Context, reqs []storage.GetRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMany", ctx, reqs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GetMany indicates an expected call of GetMany.
+func (mr *MockDBMockRecorder) GetMany(ctx, reqs any) *MockDBGetManyCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMany", reflect.TypeOf((*MockDB)(nil).GetMany), ctx, reqs)
+	return &MockDBGetManyCall{Call: call}
+}
+
+// MockDBGetManyCall wrap *gomock.Call
+type MockDBGetManyCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockDBGetManyCall) Return(arg0 error) *MockDBGetManyCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockDBGetManyCall) Do(f func(context.Context, []storage.GetRequest) error) *MockDBGetManyCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockDBGetManyCall) DoAndReturn(f func(context.Context, []storage.GetRequest) error) *MockDBGetManyCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // Keys mocks base method.
 func (m *MockDB) Keys(ctx context.Context, dir string) ([]string, error) {
 	m.ctrl.T.Helper()
