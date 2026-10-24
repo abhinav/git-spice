@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"strconv"
 	"sync"
 	"testing"
@@ -45,6 +46,81 @@ func testStorageBackend(t *testing.T, backend Backend) {
 		var got string
 		err := db.Get(ctx, "does/not/exist", &got)
 		assert.ErrorIs(t, err, ErrNotExist)
+	})
+
+	t.Run("GetMany/DoesNotExist", func(t *testing.T) {
+		var got string
+		err := db.GetMany(ctx, []GetRequest{
+			{Key: "does/not/exist", Value: &got},
+		})
+		assert.ErrorIs(t, err, ErrNotExist)
+		assert.EqualError(t, err, "missing: [does/not/exist]")
+		missing, ok := errors.AsType[*MissingKeysError](err)
+		require.True(t, ok)
+		assert.Equal(t, []int{0}, missing.Indexes)
+		assert.Equal(t, []string{"does/not/exist"}, missing.Keys)
+	})
+
+	t.Run("GetMany/AllMissing", func(t *testing.T) {
+		first, second := "unchanged", "also unchanged"
+		err := db.GetMany(ctx, []GetRequest{
+			{Key: "absent", Value: &first},
+			{Key: "also-absent\nwith\ttab", Value: &second},
+			{Key: "absent", Value: &first},
+		})
+		missing, ok := errors.AsType[*MissingKeysError](err)
+		require.True(t, ok, "expected missing keys, got %v", err)
+		assert.Equal(t, []int{0, 1, 2}, missing.Indexes)
+		assert.Equal(t, []string{"absent", "also-absent\nwith\ttab", "absent"}, missing.Keys)
+		assert.EqualError(t, err, "missing: [absent also-absent\nwith\ttab absent]")
+		assert.Equal(t, "unchanged", first)
+		assert.Equal(t, "also unchanged", second)
+	})
+
+	t.Run("GetMany/MixedMissing", func(t *testing.T) {
+		require.NoError(t, db.Set(ctx, "present", "value", "seed partial reads"))
+		defer func() { assert.NoError(t, db.Clear(ctx, "clear partial reads")) }()
+
+		values := []string{"old", "old", "old", "old", "old"}
+		err := db.GetMany(ctx, []GetRequest{
+			{Key: "missing", Value: &values[0]},
+			{Key: "present", Value: &values[1]},
+			{Key: "other-missing", Value: &values[2]},
+			{Key: "present", Value: &values[3]},
+			{Key: "missing", Value: &values[4]},
+		})
+		assert.ErrorIs(t, err, ErrNotExist)
+		missing, ok := errors.AsType[*MissingKeysError](err)
+		require.True(t, ok, "expected missing keys, got %v", err)
+		assert.Equal(t, []int{0, 2, 4}, missing.Indexes)
+		assert.Equal(t, []string{"missing", "other-missing", "missing"}, missing.Keys)
+		assert.Equal(t, []string{"old", "value", "old", "value", "old"}, values)
+	})
+
+	t.Run("GetMany/DecodeFailureAfterMissing", func(t *testing.T) {
+		require.NoError(t, db.Set(ctx, "bad-number", "not a number", "seed decode failure"))
+		defer func() { assert.NoError(t, db.Clear(ctx, "clear decode failure")) }()
+
+		var missingValue, number int
+		err := db.GetMany(ctx, []GetRequest{
+			{Key: "missing", Value: &missingValue},
+			{Key: "bad-number", Value: &number},
+		})
+		require.Error(t, err)
+		_, partial := errors.AsType[*MissingKeysError](err)
+		assert.False(t, partial, "decode failures must not guarantee partial results")
+		assert.NotErrorIs(t, err, ErrNotExist)
+	})
+
+	t.Run("GetMany/DecoderReturnsNotFound", func(t *testing.T) {
+		require.NoError(t, db.Set(ctx, "present", "value", "seed decoder error"))
+		defer func() { assert.NoError(t, db.Clear(ctx, "clear decoder error")) }()
+
+		var value notFoundJSON
+		err := db.GetMany(ctx, []GetRequest{{Key: "present", Value: &value}})
+		require.Error(t, err)
+		_, partial := errors.AsType[*MissingKeysError](err)
+		assert.False(t, partial, "a decoder error is not a missing storage key")
 	})
 
 	t.Run("SetAndGet", func(t *testing.T) {
@@ -125,6 +201,23 @@ func testStorageBackend(t *testing.T, backend Backend) {
 
 		var got string
 		assert.ErrorIs(t, db.Get(ctx, "new", &got), ErrNotExist)
+	})
+
+	t.Run("SetAndGetMany", func(t *testing.T) {
+		defer func() {
+			assert.NoError(t, db.Clear(ctx, "clear"))
+		}()
+
+		require.NoError(t, db.Set(ctx, "foo", "bar", "set foo"))
+		require.NoError(t, db.Set(ctx, "baz", "qux", "set baz"))
+
+		var got1, got2 string
+		require.NoError(t, db.GetMany(ctx, []GetRequest{
+			{Key: "foo", Value: &got1},
+			{Key: "baz", Value: &got2},
+		}))
+		assert.Equal(t, "bar", got1)
+		assert.Equal(t, "qux", got2)
 	})
 
 	t.Run("SetNested", func(t *testing.T) {
@@ -214,4 +307,10 @@ func testStorageBackend(t *testing.T, backend Backend) {
 
 		assert.ElementsMatch(t, keys, gotKeys)
 	})
+}
+
+type notFoundJSON struct{}
+
+func (*notFoundJSON) UnmarshalJSON([]byte) error {
+	return ErrNotExist
 }

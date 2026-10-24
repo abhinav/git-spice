@@ -25,6 +25,7 @@ type GitRepository interface {
 	HashAt(ctx context.Context, commitish, path string) (git.Hash, error)
 
 	ReadObject(ctx context.Context, typ git.Type, hash git.Hash, dst io.Writer) error
+	ReadObjects(ctx context.Context, hashes []git.Hash) (*git.ObjectBatchReader, error)
 	WriteObject(ctx context.Context, typ git.Type, src io.Reader) (git.Hash, error)
 
 	ListTree(ctx context.Context, tree git.Hash, opts git.ListTreeOptions) iter.Seq2[git.TreeEntry, error]
@@ -148,6 +149,103 @@ func (g *GitBackend) Snapshot(ctx context.Context) (Snapshot, error) {
 		commit:  commit,
 		tree:    tree,
 	}, nil
+}
+
+// GetMany retrieves values from the store and decodes them into request values.
+func (g *GitBackend) GetMany(ctx context.Context, reqs []GetRequest) error {
+	if len(reqs) == 0 {
+		return nil
+	}
+
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	hashes := make([]git.Hash, 0, len(reqs))
+	var missing []int
+	var missingKeys []string
+	if len(reqs) == 1 {
+		// Resolve an isolated key directly, avoiding a listing of the whole store.
+		hash, err := g.repo.HashAt(ctx, g.ref, reqs[0].Key)
+		if err != nil {
+			if errors.Is(err, git.ErrNotExist) {
+				return &MissingKeysError{Indexes: []int{0}, Keys: []string{reqs[0].Key}}
+			}
+			return fmt.Errorf("resolve key %q: %w", reqs[0].Key, err)
+		}
+		hashes = append(hashes, hash)
+	} else {
+		// Pin the ref to an immutable tree and resolve all keys from one listing,
+		// rather than starting a HashAt process for each path.
+		tree, err := g.repo.PeelToTree(ctx, g.ref)
+		if err != nil && !errors.Is(err, git.ErrNotExist) {
+			return fmt.Errorf("get store tree: %w", err)
+		}
+
+		byKey := make(map[string]git.Hash)
+		if err == nil {
+			for ent, err := range g.repo.ListTree(ctx, tree, git.ListTreeOptions{Recurse: true}) {
+				if err != nil {
+					return fmt.Errorf("list store tree: %w", err)
+				}
+				byKey[ent.Name] = ent.Hash
+			}
+		}
+		for i, req := range reqs {
+			if hash, ok := byKey[req.Key]; ok {
+				hashes = append(hashes, hash)
+			} else {
+				missing = append(missing, i)
+				missingKeys = append(missingKeys, req.Key)
+			}
+		}
+	}
+	if len(hashes) == 0 {
+		return &MissingKeysError{Indexes: missing, Keys: missingKeys}
+	}
+
+	reader, err := g.repo.ReadObjects(ctx, hashes)
+	if err != nil {
+		return fmt.Errorf("read objects: %w", err)
+	}
+	defer func() { _ = reader.Close() }()
+
+	// The object stream omits missing keys, but indexes still refer to reqs.
+	var missingIndex int
+	for i, req := range reqs {
+		if missingIndex < len(missing) && missing[missingIndex] == i {
+			missingIndex++
+			continue
+		}
+		info, err := reader.Next()
+		if err != nil {
+			return fmt.Errorf("read object %q: %w", req.Key, err)
+		}
+		if info.Type != git.BlobType {
+			return fmt.Errorf(
+				"read object %q: got %s, want %s",
+				req.Key,
+				info.Type,
+				git.BlobType,
+			)
+		}
+
+		if err := json.UnmarshalRead(reader, req.Value); err != nil {
+			return fmt.Errorf("decode JSON for %q: %w", req.Key, err)
+		}
+	}
+
+	if _, err := reader.Next(); err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("read object trailer: %w", err)
+	}
+	// Partial results are trustworthy only after cat-file exits successfully.
+	if err := reader.Close(); err != nil {
+		return fmt.Errorf("close object reader: %w", err)
+	}
+	if len(missing) > 0 {
+		return &MissingKeysError{Indexes: missing, Keys: missingKeys}
+	}
+
+	return nil
 }
 
 // Clear removes all keys from the store.

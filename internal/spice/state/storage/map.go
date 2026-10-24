@@ -54,6 +54,27 @@ func (m MapBackend) CompareAndSwap(
 	return m.Update(ctx, req)
 }
 
+// GetMany retrieves values from the store.
+func (m MapBackend) GetMany(_ context.Context, reqs []GetRequest) error {
+	var missing []int
+	var missingKeys []string
+	for i, req := range reqs {
+		value, ok := m[req.Key]
+		if !ok {
+			missing = append(missing, i)
+			missingKeys = append(missingKeys, req.Key)
+			continue
+		}
+		if err := json.Unmarshal(value, req.Value); err != nil {
+			return fmt.Errorf("decode JSON for %q: %w", req.Key, err)
+		}
+	}
+	if len(missing) > 0 {
+		return &MissingKeysError{Indexes: missing, Keys: missingKeys}
+	}
+	return nil
+}
+
 // Update applies a batch of changes to the store.
 // MapBackend ignores the update message.
 func (m MapBackend) Update(
