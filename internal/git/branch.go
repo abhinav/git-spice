@@ -88,6 +88,34 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 				Hash:     Hash(hash),
 				Worktree: string(bytes.TrimSpace(worktree)),
 			}
+			// Git derives %(worktreepath) by stripping a trailing /.git from
+			// the common Git directory. For a submodule, this leaves the
+			// Git directory itself instead of the checkout:
+			//
+			//     super/
+			//     ├── .git/modules/sub/  ← reported worktree path
+			//     │   └── config        core.worktree = ../../../sub
+			//     └── sub/              ← actual checkout
+			//         └── .git          file: gitdir: ../.git/modules/sub
+			//
+			// When the reported path equals r.gitDir, use rev-parse via
+			// OpenWorktree to resolve the checkout through core.worktree.
+			// Bare repositories have no checkout, so keep their paths unchanged.
+			if localBranch.Worktree == r.gitDir {
+				bare, err := r.gitCmd(ctx, "rev-parse", "--is-bare-repository").OutputChomp()
+				if err != nil {
+					yield(LocalBranch{}, fmt.Errorf("check bare repository: %w", err))
+					return
+				}
+				if bare == "false" {
+					wt, err := r.OpenWorktree(ctx, r.gitDir)
+					if err != nil {
+						yield(LocalBranch{}, fmt.Errorf("resolve worktree path: %w", err))
+						return
+					}
+					localBranch.Worktree = wt.RootDir()
+				}
+			}
 			if !yield(localBranch, nil) {
 				return
 			}
