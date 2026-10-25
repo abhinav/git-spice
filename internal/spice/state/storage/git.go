@@ -160,12 +160,18 @@ func (g *GitBackend) GetMany(ctx context.Context, reqs []GetRequest) error {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
+	return g.readMany(ctx, g.ref, "", reqs)
+}
+
+// readMany reads a non-empty batch. Live-ref callers hold the backend lock;
+// snapshots pass their pinned commit and tree and do not need that lock.
+func (g *GitBackend) readMany(ctx context.Context, treeish string, tree git.Hash, reqs []GetRequest) error {
 	hashes := make([]git.Hash, 0, len(reqs))
 	var missing []int
 	var missingKeys []string
 	if len(reqs) == 1 {
 		// Resolve an isolated key directly, avoiding a listing of the whole store.
-		hash, err := g.repo.HashAt(ctx, g.ref, reqs[0].Key)
+		hash, err := g.repo.HashAt(ctx, treeish, reqs[0].Key)
 		if err != nil {
 			if errors.Is(err, git.ErrNotExist) {
 				return &MissingKeysError{Indexes: []int{0}, Keys: []string{reqs[0].Key}}
@@ -176,9 +182,12 @@ func (g *GitBackend) GetMany(ctx context.Context, reqs []GetRequest) error {
 	} else {
 		// Pin the ref to an immutable tree and resolve all keys from one listing,
 		// rather than starting a HashAt process for each path.
-		tree, err := g.repo.PeelToTree(ctx, g.ref)
-		if err != nil && !errors.Is(err, git.ErrNotExist) {
-			return fmt.Errorf("get store tree: %w", err)
+		var err error
+		if tree == "" {
+			tree, err = g.repo.PeelToTree(ctx, treeish)
+			if err != nil && !errors.Is(err, git.ErrNotExist) {
+				return fmt.Errorf("get store tree: %w", err)
+			}
 		}
 
 		byKey := make(map[string]git.Hash)
@@ -501,6 +510,21 @@ func (s *gitSnapshot) Get(
 		return ErrNotExist
 	}
 	return s.backend.read(ctx, s.commit.String(), key, dst)
+}
+
+func (s *gitSnapshot) GetMany(ctx context.Context, reqs []GetRequest) error {
+	if len(reqs) == 0 {
+		return nil
+	}
+	if s.commit == "" {
+		missing := &MissingKeysError{}
+		for i, req := range reqs {
+			missing.Indexes = append(missing.Indexes, i)
+			missing.Keys = append(missing.Keys, req.Key)
+		}
+		return missing
+	}
+	return s.backend.readMany(ctx, s.commit.String(), s.tree, reqs)
 }
 
 func (s *gitSnapshot) Keys(

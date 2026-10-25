@@ -251,3 +251,11 @@ func (s *readBarrierSnapshot) Get(
 	s.afterRead(key)
 	return err
 }
+
+func (s *readBarrierSnapshot) GetMany(ctx context.Context, reqs []storage.GetRequest) error {
+	err := s.Snapshot.GetMany(ctx, reqs)
+	for _, req := range reqs {
+		s.afterRead(req.Key)
+	}
+	return err
+}
