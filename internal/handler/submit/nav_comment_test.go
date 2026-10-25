@@ -38,7 +38,8 @@ func TestUpdateNavigationComments(t *testing.T) {
 		trackedBranches []trackedBranch
 		when            NavCommentWhen
 		sync            NavCommentSync
-		downstack       NavCommentDownstack
+		downstack       string
+		layout          string
 
 		// branches from trackedBranches that were just submitted.
 		submit []string
@@ -324,7 +325,7 @@ func TestUpdateNavigationComments(t *testing.T) {
 				{Name: "feat3", Base: "feat2", ChangeID: 125},
 			},
 			sync:      NavCommentSyncDownstack,
-			downstack: NavCommentDownstackOpen,
+			downstack: "open",
 			submit:    []string{"feat3"},
 			// Merged CRs (#100, #101) should not appear
 			wantComments: map[int]string{
@@ -342,6 +343,96 @@ func TestUpdateNavigationComments(t *testing.T) {
 					"- #123",
 					"    - #124",
 					"        - #125 ◀",
+				),
+			},
+		},
+		{
+			name: "MergedDownstack/LimitOne",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+			},
+			submit:    []string{"feat2"},
+			sync:      NavCommentSyncDownstack,
+			downstack: "1",
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #101",
+					"    - #123 ◀",
+					"        - #124",
+				),
+				124: joinLines(
+					"- #123",
+					"    - #124 ◀",
+				),
+			},
+		},
+		{
+			name: "OpenDownstack/LimitOne",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat2", ChangeID: 125},
+			},
+			submit:    []string{"feat3"},
+			downstack: "1",
+			wantComments: map[int]string{
+				125: joinLines(
+					"- #124",
+					"    - #125 ◀",
+				),
+			},
+		},
+		{
+			name: "MergedDownstack/LimitExceedsHistory",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+			},
+			submit:    []string{"feat1"},
+			downstack: "10",
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #100",
+					"    - #101",
+					"        - #123 ◀",
+					"            - #124",
+				),
+			},
+		},
+		{
+			name: "MergedDownstack/LimitSimple",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+			},
+			submit:    []string{"feat1"},
+			downstack: "1",
+			layout:    "simple",
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #124",
+					"- #123 ◀",
+					"- #101",
+					"- `main`",
+				),
+			},
+		},
+		{
+			name: "MergedDownstack/LimitFork",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat1", ChangeID: 125},
+			},
+			submit:    []string{"feat1"},
+			downstack: "1",
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #101",
+					"    - #123 ◀",
+					"        - #124",
+					"        - #125",
 				),
 			},
 		},
@@ -441,6 +532,9 @@ func TestUpdateNavigationComments(t *testing.T) {
 				}).
 				AnyTimes()
 
+			var downstack NavCommentDownstack
+			require.NoError(t, downstack.UnmarshalText([]byte(cmp.Or(tt.downstack, "all"))))
+
 			err := updateNavigationComments(
 				t.Context(),
 				navigationCommentUpdate{
@@ -450,7 +544,8 @@ func TestUpdateNavigationComments(t *testing.T) {
 					remoteRepository:  mockRemoteRepo,
 					when:              tt.when,
 					sync:              tt.sync,
-					downstack:         tt.downstack,
+					downstack:         downstack,
+					layout:            tt.layout,
 					submittedBranches: tt.submit,
 				},
 			)
@@ -562,7 +657,7 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 				remoteRepository:  mockRemoteRepo,
 				when:              NavCommentAlways,
 				sync:              NavCommentSyncBranch,
-				downstack:         NavCommentDownstackAll,
+				downstack:         NavCommentDownstack{},
 				submittedBranches: []string{"feat1"},
 			},
 		)
@@ -676,7 +771,7 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 				remoteRepository:  mockRemoteRepo,
 				when:              NavCommentAlways,
 				sync:              NavCommentSyncDownstack,
-				downstack:         NavCommentDownstackAll,
+				downstack:         NavCommentDownstack{},
 				submittedBranches: []string{"feat3"},
 			},
 		)
@@ -782,7 +877,7 @@ func TestUpdateNavigationComments_trunkComparisonLink(t *testing.T) {
 				remoteRepository:  getRepo(mockRepo),
 				when:              NavCommentAlways,
 				sync:              NavCommentSyncDownstack,
-				downstack:         NavCommentDownstackAll,
+				downstack:         NavCommentDownstack{},
 				trunkLink:         mode,
 				submittedBranches: []string{"feat3"},
 				pushRepositoryID:  getPushRepositoryID,
@@ -1145,8 +1240,8 @@ func TestNavCommentDownstack_UnmarshalText(t *testing.T) {
 		give string
 		want NavCommentDownstack
 	}{
-		{"all", NavCommentDownstackAll},
-		{"open", NavCommentDownstackOpen},
+		{"all", NavCommentDownstack{}},
+		{"open", NavCommentDownstack{mode: navCommentDownstackOpen}},
 	}
 
 	for _, tt := range tests {
@@ -1161,8 +1256,26 @@ func TestNavCommentDownstack_UnmarshalText(t *testing.T) {
 	t.Run("unknown", func(t *testing.T) {
 		var d NavCommentDownstack
 		require.Error(t, d.UnmarshalText([]byte("unknown")))
-		assert.Equal(t, "unknown", NavCommentDownstack(42).String())
+		assert.Equal(t, "unknown", NavCommentDownstack{mode: 42}.String())
 	})
+}
+
+func TestNavCommentDownstack_limits(t *testing.T) {
+	for _, value := range []string{"1", "3", "100"} {
+		t.Run(value, func(t *testing.T) {
+			var got NavCommentDownstack
+			require.NoError(t, got.UnmarshalText([]byte(value)))
+			assert.Equal(t, value, got.String())
+		})
+	}
+	for _, value := range []string{"", "0", "-1", "+1", "1.5", "many", "999999999999999999999999999"} {
+		t.Run(value, func(t *testing.T) {
+			var got NavCommentDownstack
+			require.NoError(t, got.UnmarshalText([]byte("3")))
+			require.Error(t, got.UnmarshalText([]byte(value)))
+			assert.Equal(t, "3", got.String())
+		})
+	}
 }
 
 func TestNavCommentTrunkLink_UnmarshalText(t *testing.T) {

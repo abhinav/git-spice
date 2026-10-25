@@ -18,6 +18,11 @@ const (
 
 // PrintOptions customizes the behavior of Print.
 type PrintOptions struct {
+	// DownstackLimit caps the number of ancestors shown below the current
+	// change. Zero means unlimited; the current change and its upstacks
+	// are always shown.
+	DownstackLimit int
+
 	// Marker is the marker to use for the current change.
 	// If empty, defaults to "◀".
 	Marker string
@@ -105,14 +110,24 @@ func Print[N Node](w io.Writer, nodes []N, currentIdx int, opts *PrintOptions) {
 		return true
 	}
 
+	// Collect ancestors nearest first so the same limit applies to both layouts.
+	limit := len(nodes)
+	if opts != nil && opts.DownstackLimit > 0 {
+		limit = min(limit, opts.DownstackLimit)
+	}
+	var downstacks []int
+	for base := nodes[currentIdx].BaseIdx(); len(downstacks) < limit && ok(base); base = nodes[base].BaseIdx() {
+		downstacks = append(downstacks, base)
+	}
+
 	if opts != nil && opts.Simple {
 		if upstacks, linear := linearUpstacks(aboves, currentIdx); linear {
 			for _, idx := range slices.Backward(upstacks) {
 				writeNode(idx, 0)
 			}
 			writeNode(currentIdx, 0)
-			for base := nodes[currentIdx].BaseIdx(); ok(base); base = nodes[base].BaseIdx() {
-				writeNode(base, 0)
+			for _, idx := range downstacks {
+				writeNode(idx, 0)
 			}
 			if opts.Trunk != "" {
 				_, _ = fmt.Fprintf(w, "- `%v`\n", opts.Trunk)
@@ -125,17 +140,10 @@ func Print[N Node](w io.Writer, nodes []N, currentIdx int, opts *PrintOptions) {
 	// This will change the indent level.
 	// The downstacks leading up to the current branch are always linear.
 	var indent int
-	{
-		var downstacks []int
-		for base := nodes[currentIdx].BaseIdx(); ok(base); base = nodes[base].BaseIdx() {
-			downstacks = append(downstacks, base)
-		}
-
-		// Reverse order to print from base to current.
-		for _, v := range slices.Backward(downstacks) {
-			writeNode(v, indent)
-			indent++
-		}
+	// Reverse order to print from base to current.
+	for _, v := range slices.Backward(downstacks) {
+		writeNode(v, indent)
+		indent++
 	}
 
 	// For the upstacks, we'll need to traverse the graph

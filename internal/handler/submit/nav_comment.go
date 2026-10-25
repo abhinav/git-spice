@@ -166,6 +166,9 @@ func updateNavigationComments(
 	}
 	trunk := graph.Trunk()
 	printOpts := &stacknav.PrintOptions{Marker: update.marker}
+	if update.downstack.mode == navCommentDownstackLimited {
+		printOpts.DownstackLimit = update.downstack.limit
+	}
 	if update.layout == "simple" {
 		printOpts.Simple = true
 		printOpts.Trunk = trunk
@@ -220,7 +223,7 @@ func updateNavigationComments(
 		//
 		// Skip merged downstack branches if navCommentDownstack is Open.
 		lastDownstackIdx := -1
-		if update.downstack == NavCommentDownstackAll {
+		if update.downstack.mode != navCommentDownstackOpen {
 			for _, crJSON := range b.MergedDownstack {
 				downstackCR, err := remoteRepo.Forge().UnmarshalChangeID(crJSON)
 				if err != nil {
