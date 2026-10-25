@@ -99,6 +99,86 @@ func TestPrinter(t *testing.T) {
 	}
 }
 
+func TestPrinter_downstackLimit(t *testing.T) {
+	tests := []struct {
+		name    string
+		current int
+		opts    PrintOptions
+		want    string
+	}{
+		{
+			name:    "Tree",
+			current: 2,
+			opts:    PrintOptions{DownstackLimit: 1},
+			want: joinLines(
+				"- #124",
+				"    - #125 ◀",
+				"        - #126",
+				"        - #127",
+			),
+		},
+		{
+			name:    "Simple",
+			current: 3,
+			opts:    PrintOptions{DownstackLimit: 1, Simple: true, Trunk: "main"},
+			want: joinLines(
+				"- #126 ◀",
+				"- #125",
+				"- `main`",
+			),
+		},
+		{
+			name:    "SimpleForkFallback",
+			current: 2,
+			opts:    PrintOptions{DownstackLimit: 1, Simple: true},
+			want: joinLines(
+				"- #124",
+				"    - #125 ◀",
+				"        - #126",
+				"        - #127",
+			),
+		},
+		{
+			name:    "ExceedsDownstack",
+			current: 1,
+			opts:    PrintOptions{DownstackLimit: 10},
+			want: joinLines(
+				"- #123",
+				"    - #124 ◀",
+				"        - #125",
+				"            - #126",
+				"            - #127",
+			),
+		},
+		{
+			name:    "NoDownstack",
+			current: 0,
+			opts:    PrintOptions{DownstackLimit: 1},
+			want: joinLines(
+				"- #123 ◀",
+				"    - #124",
+				"        - #125",
+				"            - #126",
+				"            - #127",
+			),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes := []Item{
+				{value: "#123", base: -1},
+				{value: "#124", base: 0},
+				{value: "#125", base: 1},
+				{value: "#126", base: 2},
+				{value: "#127", base: 2},
+			}
+			var got strings.Builder
+			Print(&got, nodes, tt.current, &tt.opts)
+			assert.Equal(t, tt.want, got.String())
+		})
+	}
+}
+
 func TestPrinter_simple(t *testing.T) {
 	tests := []struct {
 		name    string

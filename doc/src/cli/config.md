@@ -1069,6 +1069,16 @@ are included in navigation comments posted to CRs.
 
 - `all` (default): include all downstack CRs (both open and merged)
 - `open`: only include CRs open at the time of submission
+- <!-- gs:version unreleased --> number > 0: include at most this many downstack CRs,
+  counting both open and merged CRs nearest to the current CR
+
+For example:
+
+```sh
+git config spice.submit.navigationComment.downstack 3
+```
+
+This shows the three nearest downstack CRs.
 
 ### spice.submit.navigationComment.trunkComparison
 

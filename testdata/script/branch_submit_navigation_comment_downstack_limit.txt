@@ -1,0 +1,124 @@
+# Numeric limits cap downstack history in navigation comments.
+as 'Test <test@example.com>'
+at '2026-10-25T18:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+shamhub-setup
+shamhub register alice
+shamhub new origin alice/example.git
+env SHAMHUB_USERNAME=alice
+gs auth login
+git push origin main
+
+git add feat1.txt
+gs branch create -m 'Add feature 1' feat1
+gs bs --fill
+
+git add feat2.txt
+gs branch create -m 'Add feature 2' feat2
+gs bs --fill
+
+git add feat3.txt
+gs branch create -m 'Add feature 3' feat3
+gs bs --fill
+
+git add feat4.txt
+gs branch create -m 'Add feature 4' feat4
+gs bs --fill
+
+git add feat5.txt
+gs branch create -m 'Add feature 5' feat5
+gs bs --fill
+
+# Record three merged CRs below the two remaining open CRs.
+shamhub merge alice/example 1
+shamhub merge alice/example 2
+shamhub merge alice/example 3
+gs repo sync
+gs branch restack
+
+git config spice.submit.navigationComment.downstack 1
+gs bs
+shamhub dump comments 5
+cmp stdout $WORK/golden/one.txt
+
+git config spice.submit.navigationComment.downstack 2
+gs bs
+shamhub dump comments 5
+cmp stdout $WORK/golden/two.txt
+
+git config spice.submit.navigationComment.downstack open
+gs bs
+shamhub dump comments 5
+cmp stdout $WORK/golden/open.txt
+
+# Limiting display must not discard stored history.
+git config spice.submit.navigationComment.downstack all
+gs bs
+shamhub dump comments 5
+cmp stdout $WORK/golden/all.txt
+
+# Invalid configuration is rejected before submission.
+git config spice.submit.navigationComment.downstack -1
+! gs bs
+stderr 'expected all, open, or a positive integer'
+git config spice.submit.navigationComment.downstack 0
+! gs bs
+stderr 'expected all, open, or a positive integer'
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- repo/feat3.txt --
+feature 3
+-- repo/feat4.txt --
+feature 4
+-- repo/feat5.txt --
+feature 5
+-- golden/one.txt --
+- change: 5
+  body: |
+    This change is part of the following stack:
+
+    - #4
+        - #5 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/two.txt --
+- change: 5
+  body: |
+    This change is part of the following stack:
+
+    - #3
+        - #4
+            - #5 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/open.txt --
+- change: 5
+  body: |
+    This change is part of the following stack:
+
+    - #4
+        - #5 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/all.txt --
+- change: 5
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3
+                - #4
+                    - #5 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

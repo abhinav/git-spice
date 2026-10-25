@@ -4,6 +4,7 @@ import (
 	"encoding"
 	"fmt"
 	"slices"
+	"strconv"
 	"time"
 
 	"go.abhg.dev/gs/internal/iterutil"
@@ -23,7 +24,7 @@ type Options struct {
 
 	NavComment          NavCommentWhen      `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 	NavCommentSync      NavCommentSync      `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
-	NavCommentDownstack NavCommentDownstack `name:"nav-comment-downstack" config:"submit.navigationComment.downstack" enum:"all,open" default:"all" hidden:"" help:"Which downstack CRs to include in navigation comments. Must be one of: all, open."`
+	NavCommentDownstack NavCommentDownstack `name:"nav-comment-downstack" config:"submit.navigationComment.downstack" default:"all" hidden:"" help:"Downstack CRs to include: all, open, or a positive downstack limit."`
 	NavCommentMarker    string              `name:"nav-comment-marker" config:"submit.navigationCommentStyle.marker" hidden:"" help:"Marker to use for the current change in navigation comments. Defaults to '◀'."`
 	NavCommentLayout    string              `name:"nav-comment-layout" config:"submit.navigationCommentStyle.layout" enum:"tree,simple" default:"tree" hidden:"" help:"Layout of navigation comments. Must be one of: tree, simple."`
 
@@ -147,48 +148,56 @@ func (s *NavCommentSync) UnmarshalText(bs []byte) error {
 	return nil
 }
 
-// NavCommentDownstack specifies which downstack CRs
-// to include in navigation comments.
-type NavCommentDownstack int
+// NavCommentDownstack controls which ancestors appear in navigation comments.
+// The zero value includes all downstack CRs, both open and merged.
+type NavCommentDownstack struct {
+	mode navCommentDownstackMode
 
-const (
-	// NavCommentDownstackAll includes all downstack CRs
-	// (both open and merged).
-	//
-	// This is the default.
-	NavCommentDownstackAll NavCommentDownstack = iota
-
-	// NavCommentDownstackOpen includes only open downstack CRs,
-	// excluding merged ones.
-	NavCommentDownstackOpen
-)
+	// limit is the maximum number of downstack CRs to include
+	// when mode is navCommentDownstackLimited.
+	limit int
+}
 
 var _ encoding.TextUnmarshaler = (*NavCommentDownstack)(nil)
 
-// String returns the string representation of the NavCommentDownstack.
 func (d NavCommentDownstack) String() string {
-	switch d {
-	case NavCommentDownstackAll:
+	switch d.mode {
+	case navCommentDownstackAll:
 		return "all"
-	case NavCommentDownstackOpen:
+	case navCommentDownstackOpen:
 		return "open"
+	case navCommentDownstackLimited:
+		return strconv.Itoa(d.limit)
 	default:
 		return "unknown"
 	}
 }
 
-// UnmarshalText decodes NavCommentDownstack from text.
+// UnmarshalText accepts all, open, or a positive decimal downstack
+// limit. Invalid input leaves the value unchanged.
 func (d *NavCommentDownstack) UnmarshalText(bs []byte) error {
 	switch string(bs) {
 	case "all":
-		*d = NavCommentDownstackAll
+		*d = NavCommentDownstack{}
 	case "open":
-		*d = NavCommentDownstackOpen
+		*d = NavCommentDownstack{mode: navCommentDownstackOpen}
 	default:
-		return fmt.Errorf("invalid value %q: expected all or open", bs)
+		n, err := strconv.ParseUint(string(bs), 10, strconv.IntSize-1)
+		if err != nil || n == 0 {
+			return fmt.Errorf("invalid value %q: expected all, open, or a positive integer", bs)
+		}
+		*d = NavCommentDownstack{mode: navCommentDownstackLimited, limit: int(n)}
 	}
 	return nil
 }
+
+type navCommentDownstackMode int
+
+const (
+	navCommentDownstackAll navCommentDownstackMode = iota
+	navCommentDownstackOpen
+	navCommentDownstackLimited
+)
 
 // NavCommentTrunkLink specifies whether navigation comments include a link
 // comparing the branch against trunk, and which CRs in a stack receive it.

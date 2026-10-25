@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  submit: Allow limiting downstack history in navigation comments
+  by setting the 'spice.submit.navigationComment.downstack' configuration option
+  to a positive integer.
+time: 2026-10-25T11:07:35.44976-07:00
