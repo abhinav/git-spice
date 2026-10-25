@@ -12,6 +12,8 @@ type StackRepository interface {
 	// when that base is also in the request.
 	// BaseBranch identifies the provider-facing branch
 	// even when BaseChange is absent from the request.
+	// Changes without BaseBranch retain their current remote base;
+	// their BaseChange is used only if that relationship already exists remotely.
 	//
 	// Planning is read-only, including on failure.
 	// If planning returns [ErrUnsupported],
@@ -82,5 +84,7 @@ type StackChange struct {
 	BaseChange ChangeID
 
 	// BaseBranch is the desired provider-facing base branch.
-	BaseBranch string // required
+	// If empty, preserve the change's remote base and use BaseChange
+	// only when it agrees with that existing relationship.
+	BaseBranch string
 }
