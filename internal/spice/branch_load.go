@@ -5,10 +5,8 @@ import (
 	"encoding/json/jsontext"
 	"errors"
 	"fmt"
-	"runtime"
 	"slices"
 	"strings"
-	"sync"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
@@ -49,10 +47,6 @@ type LoadBranchItem struct {
 // The returned branches are sorted by name.
 func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 	var (
-		wg sync.WaitGroup
-
-		mu sync.Mutex
-
 		errs  []error
 		items []LoadBranchItem
 
@@ -60,49 +54,43 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 		// that have been deleted out of band.
 		deletedBranches = make(map[string]*DeletedBranchError)
 	)
-	namec := make(chan string)
-	for range runtime.GOMAXPROCS(0) {
-		wg.Go(func() {
-			for name := range namec {
-				resp, err := s.LookupBranch(ctx, name)
-				if err != nil {
-					if delErr := new(DeletedBranchError); errors.As(err, &delErr) {
-						s.log.Infof("%v: removing...", delErr)
-						mu.Lock()
-						deletedBranches[name] = delErr
-						mu.Unlock()
-						continue
-					}
 
-					mu.Lock()
-					errs = append(errs, fmt.Errorf("get branch %v: %w", name, err))
-					mu.Unlock()
-					continue
-				}
-
-				mu.Lock()
-				items = append(items, LoadBranchItem{
-					Name:            name,
-					Head:            resp.Head,
-					Base:            resp.Base,
-					BaseHash:        resp.BaseHash,
-					UpstreamBranch:  resp.UpstreamBranch,
-					Change:          resp.Change,
-					MergedDownstack: resp.MergedDownstack,
-				})
-				mu.Unlock()
-			}
-		})
-	}
-
+	var names []string
 	for name, err := range s.store.ListBranches(ctx) {
 		if err != nil {
 			return nil, fmt.Errorf("list branches: %w", err)
 		}
-		namec <- name
+		names = append(names, name)
 	}
-	close(namec)
-	wg.Wait()
+
+	results, err := s.LookupBranches(ctx, names)
+	if err != nil {
+		return nil, fmt.Errorf("lookup branches: %w", err)
+	}
+	for i, result := range results {
+		name := names[i]
+		resp, err := result.Response, result.Err
+		if err != nil {
+			if delErr := new(DeletedBranchError); errors.As(err, &delErr) {
+				s.log.Infof("%v: removing...", delErr)
+				deletedBranches[name] = delErr
+				continue
+			}
+
+			errs = append(errs, fmt.Errorf("get branch %v: %w", name, err))
+			continue
+		}
+
+		items = append(items, LoadBranchItem{
+			Name:            name,
+			Head:            resp.Head,
+			Base:            resp.Base,
+			BaseHash:        resp.BaseHash,
+			UpstreamBranch:  resp.UpstreamBranch,
+			Change:          resp.Change,
+			MergedDownstack: resp.MergedDownstack,
+		})
+	}
 
 	if err := errors.Join(errs...); err != nil {
 		return nil, err

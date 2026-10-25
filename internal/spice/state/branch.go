@@ -113,11 +113,60 @@ type LookupResponse struct {
 // LookupBranch returns information about a tracked branch.
 // If the branch is not found, [ErrNotExist] will be returned.
 func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse, error) {
-	state, err := s.lookupBranchState(ctx, name)
+	responses, err := s.LookupBranches(ctx, []string{name})
 	if err != nil {
 		return nil, err
 	}
 
+	return responses[0], nil
+}
+
+// LookupBranches returns information about tracked branches.
+// The returned slice matches the order of names.
+//
+// Missing branches have nil responses and are identified by the indexes in
+// [storage.MissingKeysError]. All other responses are valid in that case.
+// Other errors return no responses.
+func (s *Store) LookupBranches(
+	ctx context.Context,
+	names []string,
+) ([]*LookupResponse, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	states := make([]branchState, len(names))
+	reqs := make([]storage.GetRequest, len(names))
+	for i, name := range names {
+		reqs[i] = storage.GetRequest{
+			Key:   branchKey(name),
+			Value: &states[i],
+		}
+	}
+
+	err := s.db.GetMany(ctx, reqs)
+	var missing []int
+	if missingErr, ok := errors.AsType[*storage.MissingKeysError](err); ok {
+		missing = missingErr.Indexes
+	} else if err != nil {
+		return nil, fmt.Errorf("load branches: %w", err)
+	}
+
+	responses := make([]*LookupResponse, len(states))
+	for i := range states {
+		if len(missing) > 0 && missing[0] == i {
+			missing = missing[1:]
+			continue
+		}
+		responses[i] = branchStateLookupResponse(&states[i])
+	}
+	if err != nil {
+		return responses, fmt.Errorf("load branches: %w", err)
+	}
+	return responses, nil
+}
+
+func branchStateLookupResponse(state *branchState) *LookupResponse {
 	res := &LookupResponse{
 		Base:            state.Base.Name,
 		BaseHash:        git.Hash(state.Base.Hash),
@@ -133,7 +182,7 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 		res.UpstreamBranch = upstream.Branch
 	}
 
-	return res, nil
+	return res
 }
 
 // lookupBranchState loads the state of the given branch from the store.

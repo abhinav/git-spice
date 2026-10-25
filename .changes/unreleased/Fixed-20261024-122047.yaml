@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'log: Short and long branch listings are faster in repositories with many tracked branches.'
+time: 2026-10-24T12:20:47.259839-07:00
