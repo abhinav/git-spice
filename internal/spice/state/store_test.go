@@ -1,7 +1,9 @@
 package state_test
 
 import (
+	"context"
 	"encoding/json/jsontext"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -262,7 +264,7 @@ func TestOpenStore_remoteMigrationMalformed(t *testing.T) {
 
 	_, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
 	require.Error(t, err)
-	assert.ErrorContains(t, err, "get repo state:")
+	assert.ErrorContains(t, err, `decode JSON for "repo":`)
 }
 
 func TestInitStore_writesVersionOneForSameRemote(t *testing.T) {
@@ -394,7 +396,7 @@ func TestOpenStore_errors(t *testing.T) {
 
 		_, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "get repo state:")
+		assert.ErrorContains(t, err, `decode JSON for "repo":`)
 	})
 
 	t.Run("CorruptRepo/Incomplete", func(t *testing.T) {
@@ -406,4 +408,21 @@ func TestOpenStore_errors(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "corrupt state:")
 	})
+}
+
+func TestOpenStore_batchReadError(t *testing.T) {
+	db := &failedBatchDB{DB: storage.NewDB(storage.MapBackend{
+		"version": []byte("1"),
+		"repo":    []byte(`{"trunk":"main"}`),
+	})}
+	_, err := state.OpenStore(t.Context(), db, nil)
+	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
+}
+
+type failedBatchDB struct {
+	*storage.DB
+}
+
+func (*failedBatchDB) GetMany(context.Context, []storage.GetRequest) error {
+	return io.ErrUnexpectedEOF
 }

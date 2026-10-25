@@ -5,51 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/spice/state/storage"
 )
-
-func TestLoadVersion(t *testing.T) {
-	tests := []struct {
-		name  string
-		files storage.MapBackend
-		want  Version
-	}{
-		{
-			name: "Empty",
-			want: VersionOne,
-		},
-		{
-			name: "ExplicitV1",
-			files: storage.MapBackend{
-				"version": []byte("1"),
-			},
-			want: VersionOne,
-		},
-		{
-			name: "ExplicitV2",
-			files: storage.MapBackend{
-				"version": []byte("2"),
-			},
-			want: VersionTwo,
-		},
-		{
-			name: "FutureVersion",
-			files: storage.MapBackend{
-				"version": []byte("42"),
-			},
-			want: Version(42),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			db := storage.NewDB(tt.files)
-			got, err := loadVersion(t.Context(), db)
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
 
 func TestCheckVersion(t *testing.T) {
 	tests := []struct {
