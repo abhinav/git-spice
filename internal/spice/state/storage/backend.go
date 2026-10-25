@@ -7,6 +7,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 // Backend defines the primitive operations for the key-value store.
@@ -14,6 +15,14 @@ type Backend interface {
 	// Get retrieves a value from the store and decodes it into dst.
 	// If the key does not exist, Get returns [ErrNotExist].
 	Get(ctx context.Context, key string, dst any) error
+
+	// GetMany retrieves values from the store
+	// and decodes each value into its request destination.
+	//
+	// If keys are missing, GetMany returns [MissingKeysError] after decoding
+	// every present value. Missing destinations remain unchanged.
+	// Other errors leave all destinations unspecified.
+	GetMany(ctx context.Context, reqs []GetRequest) error
 
 	// Snapshot returns a read-only view of the current store revision.
 	Snapshot(ctx context.Context) (Snapshot, error)
@@ -79,6 +88,34 @@ type SetRequest struct {
 type MoveRequest struct {
 	From string // required
 	To   string // required
+}
+
+// GetRequest is a single operation to retrieve a key.
+type GetRequest struct {
+	// Key to retrieve.
+	Key string
+
+	// Value receives the JSON-decoded value.
+	Value any
+}
+
+// MissingKeysError reports missing keys in a completed [Backend.GetMany] call.
+// Destinations not listed in Indexes were decoded successfully.
+// It matches [ErrNotExist] through [errors.Is].
+type MissingKeysError struct {
+	// Indexes contains the missing requests' zero-based indexes, in input order.
+	Indexes []int
+
+	// Keys contains the missing keys, aligned with Indexes, including duplicates.
+	Keys []string
+}
+
+func (e *MissingKeysError) Error() string {
+	return fmt.Sprintf("missing: %v", e.Keys)
+}
+
+func (e *MissingKeysError) Unwrap() error {
+	return ErrNotExist
 }
 
 // ErrNotExist indicates that an expected key does not exist.
