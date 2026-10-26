@@ -55,8 +55,8 @@ the commits in the MR are replaced with a single commit with a different hash.
 
 The branches upstack from that CR are not aware of this new commit,
 still referring to the old, unsquashed history of the branch.
-GitHub and GitLab do not yet know to reconcile this new commit with the upstack branches,
-even though the contents are the same.
+The new commit is not part of those branches' history,
+even though its contents are the same.
 
 ```pikchr
 linewid = 0.25in
@@ -108,7 +108,11 @@ arrow " restack" ljust from Y.s to Z.n
 ```
 
 As a result of this, when a branch is squash-merged into the trunk branch,
-branches upstack from it need to be restacked, and all their CRs updated.
+surviving branches upstack from it need to be restacked,
+and all their CRs updated.
+[Atomic native stack merges](merge.md#native-stack-merges)
+avoid intermediate restacks between CRs merged in the same operation.
+Branches outside that operation may still need to be restacked.
 
 To restack all branches above deleted merged branches
 and then submit the current stack after a squash merge,
@@ -123,8 +127,16 @@ The experimental merge commands automate this merge,
 sync, restack, and update loop.
 See [Merging stacks](merge.md).
 
-<!-- TODO: can be alleviated somewhat if we implement
-     https://github.com/abhinav/git-spice/issues/65 -->
+## GitHub native-stack limitations
+
+GitHub native stacks must be linear,
+with all head branches in the repository receiving the pull requests.
+For divergent local stacks, git-spice registers a linear path
+and warns about branches left out.
+
+Queued pull requests and pull requests with auto-merge enabled
+can prevent GitHub from restructuring an existing native stack.
+git-spice warns when it cannot update the stack.
 
 ## Bitbucket Cloud limitations
 

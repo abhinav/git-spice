@@ -20,10 +20,10 @@ description: >-
     ```
 
 git-spice can merge submitted Change Requests (CRs) from the command line.
-For stacked CRs, git-spice merges them bottom-up:
-merging CRs at the bottom of the stack,
-restacking and resubmitting their upstack as needed
-until all CRs have been merged.
+For stacked CRs, git-spice starts at the bottom of the stack
+and works its way up,
+restacking and resubmitting surviving branches as needed.
+On supported forges, it can merge multiple CRs in a native stack atomically.
 
 ```freeze language="ansi"
 --8<-- "captures/merge-progress.txt"
@@ -35,8 +35,10 @@ until all CRs have been merged.
     These replace commits in the merged branch with new commits on trunk.
     Git does not consider the new commit equivalent to the originals,
     so branches upstack from the merged branch point to a stale history.
-    These need to be retargeted to trunk, restacked,
+    Surviving branches need to be retargeted to trunk, restacked,
     and updated before they can merge.
+    [Native stack merges](#native-stack-merges) avoid these intermediate updates
+    between CRs merged together.
 
     See also [Squash-merges restack the upstack](limits.md#squash-merges-restack-the-upstack)
     to read more about the underlying limitation.
@@ -102,6 +104,24 @@ text "feat3" color red
 {green}${reset} gs stack merge
 {gray}# merges feat1, feat2, feat3, feat4 into main{reset}
 ```
+
+## Native stack merges
+
+<!-- gs:version unreleased -->
+<!-- gs:badge:github -->
+
+On supported forges such as GitHub,
+git-spice uses native stack membership to merge eligible groups of selected CRs
+atomically: each group merges together or not at all.
+This avoids restacking and resubmitting between those CRs,
+even with squash-merges.
+
+When a native stack merge is not possible for all selected CRs,
+git-spice merges other CRs individually,
+as it does on forges without native stack merging.
+
+See [GitHub native-stack limitations](limits.md#github-native-stack-limitations)
+for restrictions.
 
 ## When is a CR ready to merge?
 

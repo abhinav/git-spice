@@ -376,6 +376,12 @@ instead of atomic stack merges.
 This setting affects only future git-spice operations;
 it does not remove native stack associations that already exist on GitHub.
 
+See [Native stacks](../guide/cr.md#native-stacks)
+and [Native stack merges](../guide/merge.md#native-stack-merges)
+for the submission and merge workflows,
+and [GitHub native-stack limitations](../guide/limits.md#github-native-stack-limitations)
+for restrictions.
+
 ### spice.forge.github.url
 
 URL of the GitHub instance used for GitHub requests.
