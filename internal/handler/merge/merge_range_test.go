@@ -83,10 +83,10 @@ func TestMergeScheduler_nativeLinearPathWithUnselectedDivergence(t *testing.T) {
 
 	mockService := NewMockService(ctrl)
 	mockGit := NewMockGitRepository(ctrl)
-	for idx, branch := range []string{"feat1", "feat2", "feat3"} {
+	for idx, branch := range []string{"feat2", "feat3"} {
 		mockService.EXPECT().VerifyRestacked(gomock.Any(), branch).Return(nil)
 		mockGit.EXPECT().PeelToCommit(gomock.Any(), branch).
-			Return(git.Hash(fmt.Sprintf("head-%d", idx+1)), nil)
+			Return(git.Hash(fmt.Sprintf("head-%d", idx+2)), nil)
 	}
 
 	syncHandler := &recordingSyncHandler{}
@@ -96,8 +96,10 @@ func TestMergeScheduler_nativeLinearPathWithUnselectedDivergence(t *testing.T) {
 		gitRepo:   mockGit,
 		sync:      syncHandler,
 	})
+	bottom := testPlanEntry("feat1", "main", pr1)
+	bottom.headHash = "head-1" // captured during preflight
 	err := h.executePlan(t.Context(), testMergePlanWithBases(
-		testPlanEntry("feat1", "main", pr1),
+		bottom,
 		testPlanEntry("feat2", "feat1", pr2),
 		testPlanEntry("feat3", "feat2", pr3),
 	), mergeExecutionOptions{
@@ -199,10 +201,8 @@ func TestMergeScheduler_nativeRangeUnsupportedFallsBack(t *testing.T) {
 	}
 
 	mockService := NewMockService(ctrl)
-	mockService.EXPECT().VerifyRestacked(gomock.Any(), "feat1").Return(nil)
 	mockService.EXPECT().VerifyRestacked(gomock.Any(), "feat2").Return(nil).Times(2)
 	mockGit := NewMockGitRepository(ctrl)
-	mockGit.EXPECT().PeelToCommit(gomock.Any(), "feat1").Return(git.Hash("head-1"), nil)
 	mockGit.EXPECT().PeelToCommit(gomock.Any(), "feat2").Return(git.Hash("head-2"), nil).Times(2)
 
 	syncHandler := &recordingSyncHandler{operations: operations}
@@ -212,8 +212,10 @@ func TestMergeScheduler_nativeRangeUnsupportedFallsBack(t *testing.T) {
 		gitRepo:   mockGit,
 		sync:      syncHandler,
 	})
+	bottom := testPlanEntry("feat1", "main", pr1)
+	bottom.headHash = "head-1"
 	err := h.executePlan(t.Context(), testMergePlanWithBases(
-		testPlanEntry("feat1", "main", pr1),
+		bottom,
 		testPlanEntry("feat2", "feat1", pr2),
 	), mergeExecutionOptions{MergeTimeout: time.Second})
 	require.NoError(t, err)
@@ -294,16 +296,8 @@ func TestMergeScheduler_nativeFallbackSerializesWorkspaceChanges(t *testing.T) {
 		})
 		mockService := NewMockService(ctrl)
 		mockGit := NewMockGitRepository(ctrl)
-		for idx, branch := range []string{"feat1", "feat2"} {
-			mockService.EXPECT().
-				VerifyRestacked(gomock.Any(), branch).
-				Return(nil).
-				Times(idx + 1)
-			mockGit.EXPECT().
-				PeelToCommit(gomock.Any(), branch).
-				Return(git.Hash(fmt.Sprintf("head-%d", idx+1)), nil).
-				Times(idx + 1)
-		}
+		mockService.EXPECT().VerifyRestacked(gomock.Any(), "feat2").Return(nil).Times(2)
+		mockGit.EXPECT().PeelToCommit(gomock.Any(), "feat2").Return(git.Hash("head-2"), nil).Times(2)
 		h := newTestHandler(t, ctrl, testHandlerOpts{
 			forgeRepo: rangeRepo,
 			service:   mockService,
@@ -311,9 +305,11 @@ func TestMergeScheduler_nativeFallbackSerializesWorkspaceChanges(t *testing.T) {
 			sync:      syncHandler,
 		})
 		done := make(chan error, 1)
+		bottom := testPlanEntry("feat1", "main", pr1)
+		bottom.headHash = "head-1"
 		go func() {
 			done <- h.executePlan(t.Context(), []*mergeItem{
-				testPlanEntry("feat1", "main", pr1),
+				bottom,
 				testPlanEntry("feat2", "feat1", pr2),
 				testPlanEntry("feat3", "main", pr3),
 			}, mergeExecutionOptions{})
@@ -461,6 +457,7 @@ func TestRangeMergeQueueItem_Run_partialFallbackFailure(t *testing.T) {
 		testPlanEntry("feat2", "feat1", pr2),
 		testPlanEntry("feat3", "feat2", pr3),
 	}
+	plan[0].headHash = "head-1"
 	// The range covers feat1 and feat2. After native refusal, feat1 merges
 	// individually but feat2 becomes blocked. Only feat2 may be reported as
 	// failed; feat1 remains merged and dependent feat3 must be skipped.
@@ -468,16 +465,17 @@ func TestRangeMergeQueueItem_Run_partialFallbackFailure(t *testing.T) {
 	mockService := NewMockService(ctrl)
 	mockGit := NewMockGitRepository(ctrl)
 	for _, member := range []struct {
-		id     fakeChangeID
-		branch string
-		head   git.Hash
-		checks int
+		id           fakeChangeID
+		branch       string
+		head         git.Hash
+		checks       int
+		preparations int
 	}{
-		{pr1, "feat1", "head-1", 1},
-		{pr2, "feat2", "head-2", 2},
+		{pr1, "feat1", "head-1", 1, 0},
+		{pr2, "feat2", "head-2", 2, 2},
 	} {
-		mockService.EXPECT().VerifyRestacked(gomock.Any(), member.branch).Return(nil).Times(member.checks)
-		mockGit.EXPECT().PeelToCommit(gomock.Any(), member.branch).Return(member.head, nil).Times(member.checks)
+		mockService.EXPECT().VerifyRestacked(gomock.Any(), member.branch).Return(nil).Times(member.preparations)
+		mockGit.EXPECT().PeelToCommit(gomock.Any(), member.branch).Return(member.head, nil).Times(member.preparations)
 		mockForge.EXPECT().
 			ChangeStatuses(gomock.Any(), []forge.ChangeID{member.id}).
 			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: member.head}}, nil).
