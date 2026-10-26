@@ -56,6 +56,9 @@ func TestAwaitMergeability_ready(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	mockRepo.EXPECT().
 		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
@@ -97,6 +100,9 @@ func TestAwaitMergeability_blocked(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
+	mockRepo.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
 	mockRepo.EXPECT().
 		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
@@ -147,6 +153,9 @@ func TestAwaitMergeability_waitingZeroTimeout(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	mockRepo.EXPECT().
 		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
@@ -191,11 +200,18 @@ func TestAwaitMergeability_waitingThenReady(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
 		mockRepo := forgetest.NewMockRepository(ctrl)
+		mockRepo.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+
 		first := mockRepo.EXPECT().
 			ChangeMergeability(
 				gomock.Any(), fakeChangeID("pr-1"),
 			).
 			Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityWaiting, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
+		mockRepo.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
 		mockRepo.EXPECT().
 			ChangeMergeability(
 				gomock.Any(), fakeChangeID("pr-1"),
@@ -241,6 +257,9 @@ func TestAwaitMergeability_unknown(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	mockRepo.EXPECT().
 		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
@@ -284,6 +303,9 @@ func TestAwaitMergeability_unsupported(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	mockRepo.EXPECT().
 		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
@@ -326,6 +348,10 @@ func TestAwaitMergeability_readyCommandTimeoutZeroRunsOnce(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
+	mockRepo.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil).AnyTimes()
+
 	mockRepo.EXPECT().
 		CommandEnvironment(gomock.Any(), fakeChangeID("pr-1")).
 		Return(nil, nil)
@@ -389,6 +415,10 @@ func TestAwaitMergeability_readyCommandTimeoutBoundsFirstRun(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil).AnyTimes()
+
+	mockRepo.EXPECT().
 		CommandEnvironment(gomock.Any(), fakeChangeID("pr-1")).
 		Return(nil, nil).
 		AnyTimes()
@@ -446,6 +476,10 @@ func TestAwaitMergeability_readyCommandTimeoutCancelsSlowPoll(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
+	mockRepo.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{fakeChangeID("pr-1")}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil).AnyTimes()
+
 	mockRepo.EXPECT().
 		CommandEnvironment(gomock.Any(), fakeChangeID("pr-1")).
 		Return(nil, nil).
@@ -674,6 +708,9 @@ func TestExecutePlan_retargets(t *testing.T) {
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -688,6 +725,9 @@ func TestExecutePlan_retargets(t *testing.T) {
 			State:    forge.ChangeOpen,
 			HeadHash: git.Hash("head2"),
 		}}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr2).
 		Return(forge.ChangeMergeability{
@@ -707,6 +747,9 @@ func TestExecutePlan_retargets(t *testing.T) {
 			State:    forge.ChangeOpen,
 			HeadHash: git.Hash("head3"),
 		}}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr3}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head3")}}, nil)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr3).
 		Return(forge.ChangeMergeability{
@@ -813,6 +856,9 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -850,6 +896,9 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 			State:    forge.ChangeOpen,
 			HeadHash: git.Hash("new-head2"),
 		}}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("new-head2")}}, nil)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr2).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil).
@@ -908,6 +957,9 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -943,7 +995,10 @@ func TestMergeBranch_delegatesToDownstackMerge(t *testing.T) {
 	pr1 := fakeChangeID("pr-1")
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
-		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
@@ -1117,6 +1172,9 @@ func TestMergeBranch_acceptsSelectedPathToTrunk(t *testing.T) {
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil).
 		After(planStatus.Call)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil).
 		After(staleBaseStatus)
@@ -1128,6 +1186,9 @@ func TestMergeBranch_acceptsSelectedPathToTrunk(t *testing.T) {
 		Return(
 			[]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil,
 		)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
@@ -1210,7 +1271,7 @@ func TestMergeBranch_passesFailFastToScheduler(t *testing.T) {
 			}, nil)
 		staleBaseStatuses := mockForge.EXPECT().
 			ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
-			Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 		staleBaseStatuses.After(planStatuses.Call)
 		mockForge.EXPECT().
 			ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
@@ -1219,6 +1280,9 @@ func TestMergeBranch_passesFailFastToScheduler(t *testing.T) {
 				HeadHash: git.Hash("head1"),
 			}}, nil).
 			After(staleBaseStatuses.Call)
+		mockForge.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 		mockForge.EXPECT().
 			ChangeMergeability(gomock.Any(), pr1).
 			Return(forge.ChangeMergeability{
@@ -1283,6 +1347,9 @@ func TestMergeBranch_passesFailFastToScheduler(t *testing.T) {
 				State:    forge.ChangeOpen,
 				HeadHash: git.Hash("head2"),
 			}}, nil)
+		mockForge.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
 		mockForge.EXPECT().
 			ChangeMergeability(gomock.Any(), pr2).
 			DoAndReturn(func(
@@ -1353,7 +1420,7 @@ func TestMergeDownstack_passesFailFastToScheduler(t *testing.T) {
 			}, nil)
 		staleBaseStatuses := mockForge.EXPECT().
 			ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
-			Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 		staleBaseStatuses.After(planStatuses.Call)
 		mockForge.EXPECT().
 			ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
@@ -1362,6 +1429,9 @@ func TestMergeDownstack_passesFailFastToScheduler(t *testing.T) {
 				HeadHash: git.Hash("head1"),
 			}}, nil).
 			After(staleBaseStatuses.Call)
+		mockForge.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 		mockForge.EXPECT().
 			ChangeMergeability(gomock.Any(), pr1).
 			Return(forge.ChangeMergeability{
@@ -1423,6 +1493,9 @@ func TestMergeDownstack_passesFailFastToScheduler(t *testing.T) {
 				State:    forge.ChangeOpen,
 				HeadHash: git.Hash("head2"),
 			}}, nil)
+		mockForge.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
 		mockForge.EXPECT().
 			ChangeMergeability(gomock.Any(), pr2).
 			DoAndReturn(func(
@@ -1545,6 +1618,9 @@ func TestMergeStack_includesUpstackDescendants(t *testing.T) {
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil).
 		After(staleBaseStatuses.Call)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -1593,6 +1669,9 @@ func TestMergeStack_includesUpstackDescendants(t *testing.T) {
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr3}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head3")}}, nil)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr2).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -1601,6 +1680,9 @@ func TestMergeStack_includesUpstackDescendants(t *testing.T) {
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr3}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head3")}}, nil)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr3).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
@@ -1670,6 +1752,9 @@ func TestMergeStack_normalizesContainedScopes(t *testing.T) {
 		Return(git.Hash("head3"), nil)
 
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -1683,6 +1768,9 @@ func TestMergeStack_normalizesContainedScopes(t *testing.T) {
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil).
 		After(staleBaseStatuses.Call)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr2).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -1695,6 +1783,9 @@ func TestMergeStack_normalizesContainedScopes(t *testing.T) {
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr3}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head3")}}, nil).
 		After(staleBaseStatuses.Call)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr3}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head3")}}, nil)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr3).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
@@ -1736,6 +1827,9 @@ func TestMergeStack_ignoresUnsubmittedAboveSubmitted(t *testing.T) {
 		Return([]forge.ChangeStatus{
 			{State: forge.ChangeOpen},
 		}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
@@ -1800,7 +1894,10 @@ func TestMergeStack_ignoresUnsubmittedBelowSubmitted(t *testing.T) {
 	mockForge := forgetest.NewMockRepository(ctrl)
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
-		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
@@ -1921,6 +2018,9 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil).
 		After(staleBaseStatuses.Call)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -1978,8 +2078,14 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 		}}, nil).
 		AnyTimes()
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head2")}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr2).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityBlocked, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr3}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head3")}}, nil).AnyTimes()
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr3).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil).
@@ -2036,6 +2142,9 @@ func TestExecutePlan_nativePlanningUnsupportedFallsBack(t *testing.T) {
 			HeadHash: "head-1",
 		}}, nil)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{changeID}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: "head-1"}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), changeID).
 		Return(forge.ChangeMergeability{
 			State: forge.ChangeMergeabilityReady,
@@ -2067,6 +2176,9 @@ func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
 
 	mockForge := forgetest.NewMockRepository(ctrl)
 	pr1 := fakeChangeID("pr-1")
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
@@ -2108,6 +2220,9 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 	mockForge := forgetest.NewMockRepository(ctrl)
 	pr1 := fakeChangeID("pr-1")
 	status := mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
+	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 	mockForge.EXPECT().
@@ -2154,6 +2269,9 @@ func TestExecutePlan_usesForgeReadinessWhenReadyCommandEmpty(t *testing.T) {
 	mockForge := forgetest.NewMockRepository(ctrl)
 	pr1 := fakeChangeID("pr-1")
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -2197,6 +2315,10 @@ func TestExecutePlan_readyCommandReplacesForgeReadiness(t *testing.T) {
 		AnyTimes()
 
 	pr1 := fakeChangeID("pr-1")
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+
 	mockForge.EXPECT().
 		CommandEnvironment(gomock.Any(), pr1).
 		Return(nil, nil)
@@ -2243,6 +2365,9 @@ func TestExecutePlan_mergeCommandRequestsThenAwaitsMerge(t *testing.T) {
 		Return(mockForgeForge).
 		AnyTimes()
 	pr1 := fakeChangeID("pr-1")
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash("head1")}}, nil)
@@ -2322,6 +2447,9 @@ func TestExecutePlan_mergeCommandFailureFailsItem(t *testing.T) {
 		AnyTimes()
 	pr1 := fakeChangeID("pr-1")
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)
 	mockForge.EXPECT().
@@ -2353,6 +2481,9 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 	mockForge := forgetest.NewMockRepository(ctrl)
 	pr1 := fakeChangeID("pr-1")
 
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady, Reason: forge.ChangeMergeabilityReasonUnknown}, nil)

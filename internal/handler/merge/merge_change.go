@@ -50,10 +50,16 @@ func (e *mergePlanExecutor) mergeItem(ctx context.Context, item *mergeItem) erro
 }
 
 // requestMergeItem requests and awaits one merge after readiness is established.
+// A merge observed during readiness completes without another merge request.
 func (e *mergePlanExecutor) requestMergeItem(
 	ctx context.Context,
 	item *mergeItem,
 ) error {
+	if item.merged {
+		e.Progress.Event(mergeProgressEvent{Kind: mergeProgressMerged, Item: item})
+		return nil
+	}
+
 	e.Progress.Event(mergeProgressEvent{
 		Kind: mergeProgressMerging,
 		Item: item,
