@@ -42,6 +42,9 @@ func TestMergeScheduler_nativeLinearPathWithUnselectedDivergence(t *testing.T) {
 				HeadHash: change.head,
 			}}, nil)
 		mockForge.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{change.id}).
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: change.head}}, nil)
+		mockForge.EXPECT().
 			ChangeMergeability(gomock.Any(), change.id).
 			Return(forge.ChangeMergeability{
 				State: forge.ChangeMergeabilityReady,
@@ -141,6 +144,9 @@ func TestMergeScheduler_nativeRangeUnsupportedFallsBack(t *testing.T) {
 			HeadHash: "head-1",
 		}}, nil)
 	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: "head-1"}}, nil)
+	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
 		Return(forge.ChangeMergeability{
 			State: forge.ChangeMergeabilityReady,
@@ -152,6 +158,9 @@ func TestMergeScheduler_nativeRangeUnsupportedFallsBack(t *testing.T) {
 			HeadHash: "head-2",
 		}}, nil).
 		Times(2)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: "head-2"}}, nil).Times(2)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr2).
 		Return(forge.ChangeMergeability{
@@ -248,6 +257,9 @@ func TestMergeScheduler_nativeFallbackSerializesWorkspaceChanges(t *testing.T) {
 				}}, nil).
 				Times(idx + 1)
 			mockForge.EXPECT().
+				ChangeStatuses(gomock.Any(), []forge.ChangeID{id}).
+				Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: git.Hash(fmt.Sprintf("head-%d", idx+1))}}, nil).Times(idx + 1)
+			mockForge.EXPECT().
 				ChangeMergeability(gomock.Any(), id).
 				Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady}, nil).
 				Times(idx + 1)
@@ -259,6 +271,9 @@ func TestMergeScheduler_nativeFallbackSerializesWorkspaceChanges(t *testing.T) {
 
 		syncStarted := make(chan struct{})
 		releaseSync := make(chan struct{})
+		mockForge.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{pr3}).
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
 		mockForge.EXPECT().
 			ChangeMergeability(gomock.Any(), pr3).
 			Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady}, nil)
@@ -481,6 +496,9 @@ func TestRangeMergeQueueItem_Run_partialFallbackFailure(t *testing.T) {
 			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: member.head}}, nil).
 			Times(member.checks)
 		mockForge.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{member.id}).
+			Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: member.head}}, nil)
+		mockForge.EXPECT().
 			ChangeMergeability(gomock.Any(), member.id).
 			Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityReady}, nil)
 	}
@@ -488,6 +506,9 @@ func TestRangeMergeQueueItem_Run_partialFallbackFailure(t *testing.T) {
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr2).
 		Return(forge.ChangeMergeability{State: forge.ChangeMergeabilityBlocked}, nil)
@@ -539,6 +560,9 @@ func TestRangeMergeQueueItem_Run_genuineFailure(t *testing.T) {
 			State:    forge.ChangeOpen,
 			HeadHash: "head-1",
 		}}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{changeID}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen, HeadHash: "head-1"}}, nil)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), changeID).
 		Return(forge.ChangeMergeability{

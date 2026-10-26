@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'merge: Externally merged changes are detected while waiting for readiness, and the remaining stack is merged normally.'
+time: 2026-10-24T16:18:07.236438-07:00

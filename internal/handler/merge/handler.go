@@ -335,6 +335,10 @@ type mergeItem struct {
 
 	// mergeURL is the forge URL displayed when requesting the merge.
 	mergeURL string
+
+	// merged records a terminal forge state observed during readiness polling.
+	// Native fallback retains this fact across synchronization and preparation.
+	merged bool
 }
 
 // mergePlan is the prepared queue plus repository state

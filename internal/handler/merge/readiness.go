@@ -27,6 +27,10 @@ func (e *mergePlanExecutor) awaitReady(
 		return fmt.Errorf("wait for pushed head: %w", err)
 	}
 
+	if item.merged {
+		return nil
+	}
+
 	if err := e.awaitMergeability(ctx, item); err != nil {
 		e.Progress.Event(mergeProgressEvent{
 			Kind: mergeProgressMergeabilityFailed,
@@ -85,6 +89,13 @@ func (e *mergePlanExecutor) awaitChangeHeadWithDelay(
 		if len(statuses) == 0 {
 			return errors.New("forge returned no change status")
 		}
+		switch statuses[0].State {
+		case forge.ChangeMerged:
+			item.merged = true
+			return nil
+		case forge.ChangeClosed:
+			return errors.New("change closed without merging")
+		}
 		if hashMatches(statuses[0].HeadHash) {
 			return nil
 		}
@@ -113,7 +124,7 @@ func (e *mergePlanExecutor) awaitChangeHeadWithDelay(
 }
 
 // awaitMergeability polls until the forge reports that the change is
-// ready to merge.
+// ready to merge or already merged.
 // Uses truncated exponential backoff.
 func (e *mergePlanExecutor) awaitMergeability(
 	ctx context.Context,
@@ -144,6 +155,21 @@ func (e *mergePlanExecutor) awaitMergeabilityWithDelay(
 
 	delay := baseDelay
 	for attempt := 0; ; attempt++ {
+		statuses, err := e.RemoteRepository.ChangeStatuses(ctx, []forge.ChangeID{item.changeID})
+		if err != nil {
+			return fmt.Errorf("query change state: %w", err)
+		}
+		if len(statuses) == 0 {
+			return errors.New("forge returned no change status")
+		}
+		switch statuses[0].State {
+		case forge.ChangeMerged:
+			item.merged = true
+			return nil
+		case forge.ChangeClosed:
+			return errors.New("change closed without merging")
+		}
+
 		mergeability, err := e.ReadinessChecker.CheckMergeItemReady(ctx, item)
 		if err != nil {
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {

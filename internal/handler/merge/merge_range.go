@@ -53,6 +53,11 @@ func (i *rangeMergeQueueItem) Run(ctx context.Context) error {
 		if err := e.awaitReady(ctx, item); err != nil {
 			return fmt.Errorf("%s: %w", item.branch, err)
 		}
+		if item.merged {
+			// The original range contains a completed member.
+			// Reconcile it and prepare the remaining changes individually.
+			return i.mergeIndividually(ctx)
+		}
 	}
 
 	operation, err := i.plan.Merge(ctx, i.request)
@@ -91,6 +96,11 @@ func (i *rangeMergeQueueItem) Run(ctx context.Context) error {
 func (i *rangeMergeQueueItem) mergeIndividually(ctx context.Context) error {
 	e := i.executor
 	for idx, item := range i.items {
+		if item.merged {
+			e.Progress.Event(mergeProgressEvent{Kind: mergeProgressMerged, Item: item})
+			i.completed++
+			continue
+		}
 		if idx > 0 {
 			if err := e.workspace.SyncAndPrepare(ctx, item); err != nil {
 				return err
