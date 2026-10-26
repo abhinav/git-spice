@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
@@ -14,30 +15,33 @@ import (
 func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 	// This does not use LookupBranch because we don't care if the branch
 	// doesn't actually exist, we just want to update the upstacks.
-	branch, err := s.store.LookupBranch(ctx, name)
+	branchTx := s.store.BeginBranchTx()
+	branches, err := branchTx.LookupBranches(ctx, []string{name})
 	if err != nil {
 		if errors.Is(err, state.ErrNotExist) {
 			return nil
 		}
 		return fmt.Errorf("lookup branch: %w", err)
 	}
+	branch := branches[0]
 
 	// Similarly, this doesn't use ListAbove
 	// because we don't want the deleted branch to be removed yet.
-	branchTx := s.store.BeginBranchTx()
-	for candidate, err := range s.store.ListBranches(ctx) {
-		if err != nil {
-			return fmt.Errorf("list branches: %w", err)
-		}
+	names, err := sliceutil.CollectErr(s.store.ListBranches(ctx))
+	if err != nil {
+		return fmt.Errorf("list branches: %w", err)
+	}
+	branches, err = branchTx.LookupBranches(ctx, names)
+	if err != nil {
+		return fmt.Errorf("lookup branches: %w", err)
+	}
+	for i, candidate := range names {
 
 		if candidate == name {
 			continue
 		}
 
-		info, err := s.store.LookupBranch(ctx, candidate)
-		if err != nil {
-			return fmt.Errorf("lookup %v: %w", candidate, err)
-		}
+		info := branches[i]
 
 		if info.Base != name {
 			continue

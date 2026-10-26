@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch untrack: Branch-state reads are reused when reparenting and removing tracked branches.'
+time: 2026-10-25T17:06:12.314146-07:00
