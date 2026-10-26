@@ -1,7 +1,11 @@
 package github
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"slices"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,6 +18,7 @@ import (
 
 func TestRepository_PlanMergeRanges(t *testing.T) {
 	gateway := NewMockGithubGateway(gomock.NewController(t))
+	gateway.EXPECT().CheckPullRequestStacks(gomock.Any(), "acme", "repo").Return(nil)
 	stack := newPullRequestStack(42, 1, 2, 4)
 	gateway.EXPECT().PullRequestsForMergeRange(
 		gomock.Any(), "acme", "repo", []int{1, 2, 3, 4},
@@ -43,6 +48,7 @@ func TestRepository_PlanMergeRanges(t *testing.T) {
 
 func TestRepository_PlanMergeRanges_ignoresMergedStackMembers(t *testing.T) {
 	gateway := NewMockGithubGateway(gomock.NewController(t))
+	gateway.EXPECT().CheckPullRequestStacks(gomock.Any(), "acme", "repo").Return(nil)
 	stack := &github.PullRequestStack{
 		Number: 42,
 		Members: []github.PullRequestStackMember{
@@ -73,6 +79,7 @@ func TestRepository_PlanMergeRanges_ignoresMergedStackMembers(t *testing.T) {
 
 func TestRepository_PlanMergeRanges_requiresLowestStackMember(t *testing.T) {
 	gateway := NewMockGithubGateway(gomock.NewController(t))
+	gateway.EXPECT().CheckPullRequestStacks(gomock.Any(), "acme", "repo").Return(nil)
 	stack := newPullRequestStack(42, 1, 2, 3)
 	gateway.EXPECT().PullRequestsForMergeRange(
 		gomock.Any(), "acme", "repo", []int{2, 3},
@@ -97,6 +104,7 @@ func TestRepository_PlanMergeRanges_rechecksNativeMembership(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	gateway := NewMockGithubGateway(mockCtrl)
 	repo := newStackRepository(t, gateway)
+	gateway.EXPECT().CheckPullRequestStacks(gomock.Any(), "acme", "repo").Return(nil)
 	stack := newPullRequestStack(42, 1, 2)
 	gateway.EXPECT().
 		PullRequestsForMergeRange(gomock.Any(), "acme", "repo", []int{1, 2}).
@@ -128,6 +136,65 @@ func TestRepository_PlanMergeRanges_rechecksNativeMembership(t *testing.T) {
 	})
 	assert.Nil(t, operation)
 	assert.ErrorContains(t, err, "must begin with the lowest open member")
+}
+
+func TestRepository_PlanMergeRanges_unavailableStacks(t *testing.T) {
+	tests := []struct {
+		name            string
+		status          int
+		wantErr         error
+		wantUnsupported bool
+	}{
+		{
+			name:            "Unsupported",
+			status:          http.StatusNotFound,
+			wantErr:         github.ErrNotFound,
+			wantUnsupported: true,
+		},
+		{
+			name:    "Forbidden",
+			status:  http.StatusForbidden,
+			wantErr: github.ErrForbidden,
+		},
+		{
+			name:   "ServerFailure",
+			status: http.StatusInternalServerError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var queried atomic.Bool
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if r.Method == http.MethodGet && r.URL.Path == "/v3/repos/acme/repo/stacks" {
+					w.WriteHeader(tt.status)
+					fmt.Fprintln(w, `{"message":"stack discovery unavailable"}`)
+					return
+				}
+				queried.Store(true)
+				// A server without native stacks cannot answer the membership query.
+				fmt.Fprintln(w, `{"errors":[{"message":"Field 'stack' doesn't exist on type 'PullRequest'"}]}`)
+			}))
+			defer srv.Close()
+
+			plans, err := newStackRepository(t, newTestGateway(t, srv.URL)).PlanMergeRanges(
+				t.Context(), []forge.MergePlanChange{{Change: &PR{Number: 1}}},
+			)
+			require.Error(t, err)
+			assert.Nil(t, plans)
+			assert.ErrorContains(t, err, http.StatusText(tt.status))
+			assert.False(t, queried.Load(), "failed capability discovery must not query stack membership")
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+			}
+			if tt.wantUnsupported {
+				assert.ErrorIs(t, err, forge.ErrUnsupported)
+			} else {
+				assert.NotErrorIs(t, err, forge.ErrUnsupported, "genuine failures must not become fallback")
+				assert.ErrorContains(t, err, "check GitHub native stack support")
+			}
+		})
+	}
 }
 
 func TestRepository_MergeRangeImmediate(t *testing.T) {

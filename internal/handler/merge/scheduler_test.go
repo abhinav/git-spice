@@ -19,6 +19,75 @@ import (
 	"go.abhg.dev/gs/internal/handler/sync"
 )
 
+func TestMergePlanExecutor_mergeQueueItems_overlaysNativePlans(t *testing.T) {
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	pr3 := fakeChangeID("pr-3")
+	pr4 := fakeChangeID("pr-4")
+	plan := []*mergeItem{
+		testPlanEntry("feat1", "main", pr1),
+		testPlanEntry("feat2", "feat1", pr2),
+		testPlanEntry("feat3", "feat2", pr3),
+		testPlanEntry("feat4", "feat2", pr4),
+	}
+
+	executor := new(mergePlanExecutor)
+	executor.MergeRangePlans = []forge.MergeRangePlan{&testMergeRangePlan{
+		changes: []forge.ChangeID{pr1, pr2, pr4},
+	}}
+	queueItems, err := executor.mergeQueueItems(plan)
+	require.NoError(t, err)
+	require.Len(t, queueItems, 2)
+
+	assert.Equal(t, "feat4", queueItems[0].ID())
+	assert.Empty(t, queueItems[0].Parent())
+	assert.Equal(t, "feat3", queueItems[1].ID())
+	assert.Equal(t, "feat4", queueItems[1].Parent())
+
+	nativeRange := queueItems[0].(*rangeMergeQueueItem)
+	assert.Equal(t, []string{"feat1", "feat2", "feat4"}, []string{
+		nativeRange.items[0].branch,
+		nativeRange.items[1].branch,
+		nativeRange.items[2].branch,
+	})
+	ordinary := queueItems[1].(*changeMergeQueueItem)
+	assert.Equal(t, "feat3", ordinary.item.branch)
+}
+
+func TestMergePlanExecutor_mergeQueueItems_rangeBetweenOrdinaryChanges(t *testing.T) {
+	// The native feat2 -> feat3 range has ordinary work both below and above.
+	// A second native range is independent. Input need not be bottom-up.
+	plan := []*mergeItem{
+		testPlanEntry("feat4", "feat3", "pr-4"),
+		testPlanEntry("feat3", "feat2", "pr-3"),
+		testPlanEntry("feat2", "feat1", "pr-2"),
+		testPlanEntry("feat1", "main", "pr-1"),
+		testPlanEntry("other2", "other1", "pr-6"),
+		testPlanEntry("other1", "main", "pr-5"),
+	}
+	executor := new(mergePlanExecutor)
+	executor.MergeRangePlans = []forge.MergeRangePlan{
+		&testMergeRangePlan{changes: []forge.ChangeID{fakeChangeID("pr-2"), fakeChangeID("pr-3")}},
+		&testMergeRangePlan{changes: []forge.ChangeID{fakeChangeID("pr-5"), fakeChangeID("pr-6")}},
+	}
+	items, err := executor.mergeQueueItems(plan)
+	require.NoError(t, err)
+	require.Len(t, items, 4)
+	var ids []string
+	dependencies := make(map[string]string)
+	for _, item := range items {
+		ids = append(ids, item.ID())
+		dependencies[item.ID()] = item.Parent()
+	}
+	assert.Equal(t, []string{"feat1", "feat3", "feat4", "other2"}, ids)
+	assert.Equal(t, map[string]string{
+		"feat1":  "",
+		"feat3":  "feat1",
+		"feat4":  "feat3",
+		"other2": "",
+	}, dependencies)
+}
+
 func TestMergeScheduler_parentMergeUnlocksIndependentChildren(t *testing.T) {
 	ctrl := gomock.NewController(t)
 

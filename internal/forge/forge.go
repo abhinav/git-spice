@@ -15,7 +15,7 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
-//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,ChangeID,RepositoryID,Repository,ReviewThreadID,ReviewCommentID,ReviewRepository,ReviewCommentEditor,ReviewThreadResolver
+//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,ChangeID,RepositoryID,Repository,ReviewThreadID,ReviewCommentID,ReviewRepository,ReviewCommentEditor,ReviewThreadResolver,MergeOperation
 
 // TODO:
 // Forge should become a struct with multiple interfaces or funcctions
@@ -215,6 +215,8 @@ type Repository interface {
 
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
+
+	// ChangeStatuses returns one status for each ID in the same order.
 	ChangeStatuses(ctx context.Context, ids []ChangeID) ([]ChangeStatus, error)
 
 	// ChangeChecks reports CI/checks for the given change.

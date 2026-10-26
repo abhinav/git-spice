@@ -3,19 +3,16 @@ package merge
 import (
 	"context"
 	"fmt"
-
-	"go.abhg.dev/gs/internal/mergequeue"
 )
 
-// changeMergeQueueItem owns preparation and execution of one selected change.
+// changeMergeQueueItem preserves the ordinary per-change merge path for a
+// selected change that the forge omitted from its native plans.
 type changeMergeQueueItem struct {
 	item *mergeItem
 
 	executor *mergePlanExecutor
 	parent   string
 }
-
-var _ mergequeue.Item = (*changeMergeQueueItem)(nil)
 
 func (i *changeMergeQueueItem) ID() string {
 	return i.item.branch
@@ -25,12 +22,24 @@ func (i *changeMergeQueueItem) Parent() string {
 	return i.parent
 }
 
+func (i *changeMergeQueueItem) setParent(parent string) {
+	i.parent = parent
+}
+
 func (i *changeMergeQueueItem) Prepare(ctx context.Context) error {
 	return i.executor.workspace.PrepareChange(ctx, i.item)
 }
 
 func (i *changeMergeQueueItem) Run(ctx context.Context) error {
 	return i.executor.mergeItem(ctx, i.item)
+}
+
+func (i *changeMergeQueueItem) changes() []*mergeItem {
+	return []*mergeItem{i.item}
+}
+
+func (i *changeMergeQueueItem) unmergedChanges() []*mergeItem {
+	return []*mergeItem{i.item}
 }
 
 func (e *mergePlanExecutor) mergeItem(ctx context.Context, item *mergeItem) error {
@@ -63,7 +72,8 @@ func (e *mergePlanExecutor) requestMergeItem(
 		Kind: mergeProgressWaitingForMerge,
 		Item: item,
 	})
-	if err := e.awaitMerged(ctx, item); err != nil {
+	items := []*mergeItem{item}
+	if err := e.awaitMerged(ctx, items, nil); err != nil {
 		e.Progress.Event(mergeProgressEvent{
 			Kind: mergeProgressMergeIncomplete,
 			Item: item,

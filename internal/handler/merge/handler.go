@@ -76,6 +76,7 @@ type Options struct {
 	Method forge.MergeMethod `placeholder:"METHOD" config:"merge.method" help:"Preferred merge method. One of 'merge', 'squash', and 'rebase'."`
 
 	// Command requests merges through a user-defined command.
+	// The command runs per change; native stack merges are not used.
 	// Empty means use the forge merge API.
 	Command string `hidden:"" config:"merge.command" help:"Command to request merge instead of using the forge merge API."`
 
@@ -634,6 +635,14 @@ func (h *Handler) executePlan(
 		}
 	}
 
+	var nativePlans []forge.MergeRangePlan
+	if opts.Command == "" {
+		nativePlans, err = h.planMergeRanges(ctx, plan)
+		if err != nil {
+			return err
+		}
+	}
+
 	var progress mergeProgress
 	if runner, ok := h.View.(ui.ModelView); ok {
 		widgetProgress := newWidgetMergeProgress(
@@ -672,6 +681,8 @@ func (h *Handler) executePlan(
 		Method:     opts.Method,
 	})
 	if opts.Command != "" {
+		// A custom command owns merge transport and may implement semantics
+		// that one provider-native range request cannot preserve.
 		mergeRequester = &commandMergeRequester{
 			Runner: getCommandRunner(),
 			Script: opts.Command,
@@ -700,6 +711,7 @@ func (h *Handler) executePlan(
 		Progress:         progress,
 		MergeRequester:   mergeRequester,
 		ReadinessChecker: readinessChecker,
+		MergeRangePlans:  nativePlans,
 
 		Trunk:        h.Store.Trunk(),
 		ReadyTimeout: opts.ReadyTimeout,
@@ -713,6 +725,35 @@ func (h *Handler) executePlan(
 
 	h.Log.Infof("All %d change(s) merged.", len(plan))
 	return nil
+}
+
+// planMergeRanges asks the forge to group selected changes it can merge
+// atomically. Missing stack support returns no native plans;
+// the scheduler retains omitted changes as ordinary merge items.
+func (h *Handler) planMergeRanges(ctx context.Context, plan []*mergeItem) ([]forge.MergeRangePlan, error) {
+	repository, ok := h.RemoteRepository.(forge.StackRepository)
+	if !ok {
+		return nil, nil
+	}
+	changeByBranch := make(map[string]forge.ChangeID, len(plan))
+	for _, item := range plan {
+		changeByBranch[item.branch] = item.changeID
+	}
+	changes := make([]forge.MergePlanChange, len(plan))
+	for idx, item := range plan {
+		changes[idx] = forge.MergePlanChange{
+			Change:     item.changeID,
+			BaseChange: changeByBranch[item.base],
+		}
+	}
+	plans, err := repository.PlanMergeRanges(ctx, changes)
+	if errors.Is(err, forge.ErrUnsupported) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("plan native merge ranges: %w", err)
+	}
+	return plans, nil
 }
 
 func (h *Handler) validateFreshBases(
