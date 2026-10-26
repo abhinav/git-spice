@@ -4,162 +4,66 @@ package forge
 
 import (
 	"context"
-	"encoding"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
-	"fmt"
 	"iter"
+	"net/http"
 	"net/url"
-	"regexp"
-	"strings"
-	"sync"
 
-	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/ui"
 )
 
-// Registry is a collection of known code forges.
-type Registry struct {
-	m sync.Map
-}
-
-// All returns an iterator over items in the Forge
-// in an unspecified order.
-func (r *Registry) All() iter.Seq[Forge] {
-	return func(yield func(Forge) bool) {
-		r.m.Range(func(_, value any) bool {
-			return yield(value.(Forge))
-		})
-	}
-}
-
-// Register registers a Forge with the Registry.
-// The Forge may be unregistered by calling the returned function.
-func (r *Registry) Register(f Forge) (unregister func()) {
-	id := f.ID()
-	r.m.Store(id, f)
-	return func() {
-		r.m.Delete(id)
-	}
-}
-
-// Lookup searches for a registered Forge by ID.
-// It returns false if a forge with that ID is not known.
-func (r *Registry) Lookup(id string) (Forge, bool) {
-	f, ok := r.m.Load(id)
-	if !ok {
-		return nil, false
-	}
-	return f.(Forge), true
-}
-
-// FromRemoteURL attempts to match the given remote URL with a registered forge.
-// It returns the matched forge and information about the matched repository.
-func FromRemoteURL(r *Registry, remoteURL *giturl.URL) (forge Forge, rid RepositoryID, ok bool) {
-	for f := range r.All() {
-		baseURL, err := url.Parse(f.BaseURL())
-		if err != nil {
-			continue
-		}
-
-		baseHost := baseURL.Hostname()
-		remoteHost := remoteURL.Hostname
-		// Some forges advertise a base URL such as "https://github.com",
-		// while Git remotes use a related SSH hostname like "ssh.github.com".
-		// Accept subdomains so these documented SSH hosts still infer
-		// the same forge.
-		hostMatches := remoteHost == baseHost ||
-			strings.HasSuffix(remoteHost, "."+baseHost)
-		if !hostMatches {
-			continue
-		}
-
-		// A base URL without an explicit port describes the forge host,
-		// not one transport endpoint.
-		// In that case, allow the remote to specify its SSH port.
-		basePort := baseURL.Port()
-		if basePort != "" && remoteURL.Port != basePort {
-			continue
-		}
-
-		rid, err := f.ParseRepositoryPath(remoteURL.Path)
-		if err == nil {
-			return f, rid, true
-		}
-	}
-	return nil, nil, false
-}
-
-// SplitRepositoryPath extracts owner and repository name from a URL path.
-//
-// It strips leading/trailing slashes and the ".git" suffix,
-// then splits on the first slash to get owner/repository components.
-// For example,
-// "/owner/repo.git" returns "owner" and "repo";
-// "/workspace/repo/" returns "workspace" and "repo".
-func SplitRepositoryPath(path string) (owner, repo string, ok bool) {
-	s := strings.TrimPrefix(path, "/")
-	s = strings.TrimSuffix(s, "/")
-	s = strings.TrimSuffix(s, ".git")
-
-	owner, repo, ok = strings.Cut(s, "/")
-	return owner, repo, ok
-}
-
-// ErrUnsupportedURL indicates that the given remote URL
-// does not match any registered forge.
-var ErrUnsupportedURL = errors.New("unsupported URL")
-
-// ErrNotFound indicates that a requested resource does not exist.
-var ErrNotFound = errors.New("not found")
-
-// ErrCommentCannotUpdate indicates that an existing comment cannot be updated.
-// This typically occurs when local state is missing required information
-// (e.g., PR ID for Bitbucket comments).
-// Callers should handle this by posting a new comment instead.
-var ErrCommentCannotUpdate = errors.New("comment cannot be updated")
-
-// CommentFormat specifies formatting preferences for navigation comments.
-type CommentFormat struct {
-	// Footer is appended at the end of the navigation comment.
-	// Defaults to HTML <sub> tag if empty.
-	Footer string
-
-	// Marker is an invisible marker used to identify navigation comments.
-	// Defaults to HTML comment if empty.
-	Marker string
-}
-
-// WithCommentFormat is an optional interface that forges can implement
-// to customize navigation comment formatting.
-// This is useful for forges like Bitbucket that don't support HTML in comments.
-type WithCommentFormat interface {
-	Forge
-
-	// CommentFormat returns custom formatting for navigation comments.
-	CommentFormat() CommentFormat
-}
-
-//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,RepositoryID,Repository
+//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,ChangeID,RepositoryID,Repository,ReviewThreadID,ReviewCommentID,ReviewRepository,ReviewCommentEditor,ReviewThreadResolver,MergeOperation
 
 // TODO:
 // Forge should become a struct with multiple interfaces or funcctions
 // that it depends on in the underlying implementation.
 
-// Forge is a forge that hosts Git repositories.
-type Forge interface {
-	// ID reports a unique identifier for the forge, e.g. "github".
-	ID() string // TODO: Rename to "slug" or "name" as that's more correct
+// Definition describes a forge implementation before it is bound
+// to a particular repository remote.
+type Definition interface {
+	ChangeMetadataCodec
 
-	// CLIPlugin returns a Kong plugin for this Forge.
+	// ID reports a unique identifier for the forge, e.g. "github".
+	ID() string
+
+	// BaseURL reports the configured forge web URL.
+	//
+	// Remote URL inference uses the host and optional port from this URL.
+	BaseURL() string
+
+	// CLIPlugin returns a Kong plugin for this forge.
 	//
 	// This will be installed into the application to provide
 	// additional Forge-specific flags or environment variable overrides.
 	//
 	// Return nil if the forge does not require any extra CLI flags.
 	CLIPlugin() any
+
+	// New constructs a forge instance for the given remote URL.
+	//
+	// The remote URL must be non-nil.
+	// Implementations may use it to derive instance configuration
+	// that is not known when command-line options are registered.
+	New(remoteURL *giturl.URL, opts *NewOptions) (Forge, error)
+}
+
+// NewOptions configures application-scoped dependencies for a forge.
+// A nil options value uses the default HTTP client.
+type NewOptions struct {
+	// HTTPClient sends forge API and authentication requests.
+	// If nil, the forge uses its default HTTP client.
+	HTTPClient *http.Client
+}
+
+// Forge is a forge that hosts Git repositories.
+type Forge interface {
+	ChangeMetadataCodec
+
+	// ID reports a unique identifier for the forge, e.g. "github".
+	ID() string // TODO: Rename to "slug" or "name" as that's more correct
 
 	// BaseURL reports the configured forge web URL.
 	//
@@ -192,18 +96,10 @@ type Forge interface {
 	ChangeTemplatePaths() []string
 
 	// MarshalChangeID serializes the given change ID into a valid JSON blob.
-	MarshalChangeID(ChangeID) (json.RawMessage, error)
+	MarshalChangeID(ChangeID) (jsontext.Value, error)
 
 	// UnmarshalChangeID deserializes the given JSON blob into a change ID.
-	UnmarshalChangeID(json.RawMessage) (ChangeID, error)
-
-	// MarshalChangeMetadata serializes the given change metadata
-	// into a valid JSON blob.
-	MarshalChangeMetadata(ChangeMetadata) (json.RawMessage, error)
-
-	// UnmarshalChangeMetadata deserializes the given JSON blob
-	// into change metadata.
-	UnmarshalChangeMetadata(json.RawMessage) (ChangeMetadata, error)
+	UnmarshalChangeID(jsontext.Value) (ChangeID, error)
 
 	// AuthenticationFlow runs the authentication flow for the forge.
 	// This may prompt the user, perform network requests, etc.
@@ -225,25 +121,33 @@ type Forge interface {
 	ClearAuthenticationToken(secret.Stash) error
 }
 
-// WithDisplayName is an optional interface that forges can implement
-// to provide a human-friendly display name for the UI.
-// If not implemented, the forge's ID is used as the display name.
-type WithDisplayName interface {
-	Forge
+// ChangeMetadataCodec serializes persisted forge change metadata.
+type ChangeMetadataCodec interface {
+	// MarshalChangeMetadata serializes the given change metadata
+	// into a valid JSON blob.
+	MarshalChangeMetadata(ChangeMetadata) (jsontext.Value, error)
 
+	// UnmarshalChangeMetadata deserializes the given JSON blob
+	// into change metadata.
+	UnmarshalChangeMetadata(jsontext.Value) (ChangeMetadata, error)
+}
+
+// WithDisplayName is an optional interface for values with UI display names.
+// If not implemented, the value's ID is used as the display name.
+type WithDisplayName interface {
 	// DisplayName returns a human-friendly name for the forge,
 	// e.g. "Bitbucket (Atlassian)" instead of just "bitbucket".
 	DisplayName() string
 }
 
-// GetDisplayName returns the display name for a forge.
-// If the forge implements WithDisplayName, it returns DisplayName().
-// Otherwise, it returns the forge's ID.
-func GetDisplayName(f Forge) string {
-	if fd, ok := f.(WithDisplayName); ok {
+// GetDisplayName returns the display name for a forge or forge definition.
+// If the value implements WithDisplayName, it returns DisplayName().
+// Otherwise, it returns the value's ID.
+func GetDisplayName(v interface{ ID() string }) string {
+	if fd, ok := v.(WithDisplayName); ok {
 		return fd.DisplayName()
 	}
-	return f.ID()
+	return v.ID()
 }
 
 // AuthenticationToken is a secret that results from a successful login.
@@ -273,6 +177,9 @@ type RepositoryID interface {
 // because the base branch has not been pushed yet.
 var ErrUnsubmittedBase = errors.New("base branch has not been submitted yet")
 
+// ErrUnknown indicates that a requested forge is not registered.
+var ErrUnknown = errors.New("unknown forge")
+
 // Repository is a Git repository hosted on a forge.
 type Repository interface {
 	Forge() Forge
@@ -290,17 +197,34 @@ type Repository interface {
 	// MergeChange merges an open change into its base branch.
 	MergeChange(ctx context.Context, id ChangeID, opts MergeChangeOptions) error
 
+	// CommandEnvironment returns forge-specific environment variables
+	// for commands that operate on the given change.
+	//
+	// Keys must use the GIT_SPICE_ prefix.
+	// Callers own common git-spice variables
+	// and may ignore forge values that collide with those keys.
+	CommandEnvironment(ctx context.Context, id ChangeID) (map[string]string, error)
+
+	// ChangeMergeability reports whether the forge currently considers
+	// the change mergeable.
+	//
+	// This reports the forge's merge decision,
+	// not the detailed status of individual CI/checks signals.
+	// Use ChangeChecks for check display and required-check inspection.
+	ChangeMergeability(ctx context.Context, id ChangeID) (ChangeMergeability, error)
+
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
+
+	// ChangeStatuses returns one status for each ID in the same order.
 	ChangeStatuses(ctx context.Context, ids []ChangeID) ([]ChangeStatus, error)
 
-	// ChangeChecksState reports the aggregate CI/checks
-	// state for the given change.
+	// ChangeChecks reports CI/checks for the given change.
 	//
 	// If the forge has no CI/checks integration
 	// or the change has no required checks,
-	// implementations should return ChecksPassed.
-	ChangeChecksState(ctx context.Context, id ChangeID) (ChecksState, error)
+	// implementations should return an empty slice.
+	ChangeChecks(ctx context.Context, id ChangeID) ([]ChangeCheck, error)
 	CommentCountsByChange(ctx context.Context, ids []ChangeID) ([]*CommentCounts, error)
 
 	// Post, update, and delete comments on changes.
@@ -351,412 +275,44 @@ type WithNavigationReference interface {
 	NavigationReference(id ChangeID) string
 }
 
-// ChangeID is a unique identifier for a change in a repository.
-type ChangeID interface {
-	String() string
-}
-
-// ChangeCommentID is a unique identifier for a comment on a change.
-type ChangeCommentID interface {
-	String() string
-}
-
-// ChangeMetadata defines Forge-specific per-change metadata.
-// This metadata is persisted to the state store alongside the branch state.
-// It is used to track the relationship between a branch
-// and its corresponding change in the forge.
+// WithComparisonURL is an optional interface that repositories can implement
+// to build a web URL comparing two refs.
 //
-// The implementation is per-forge, and should contain enough information
-// for the forge to uniquely identify a change within a repository.
-//
-// The metadata must be JSON-serializable (as defined by methods on Forge).
-type ChangeMetadata interface {
-	ForgeID() string
+// This powers the optional trunk-comparison link in stack navigation
+// comments, which lets reviewers view the whole stack's diff against trunk
+// at once.
+// Forges that cannot construct such URLs simply don't implement this
+// interface, in which case the link is omitted.
+type WithComparisonURL interface {
+	Repository
 
-	// ChangeID is a human-readable identifier for the change.
-	// This is presented to the user in the UI.
-	ChangeID() ChangeID
-
-	// NavigationCommentID is a comment left on the Change
-	// that contains a visualization of the stack.
-	NavigationCommentID() ChangeCommentID
-
-	// SetNavigationCommentID sets the ID of the navigation comment
-	// on the chnage metadata to persist it later.
-	//
-	// The ID may be nil to indicate that there is no navigation comment.
-	SetNavigationCommentID(ChangeCommentID)
+	// ComparisonURL returns a web URL for the requested comparison.
+	// It returns an empty string if a URL cannot be constructed.
+	ComparisonURL(ComparisonRequest) string
 }
 
-// FindChangesOptions specifies filtering options
-// for searching for changes.
-type FindChangesOptions struct {
-	State ChangeState // 0 = all
-
-	// PushRepository is the repository that owns the head branch.
-	// If nil, only changes whose head branch is owned by the target
-	// repository are returned.
-	PushRepository RepositoryID
-
-	// Limit specifies the maximum number of changes to return.
-	// Changes are sorted by most recently updated.
-	// Defaults to 10.
-	Limit int
-}
-
-// ListChangeCommentsOptions specifies options for filtering
-// and limiting comments listed by ListChangeComments.
-//
-// Conditions specified here are combined with AND.
-type ListChangeCommentsOptions struct {
-	// BodyMatchesAll specifies zero or more regular expressions
-	// that must all match the comment body.
-	//
-	// If empty, all comments are returned.
-	BodyMatchesAll []*regexp.Regexp
-
-	// CanUpdate specifies whether only comments that can be updated
-	// by the current user should be returned.
-	//
-	// If false, all comments are returned.
-	CanUpdate bool
-}
-
-// ListChangeCommentItem is a single result from listing comments on a change.
-type ListChangeCommentItem struct {
-	ID   ChangeCommentID
-	Body string
-}
-
-// SubmitChangeRequest is a request to submit a new change in a repository.
-// The change must have already been pushed to the remote.
-type SubmitChangeRequest struct {
-	// Subject is the title of the change.
-	Subject string // required
-
-	// Body is the description of the change.
-	Body string
-
-	// Base is the name of the base branch
-	// that this change is proposed against.
+// ComparisonRequest describes a comparison against a repository's branch.
+// Base and Head are plain-text branch names.
+// Forges must URL-encode them before interpolation into a URL.
+type ComparisonRequest struct {
+	// Base is the plain-text branch to compare against
+	// in the receiving repository.
 	Base string // required
 
-	// Head is the name of the branch containing the change.
-	//
-	// This must have already been pushed to the remote.
+	// Head is the plain-text branch containing the changes.
 	Head string // required
 
-	// PushRepository is the repository that owns the head branch.
-	// If nil, the target repository owns the head branch.
-	PushRepository RepositoryID
-
-	// Draft specifies whether the change should be marked as a draft.
-	Draft bool
-
-	// Labels are optional labels to apply to the change.
-	Labels []string
-
-	// Reviewers are optional reviewers to request reviews from.
-	Reviewers []string
-
-	// Assignees are optional users to assign to the change.
-	Assignees []string
+	// HeadRepository identifies the repository that owns Head.
+	// If nil, the receiving repository owns Head.
+	HeadRepository RepositoryID // optional
 }
 
-// SubmitChangeResult is the result of creating a new change in a repository.
-type SubmitChangeResult struct {
-	ID  ChangeID
-	URL string
+// BaseURLEncoded returns Base encoded for use as one URL path segment.
+func (r ComparisonRequest) BaseURLEncoded() string {
+	return url.PathEscape(r.Base)
 }
 
-// EditChangeOptions specifies options for an operation to edit
-// an existing change.
-type EditChangeOptions struct {
-	// Base specifies the name of the base branch.
-	//
-	// If unset, the base branch is not changed.
-	Base string
-
-	// Draft specifies whether the change should be marked as a draft.
-	// If unset, the draft status is not changed.
-	Draft *bool
-
-	// AddLabels are the labels to apply to the change.
-	// Existing labels associated with the change will not be modified.
-	AddLabels []string
-
-	// AddReviewers are new reviewers to request reviews from.
-	// Existing reviewers associated with the change will not be modified.
-	AddReviewers []string
-
-	// AddAssignees are new users to assign to the change.
-	// Existing assignees associated with the change will not be modified.
-	AddAssignees []string
-}
-
-// MergeChangeOptions specifies options for a merge operation.
-type MergeChangeOptions struct {
-	// Method selects the forge merge strategy.
-	// If zero, the forge uses its repository default.
-	Method MergeMethod
-
-	// HeadHash, if non-empty, causes the merge to fail
-	// if the change's current head commit doesn't match.
-	// This prevents merging a change whose content
-	// has changed since the caller last inspected it.
-	//
-	// Not all forges support this; unsupported forges
-	// ignore the field.
-	HeadHash git.Hash
-}
-
-// MergeMethod names a forge-level strategy for merging a change request.
-type MergeMethod int
-
-const (
-	// MergeMethodDefault leaves the merge strategy up to the forge.
-	MergeMethodDefault MergeMethod = iota
-
-	// MergeMethodMerge requests a two-parent merge commit.
-	MergeMethodMerge
-
-	// MergeMethodSquash requests a single squashed commit.
-	MergeMethodSquash
-
-	// MergeMethodRebase requests a rebase before merging.
-	MergeMethodRebase
-)
-
-var (
-	_ encoding.TextMarshaler   = MergeMethod(0)
-	_ encoding.TextUnmarshaler = (*MergeMethod)(nil)
-)
-
-// UnmarshalText decodes a merge method from text.
-func (m *MergeMethod) UnmarshalText(bs []byte) error {
-	switch strings.ToLower(string(bs)) {
-	case "", "default":
-		*m = MergeMethodDefault
-	case "merge":
-		*m = MergeMethodMerge
-	case "squash":
-		*m = MergeMethodSquash
-	case "rebase":
-		*m = MergeMethodRebase
-	default:
-		return fmt.Errorf(
-			"invalid value %q: expected merge, squash, or rebase",
-			string(bs),
-		)
-	}
-	return nil
-}
-
-// MarshalText encodes a merge method to text.
-func (m MergeMethod) MarshalText() ([]byte, error) {
-	switch m {
-	case MergeMethodDefault:
-		return []byte("default"), nil
-	case MergeMethodMerge:
-		return []byte("merge"), nil
-	case MergeMethodSquash:
-		return []byte("squash"), nil
-	case MergeMethodRebase:
-		return []byte("rebase"), nil
-	default:
-		return nil, fmt.Errorf("unknown merge method: %d", m)
-	}
-}
-
-// String returns the text form of the merge method.
-func (m MergeMethod) String() string {
-	if m == MergeMethodDefault {
-		return "default"
-	}
-	bs, err := m.MarshalText()
-	if err != nil {
-		return fmt.Sprintf("MergeMethod(%d)", int(m))
-	}
-	return string(bs)
-}
-
-// FindChangeItem is a single result from searching for changes in the
-// repository.
-type FindChangeItem struct {
-	// ID is a unique identifier for the change.
-	ID ChangeID // required
-
-	// URL is the web URL at which the change can be viewed.
-	URL string // required
-
-	// State is the current state of the change.
-	State ChangeState // required
-
-	// Subject is the title of the change.
-	Subject string // required
-
-	// HeadHash is the hash of the commit at the top of the change.
-	HeadHash git.Hash // required
-
-	// BaseName is the name of the base branch
-	// that this change is proposed against.
-	BaseName string // required
-
-	// Draft is true if the change is not yet ready to be reviewed.
-	Draft bool // required
-
-	// Labels are the labels currently applied to the change.
-	Labels []string
-
-	// Reviewers are the usernames of users
-	// who have been requested to review the change.
-	Reviewers []string
-
-	// Assignees are the usernames of users
-	// who are assigned to the change.
-	Assignees []string
-}
-
-// ChangeStatus is a compact status summary for a change.
-type ChangeStatus struct {
-	// State is the current state of the change.
-	State ChangeState
-
-	// HeadHash is the hash of the commit at the top of the change.
-	HeadHash git.Hash
-}
-
-// ChangeTemplate is a template for a new change proposal.
-type ChangeTemplate struct {
-	// Filename is the name of the template file.
-	//
-	// This is NOT a path.
-	Filename string
-
-	// Body is the content of the template file.
-	Body string
-}
-
-// CommentCounts represents comment/thread resolution counts on a change.
-type CommentCounts struct {
-	// Total is the total number of resolvable comments or threads.
-	Total int
-
-	// Resolved is the number of resolved comments or threads.
-	Resolved int
-
-	// Unresolved is the number of unresolved comments or threads.
-	Unresolved int
-}
-
-// ChangeState is the current state of a change.
-type ChangeState int
-
-const (
-	// ChangeOpen specifies that a change is open.
-	ChangeOpen ChangeState = iota + 1
-
-	// ChangeMerged specifies that a change has been merged.
-	ChangeMerged
-
-	// ChangeClosed specifies that a change has been closed.
-	ChangeClosed
-)
-
-func (s ChangeState) String() string {
-	b, err := s.MarshalText()
-	if err != nil {
-		return "unknown"
-	}
-	return string(b)
-}
-
-// GoString returns a Go-syntax representation of the change state.
-func (s ChangeState) GoString() string {
-	switch s {
-	case ChangeOpen:
-		return "ChangeOpen"
-	case ChangeMerged:
-		return "ChangeMerged"
-	case ChangeClosed:
-		return "ChangeClosed"
-	default:
-		return fmt.Sprintf("ChangeState(%d)", int(s))
-	}
-}
-
-// MarshalText serialize the change state to text.
-// This implements encoding.TextMarshaler.
-func (s ChangeState) MarshalText() ([]byte, error) {
-	switch s {
-	case ChangeOpen:
-		return []byte("open"), nil
-	case ChangeMerged:
-		return []byte("merged"), nil
-	case ChangeClosed:
-		return []byte("closed"), nil
-	default:
-		return nil, fmt.Errorf("unknown change state: %d", s)
-	}
-}
-
-// UnmarshalText parses the change state from text.
-// This implements encoding.TextUnmarshaler.
-func (s *ChangeState) UnmarshalText(b []byte) error {
-	switch string(b) {
-	case "open":
-		*s = ChangeOpen
-	case "merged":
-		*s = ChangeMerged
-	case "closed":
-		*s = ChangeClosed
-	default:
-		return fmt.Errorf("unknown change state: %q", b)
-	}
-	return nil
-}
-
-// ChecksState represents the aggregate CI/checks
-// status for a change.
-//
-// TODO: Teach this type the names of individual statuses
-// so merge failures can report exactly what's blocking the user.
-type ChecksState int
-
-const (
-	// ChecksPending indicates checks are still running.
-	ChecksPending ChecksState = iota + 1
-
-	// ChecksPassed indicates all checks have passed.
-	ChecksPassed
-
-	// ChecksFailed indicates one or more checks failed.
-	ChecksFailed
-)
-
-func (s ChecksState) String() string {
-	switch s {
-	case ChecksPending:
-		return "pending"
-	case ChecksPassed:
-		return "passed"
-	case ChecksFailed:
-		return "failed"
-	default:
-		return fmt.Sprintf("ChecksState(%d)", int(s))
-	}
-}
-
-// GoString returns a Go-syntax representation.
-func (s ChecksState) GoString() string {
-	switch s {
-	case ChecksPending:
-		return "ChecksPending"
-	case ChecksPassed:
-		return "ChecksPassed"
-	case ChecksFailed:
-		return "ChecksFailed"
-	default:
-		return fmt.Sprintf("ChecksState(%d)", int(s))
-	}
+// HeadURLEncoded returns Head encoded for use as one URL path segment.
+func (r ComparisonRequest) HeadURLEncoded() string {
+	return url.PathEscape(r.Head)
 }

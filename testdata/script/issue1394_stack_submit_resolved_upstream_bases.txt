@@ -1,0 +1,118 @@
+# 'stack submit' uses collision-resolved upstream names as PR bases.
+#
+# https://github.com/abhinav/git-spice/issues/1394
+
+as 'Test <test@example.com>'
+at '2026-08-30T19:28:02Z'
+
+# Setup.
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# Set up a fake GitHub remote with the desired branch names already taken.
+shamhub-setup
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main main:float-1 main:float-2 main:float-3
+gs repo init
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create the local float-1 -> float-2 -> float-3 stack.
+git add float-1.txt
+gs branch create float-1 -m 'Add float 1'
+git add float-2.txt
+gs branch create float-2 -m 'Add float 2'
+git add float-3.txt
+gs branch create float-3 -m 'Add float 3'
+
+# Each local branch needs a collision-free upstream name.
+# Upper PRs must target those resolved names during the same submission.
+gs stack submit --fill
+stderr 'float-1: Using upstream name ''float-1-2'' instead'
+stderr 'float-2: Using upstream name ''float-2-2'' instead'
+stderr 'float-3: Using upstream name ''float-3-2'' instead'
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/float-1.txt --
+Float 1
+-- repo/float-2.txt --
+Float 2
+-- repo/float-3.txt --
+Float 3
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add float 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "41127951a5bcb2b7258946d758cbe8549dde8fd2"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "float-1-2",
+      "sha": "19b5f4c2b2d7362f0d02649e1351083ebc7a3d42"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Add float 2",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "float-1-2",
+      "sha": "19b5f4c2b2d7362f0d02649e1351083ebc7a3d42"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "float-2-2",
+      "sha": "bb5562b20af515520df4bcc17277fe7cbda2221b"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "Add float 3",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "float-2-2",
+      "sha": "bb5562b20af515520df4bcc17277fe7cbda2221b"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "float-3-2",
+      "sha": "d1a14cc8a8ecd178c66856d80489bb09a3e79ccf"
+    }
+  }
+]

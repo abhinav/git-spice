@@ -21,14 +21,14 @@ feed 7 <Enter>
 ]
 -- prompt --
 Select a branch:
-      ┏━■ qux ◀
+      ┏━━■ qux ◀
     ┏━┻□ baz
   ┏━┻□ bar (#127)
 ┏━┻□ foo (#123)
 main
 -- filter --
 Select a branch:
-┏━■ bar (#127) ◀
+┏━━■ bar (#127) ◀
 foo (#123)
 -- want --
 bar

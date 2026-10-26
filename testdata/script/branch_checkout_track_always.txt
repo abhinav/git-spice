@@ -26,5 +26,5 @@ cmp stderr $WORK/golden/ls.txt
 -- repo/foo.txt --
 whatever
 -- golden/ls.txt --
-┏━■ feature ◀
+┏━━■ feature ◀
 main

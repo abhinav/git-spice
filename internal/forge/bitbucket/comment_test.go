@@ -3,6 +3,7 @@ package bitbucket
 import (
 	"testing"
 
+	"go.abhg.dev/gs/internal/gateway/bitbucket/cloud"
 	"go.abhg.dev/testing/stub"
 )
 
@@ -11,5 +12,5 @@ import (
 //
 // It restores the old value after the test finishes.
 func SetListChangeCommentsPageSize(t testing.TB, pageSize int) {
-	t.Cleanup(stub.Value(&_listChangeCommentsPageSize, pageSize))
+	t.Cleanup(stub.Value(&cloud.ListChangeCommentsPageSize, pageSize))
 }

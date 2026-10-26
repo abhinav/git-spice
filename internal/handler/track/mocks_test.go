@@ -42,6 +42,44 @@ func (m *MockGitRepository) EXPECT() *MockGitRepositoryMockRecorder {
 	return m.recorder
 }
 
+// BranchExists mocks base method.
+func (m *MockGitRepository) BranchExists(ctx context.Context, branch string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BranchExists", ctx, branch)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// BranchExists indicates an expected call of BranchExists.
+func (mr *MockGitRepositoryMockRecorder) BranchExists(ctx, branch any) *MockGitRepositoryBranchExistsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BranchExists", reflect.TypeOf((*MockGitRepository)(nil).BranchExists), ctx, branch)
+	return &MockGitRepositoryBranchExistsCall{Call: call}
+}
+
+// MockGitRepositoryBranchExistsCall wrap *gomock.Call
+type MockGitRepositoryBranchExistsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryBranchExistsCall) Return(arg0 bool) *MockGitRepositoryBranchExistsCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryBranchExistsCall) Do(f func(context.Context, string) bool) *MockGitRepositoryBranchExistsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryBranchExistsCall) DoAndReturn(f func(context.Context, string) bool) *MockGitRepositoryBranchExistsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ListCommits mocks base method.
 func (m *MockGitRepository) ListCommits(ctx context.Context, commits git.CommitRange) iter.Seq2[git.Hash, error] {
 	m.ctrl.T.Helper()

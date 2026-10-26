@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -95,10 +96,6 @@ func (sh *ShamHub) handleFindChangesByBranch(_ context.Context, req *findChanges
 	sh.mu.RLock()
 nextChange:
 	for _, c := range sh.changes {
-		if len(got) >= limit {
-			break
-		}
-
 		for _, f := range filters {
 			if !f(c) {
 				continue nextChange
@@ -109,11 +106,21 @@ nextChange:
 	}
 	sh.mu.RUnlock()
 
+	// Return newest changes first,
+	// matching the order of hosted forges that prioritize recent activity.
+	slices.Reverse(got)
+	if len(got) > limit {
+		got = got[:limit]
+	}
+
 	changes := make([]*Change, len(got))
 	for i, c := range got {
 		change, err := sh.toChange(c)
 		if err != nil {
 			return nil, fmt.Errorf("convert shamChange to Change: %w", err)
+		}
+		if c.HeadHash != "" {
+			change.Head.Hash = c.HeadHash
 		}
 
 		changes[i] = change

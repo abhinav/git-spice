@@ -1,10 +1,6 @@
 package state
 
-import (
-	"context"
-	"errors"
-	"fmt"
-)
+import "fmt"
 
 const _versionFile = "version"
 
@@ -39,23 +35,6 @@ func checkVersion(version Version) error {
 	}
 
 	return nil
-}
-
-// loadVersion loads the version of the storage layout used by the given [DB].
-func loadVersion(ctx context.Context, db DB) (Version, error) {
-	var version Version
-
-	if err := db.Get(ctx, _versionFile, &version); err != nil {
-		if errors.Is(err, ErrNotExist) {
-			// Version file was added during storage version 1.
-			// If file does not exist, it's an old v1 store.
-			return VersionOne, nil
-		}
-
-		return 0, err
-	}
-
-	return version, nil
 }
 
 // VersionMismatchError indicates that the data store we attempted to open

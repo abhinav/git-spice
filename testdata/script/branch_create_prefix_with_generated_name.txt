@@ -22,6 +22,6 @@ cmp stderr $WORK/golden/ll.txt
 -- repo/feature.txt --
 This is a feature file.
 -- golden/ll.txt --
-┏━■ myuser/add-feature-2 ◀
-┃   702c658 Add feature (now)
+┏━━■ myuser/add-feature-2 ◀
+┃    702c658 Add feature (now)
 main

@@ -282,6 +282,12 @@ func (tw *treeWriter[T]) writeTree(nodeIdx int, path []int, pathNodeIxes []int) 
 	titlePrefix := tw.style.NodeMarker(nodeValue).String() + " "
 	if hasChildren {
 		titlePrefix = tw.style.Joint.Render(string(_horizontalUp)) + titlePrefix
+	} else if len(path) > 0 {
+		// The node is a leaf sibling: it has no upward joint to
+		// children, but we emit a horizontal segment anyway so its
+		// marker lines up with siblings that do have children
+		// and carry a ┻ joint there.
+		titlePrefix = tw.style.Joint.Render(string(_horizontal)) + titlePrefix
 	}
 	bodyPrefix := strings.Repeat(" ", lipgloss.Width(titlePrefix))
 

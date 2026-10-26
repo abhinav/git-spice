@@ -7,21 +7,20 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56373
-        url: http://127.0.0.1:56373/abhinav/test-repo/change-template
+        host: 127.0.0.1:53776
+        url: http://127.0.0.1:53776/abhinav/test-repo/change-template
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 5
-        body: |
-            null
+        content_length: 2
+        body: '[]'
         headers:
             Content-Length:
-                - "5"
+                - "2"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 138.274667ms
+        duration: 8.374833ms

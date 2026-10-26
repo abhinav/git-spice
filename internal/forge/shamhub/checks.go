@@ -2,13 +2,15 @@ package shamhub
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// changeChecksRequest identifies the change whose checks state
+// changeChecksRequest identifies the change whose checks
 // should be reported.
 type changeChecksRequest struct {
 	// Owner is the base repository owner.
@@ -21,8 +23,17 @@ type changeChecksRequest struct {
 	Number int `path:"number" json:"-"`
 }
 
-// changeChecksResponse is the wire response for aggregate checks state.
+// changeChecksResponse is the wire response for change checks.
 type changeChecksResponse struct {
+	// Checks lists the checks reported for the change.
+	Checks []changeCheckResponse `json:"checks,omitempty"`
+}
+
+// changeCheckResponse is one check in a changeChecksResponse.
+type changeCheckResponse struct {
+	// Name identifies the status check.
+	Name string `json:"name"`
+
 	// State is one of pending, passed, or failed.
 	State string `json:"state"`
 }
@@ -35,19 +46,19 @@ var _ = shamhubRESTHandler(
 func (sh *ShamHub) handleChangeChecks(
 	_ context.Context, req changeChecksRequest,
 ) (*changeChecksResponse, error) {
-	state, err := sh.ChangeChecksState(req.Owner, req.Repo, req.Number)
+	checks, err := sh.ChangeChecks(req.Owner, req.Repo, req.Number)
 	if err != nil {
 		return nil, err
 	}
-	return &changeChecksResponse{State: state.String()}, nil
+	return &changeChecksResponse{Checks: checkResponses(checks)}, nil
 }
 
-// ChangeChecksState reports the aggregate checks state for a change.
-func (sh *ShamHub) ChangeChecksState(
+// ChangeChecks reports checks for a change.
+func (sh *ShamHub) ChangeChecks(
 	owner string,
 	repo string,
 	number int,
-) (forge.ChecksState, error) {
+) ([]forge.ChangeCheck, error) {
 	sh.mu.RLock()
 	defer sh.mu.RUnlock()
 
@@ -55,17 +66,14 @@ func (sh *ShamHub) ChangeChecksState(
 		if change.Base.Owner == owner &&
 			change.Base.Repo == repo &&
 			change.Number == number {
-			if change.ChecksState == 0 {
-				return forge.ChecksPassed, nil
-			}
-			return change.ChecksState, nil
+			return slices.Clone(change.Checks), nil
 		}
 	}
 
-	return 0, notFoundErrorf("change %d (%v/%v) not found", number, owner, repo)
+	return nil, notFoundErrorf("change %d (%v/%v) not found", number, owner, repo)
 }
 
-// setStatusRequest updates the simulated checks state for a change.
+// setStatusRequest updates one simulated check for a change.
 type setStatusRequest struct {
 	// Owner is the base repository owner.
 	Owner string `path:"owner" json:"-"`
@@ -75,6 +83,9 @@ type setStatusRequest struct {
 
 	// Number is the change number in the base repository.
 	Number int `path:"number" json:"-"`
+
+	// Name identifies the check to update.
+	Name string `json:"name"`
 
 	// State is one of pending, passed, or failed.
 	State string `json:"state"`
@@ -91,25 +102,33 @@ var _ = shamhubRESTHandler(
 func (sh *ShamHub) handleSetStatus(
 	_ context.Context, req setStatusRequest,
 ) (*setStatusResponse, error) {
+	if req.Name == "" {
+		return nil, badRequestErrorf("check name is required")
+	}
 	state, err := parseChecksState(req.State)
 	if err != nil {
 		return nil, badRequestErrorf("%s", err)
 	}
-	if err := sh.SetChangeChecksState(
-		req.Owner, req.Repo, req.Number, state,
+	if err := sh.SetChangeCheck(
+		req.Owner, req.Repo, req.Number,
+		forge.ChangeCheck{Name: req.Name, State: state},
 	); err != nil {
 		return nil, err
 	}
 	return &setStatusResponse{}, nil
 }
 
-// SetChangeChecksState sets the aggregate checks state for a change.
-func (sh *ShamHub) SetChangeChecksState(
+// SetChangeCheck sets one named check for a change.
+func (sh *ShamHub) SetChangeCheck(
 	owner string,
 	repo string,
 	number int,
-	state forge.ChecksState,
+	check forge.ChangeCheck,
 ) error {
+	if check.Name == "" {
+		return errors.New("check name is required")
+	}
+
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
@@ -117,7 +136,13 @@ func (sh *ShamHub) SetChangeChecksState(
 		if change.Base.Owner == owner &&
 			change.Base.Repo == repo &&
 			change.Number == number {
-			sh.changes[i].ChecksState = state
+			for j, existing := range sh.changes[i].Checks {
+				if existing.Name == check.Name {
+					sh.changes[i].Checks[j] = check
+					return nil
+				}
+			}
+			sh.changes[i].Checks = append(sh.changes[i].Checks, check)
 			return nil
 		}
 	}
@@ -125,11 +150,11 @@ func (sh *ShamHub) SetChangeChecksState(
 	return notFoundErrorf("change %d (%v/%v) not found", number, owner, repo)
 }
 
-// ChangeChecksState reports the aggregate checks state for a change.
-func (r *forgeRepository) ChangeChecksState(
+// ChangeChecks reports checks for a change.
+func (r *forgeRepository) ChangeChecks(
 	ctx context.Context,
 	fid forge.ChangeID,
-) (forge.ChecksState, error) {
+) ([]forge.ChangeCheck, error) {
 	id := fid.(ChangeID)
 	u := r.apiURL.JoinPath(
 		r.owner, r.repo,
@@ -138,16 +163,27 @@ func (r *forgeRepository) ChangeChecksState(
 
 	var res changeChecksResponse
 	if err := r.client.Get(ctx, u.String(), &res); err != nil {
-		return 0, fmt.Errorf("get checks: %w", err)
+		return nil, fmt.Errorf("get checks: %w", err)
 	}
 
-	return parseChecksState(res.State)
+	checks := make([]forge.ChangeCheck, 0, len(res.Checks))
+	for _, check := range res.Checks {
+		state, err := parseChecksState(check.State)
+		if err != nil {
+			return nil, err
+		}
+		checks = append(checks, forge.ChangeCheck{
+			Name:  check.Name,
+			State: state,
+		})
+	}
+	return checks, nil
 }
 
-func (r *forgeRepository) setChangeChecksState(
+func (r *forgeRepository) setChangeCheck(
 	ctx context.Context,
 	fid forge.ChangeID,
-	state forge.ChecksState,
+	check forge.ChangeCheck,
 ) error {
 	id := fid.(ChangeID)
 	u := r.apiURL.JoinPath(
@@ -156,7 +192,8 @@ func (r *forgeRepository) setChangeChecksState(
 	)
 
 	req := setStatusRequest{
-		State: state.String(),
+		Name:  check.Name,
+		State: check.State.String(),
 	}
 	var res setStatusResponse
 	if err := r.client.Post(ctx, u.String(), req, &res); err != nil {
@@ -165,15 +202,26 @@ func (r *forgeRepository) setChangeChecksState(
 	return nil
 }
 
-func parseChecksState(value string) (forge.ChecksState, error) {
+func parseChecksState(value string) (forge.ChangeCheckState, error) {
 	switch value {
 	case "pending":
-		return forge.ChecksPending, nil
+		return forge.ChangeCheckPending, nil
 	case "passed":
-		return forge.ChecksPassed, nil
+		return forge.ChangeCheckPassed, nil
 	case "failed":
-		return forge.ChecksFailed, nil
+		return forge.ChangeCheckFailed, nil
 	default:
 		return 0, fmt.Errorf("unsupported status %q", value)
 	}
+}
+
+func checkResponses(checks []forge.ChangeCheck) []changeCheckResponse {
+	responses := make([]changeCheckResponse, 0, len(checks))
+	for _, check := range checks {
+		responses = append(responses, changeCheckResponse{
+			Name:  check.Name,
+			State: check.State.String(),
+		})
+	}
+	return responses
 }

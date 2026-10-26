@@ -2,45 +2,56 @@ Usage: gs downstack (ds) merge (m) [flags]
 
 Merge a branch and those below it
 
-Merges the current branch and all branches below it into trunk via the forge
-API, bottom-up. Use --branch to start at a different branch.
+Merges CRs for the current branch and all branches below it into trunk.
+Use --branch to merge the downstack of a different branch. Use --branch multiple
+times to merge downstacks of multiple branches. Selected branches and their
+downstack branches down to trunk are merged.
 
-This command acts as a local merge queue: it merges one Change Request,
-waits for that merge to finish, restacks and updates the next Change Request,
-waits for its CI checks to pass, and then repeats the process.
+For example, for the following stack:
 
-For a stack like this:
+       ┌── D
+       │ ┌── C
+       ├─┴ B
+     ┌─┴ A
+    trunk
 
-    main <- feature1 <- feature2 <- feature3
+The following commands have the following effects:
 
-Running from feature3 merges in this order:
+    gs downstack merge --branch D # merge A, D
+    gs downstack merge --branch B # merge A, B
+    gs downstack merge --branch C # merge A, B, C
+    gs downstack merge \          # merge A, B, C, D
+                          --branch C --branch D
 
-    feature1, feature2, feature3
+Use 'gs stack merge' to merge a branch and its upstack branches in one
+operation.
 
-Already-merged branches are skipped automatically. Branches must have an open
-Change Request to be merged.
+Branches merge bottom-up starting with those stacked on trunk. After a branch
+merges, its upstack branches are restacked and resubmitted. When those are ready
+to merge, they are merged in turn, and the process repeats.
 
-Before merging, the downstack is checked for branches whose base PR was already
-merged on the forge. Use --no-branch-check to skip this validation.
+A branch is considered ready to merge when the forge reports it as mergeable,
+based on the forge and the repository configuration. Override this with the
+'spice.merge.ready.command' configuration option.
 
-Before each merge, waits for CI checks to pass. Use --build-timeout to configure
-the maximum wait (default: 30m, 0 means fail immediately if not ready).
+Branches are merged using the forge's merge API. Override this with the
+'spice.merge.command' configuration option.
 
-Between merges, the command waits for each merge to complete, restacks and
-updates the next PR, waits for CI checks on the updated PR, and syncs merged
-branch cleanup.
-
-Use --no-wait for single branch merging when you don't want to wait for the
-merge to propagate. --no-wait is rejected for multi-branch merges.
+If a branch becomes blocked and will not become ready without intervention,
+or it takes too long to become ready, or otherwise fails to merge, it is
+skipped and any branches stacked on it are also skipped. Use --fail-fast to stop
+scheduling remaining merge queue work after the first branch failure.
 
 Flags:
-  --branch=NAME          Branch to start merging from
-  --no-wait              Skip polling for a single branch merge to propagate.
-  --no-branch-check      Skip stale base validation before merging.
   --method=METHOD        Preferred merge method. One of 'merge', 'squash',
                          and 'rebase'. (🔧 spice.merge.method)
-  --build-timeout=30m    Max time to wait for CI checks before each merge.
-                         0 means check once. (🔧 spice.merge.buildTimeout)
+  --ready-timeout=30m    Max time to wait for merge readiness before each merge.
+                         0 means check once. (🔧 spice.merge.ready.timeout)
+  --merge-timeout=2m     Max time to wait for merge completion after requesting
+                         merge. (🔧 spice.merge.timeout)
+  --fail-fast            Stop scheduling remaining merge queue work after the
+                         first branch failure.
+  --branch=NAME,...      Branches to start merging from. May be repeated.
 
 Global Flags:
   -h, --help           Show help for the command
@@ -48,3 +59,9 @@ Global Flags:
   -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
   -C, --dir=DIR        Change to DIR before doing anything
       --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.merge.command          Command to request merge instead of using the
+                               forge merge API.
+  spice.merge.ready.command    Command to check merge readiness instead of using
+                               the forge.

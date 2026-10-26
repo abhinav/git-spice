@@ -4,21 +4,22 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/json"
+	json "encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"testing"
+	"time"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/fixturetest"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/forge/github"
+	githubgateway "go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/graphqlutil"
 	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"golang.org/x/oauth2"
@@ -57,11 +58,15 @@ func newRecorder(
 	return forgetest.NewHTTPRecorder(t, name, sanitizers)
 }
 
-func newGitHubClient(
-	httpClient *http.Client,
-) *githubv4.Client {
-	httpClient.Transport = graphqlutil.WrapTransport(httpClient.Transport)
-	return githubv4.NewClient(httpClient)
+func newGateway(t *testing.T, httpClient *http.Client) *githubgateway.Gateway {
+	t.Helper()
+	client, err := githubgateway.NewGateway(
+		github.DefaultAPIURL,
+		&http.Client{Transport: httpClient.Transport},
+		testTokenSource("token"),
+	)
+	require.NoError(t, err)
+	return client
 }
 
 func TestIntegration_Repository(t *testing.T) {
@@ -76,8 +81,8 @@ func TestIntegration_Repository(t *testing.T) {
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 	}
 
-	ghc := newGitHubClient(httpClient)
-	_, err := github.NewRepository(t.Context(), new(github.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc, nil)
+	gatewayClient := newGateway(t, httpClient)
+	_, err := github.NewRepository(t.Context(), new(github.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), gatewayClient, "")
 	require.NoError(t, err)
 }
 
@@ -95,13 +100,18 @@ func TestIntegration(t *testing.T) {
 
 	githubForge := github.Forge{
 		Log: silogtest.New(t),
+		Options: github.Options{
+			Stacks: true,
+		},
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL:     remoteURL,
-		PushRemoteURL: pushRemoteURL,
-		Forge:         &githubForge,
-		Sanitizers:    sanitizers,
+		RemoteURL:      remoteURL,
+		PushRemoteURL:  pushRemoteURL,
+		Forge:          &githubForge,
+		TestStacks:     true,
+		TestMergeRange: true,
+		Sanitizers:     sanitizers,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			token := forgetest.Token(t, remoteURL, "GITHUB_TOKEN")
 			httpClient.Transport = &oauth2.Transport{
@@ -111,27 +121,25 @@ func TestIntegration(t *testing.T) {
 				}),
 			}
 
-			ghc := newGitHubClient(httpClient)
+			gatewayClient := newGateway(t, httpClient)
 			newRepo, err := github.NewRepository(
 				t.Context(), &githubForge, cfg.Owner, cfg.Repo,
-				silogtest.New(t), ghc, nil,
+				silogtest.New(t), gatewayClient, "",
 			)
 			require.NoError(t, err)
 			return newRepo
 		},
-		MergeChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, github.MergeChange(t.Context(), repo.(*github.Repository), change.(*github.PR)))
-		},
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, github.CloseChange(t.Context(), repo.(*github.Repository), change.(*github.PR)))
+			ctx := context.WithoutCancel(t.Context())
+			require.NoError(t, github.CloseChange(ctx, repo.(*github.Repository), change.(*github.PR)))
 		},
-		SetChangeChecksState: func(
+		SetChangeCheck: func(
 			t *testing.T,
 			httpClient *http.Client,
 			_ forge.Repository,
 			_ forge.ChangeID,
 			headHash git.Hash,
-			state forge.ChecksState,
+			check forge.ChangeCheck,
 		) {
 			require.NoError(t, setGitHubChangeChecksState(
 				t.Context(),
@@ -139,13 +147,551 @@ func TestIntegration(t *testing.T) {
 				cfg.Owner,
 				cfg.Repo,
 				headHash,
-				state,
+				check,
 			))
 		},
-		SetCommentsPageSize: github.SetListChangeCommentsPageSize,
-		Reviewers:           []string{cfg.Reviewer},
-		Assignees:           []string{cfg.Assignee},
+		SetCommentsPageSize:    github.SetListChangeCommentsPageSize,
+		ReviewThreads:          true,
+		FileReviewThreads:      true,
+		ReviewThreadCommitHash: true,
+		Reviewers:              []string{cfg.Reviewer},
+		Assignees:              []string{cfg.Assignee},
 	})
+}
+
+func TestIntegration_stackReplacement(t *testing.T) {
+	cfg, sanitizers := testConfig(t)
+	remoteURL := "https://github.com/" + cfg.Owner + "/" + cfg.Repo
+	bottomBranch := fixturetest.New(_fixtures, "bottomBranch", func() string {
+		return "stack-replace-bottom-" + randomString(8)
+	}).Get(t)
+	insertedBranch := fixturetest.New(_fixtures, "insertedBranch", func() string {
+		return "stack-replace-inserted-" + randomString(8)
+	}).Get(t)
+	topBranch := fixturetest.New(_fixtures, "topBranch", func() string {
+		return "stack-replace-top-" + randomString(8)
+	}).Get(t)
+
+	if forgetest.Update() {
+		builder := forgetest.NewRepositoryBuilder(t, remoteURL)
+		t.Cleanup(func() {
+			for _, branch := range []string{topBranch, insertedBranch, bottomBranch} {
+				builder.DeleteRemoteBranch(branch)
+			}
+		})
+
+		// Build the ancestry needed by the desired stack while initially leaving
+		// the middle branch without a pull request:
+		//
+		//     main
+		//       |
+		//     bottom
+		//       |
+		//    inserted
+		//       |
+		//      top
+		builder.CheckoutBranch("main")
+		for _, branch := range []string{bottomBranch, insertedBranch, topBranch} {
+			builder.CreateBranch(branch)
+			builder.CheckoutBranch(branch)
+			builder.WriteFile(branch+".txt", "commit for "+branch)
+			builder.AddAllAndCommit("commit for " + branch)
+			builder.Push(branch)
+		}
+	}
+
+	rec := newRecorder(t, t.Name(), sanitizers)
+	httpClient := rec.GetDefaultClient()
+	token := forgetest.Token(t, remoteURL, "GITHUB_TOKEN")
+	httpClient.Transport = &oauth2.Transport{
+		Base:   httpClient.Transport,
+		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
+	}
+	gatewayClient := newGateway(t, httpClient)
+	repo, err := github.NewRepository(
+		t.Context(), &github.Forge{
+			Options: github.Options{Stacks: true},
+		}, cfg.Owner, cfg.Repo,
+		silogtest.New(t), gatewayClient, "",
+	)
+	require.NoError(t, err)
+
+	var openChanges []forge.ChangeID
+	t.Cleanup(func() {
+		ctx := context.WithoutCancel(t.Context())
+		for _, openChange := range slices.Backward(openChanges) {
+			assert.NoError(t, github.CloseChange(
+				ctx,
+				repo,
+				openChange.(*github.PR),
+			))
+		}
+	})
+
+	bottom, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Native stack replacement bottom " + bottomBranch,
+		Body:    "Native stack replacement integration test",
+		Base:    "main",
+		Head:    bottomBranch,
+	})
+	require.NoError(t, err, "create bottom change")
+	openChanges = append(openChanges, bottom.ID)
+	top, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Native stack replacement top " + topBranch,
+		Body:    "Native stack replacement integration test",
+		Base:    bottomBranch,
+		Head:    topBranch,
+	})
+	require.NoError(t, err, "create top change")
+	openChanges = append(openChanges, top.ID)
+
+	plan, err := repo.PlanStackUpdate(t.Context(), []forge.StackChange{
+		{Change: bottom.ID, BaseBranch: "main"},
+		{Change: top.ID, BaseChange: bottom.ID, BaseBranch: bottomBranch},
+	})
+	require.NoError(t, err, "plan initial native stack")
+	require.NoError(t, plan.Execute(t.Context()), "create initial native stack")
+
+	inserted, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Native stack replacement middle " + insertedBranch,
+		Body:    "Native stack replacement integration test",
+		Base:    bottomBranch,
+		Head:    insertedBranch,
+	})
+	require.NoError(t, err, "create inserted change")
+	openChanges = append(openChanges, inserted.ID)
+
+	desired := []forge.StackChange{
+		{Change: bottom.ID, BaseBranch: "main"},
+		{Change: inserted.ID, BaseChange: bottom.ID, BaseBranch: bottomBranch},
+		{Change: top.ID, BaseChange: inserted.ID, BaseBranch: insertedBranch},
+	}
+	plan, err = repo.PlanStackUpdate(t.Context(), desired)
+	require.NoError(t, err, "plan native stack replacement")
+	require.NoError(t, plan.Execute(t.Context()), "replace native stack")
+
+	pullRequests, err := gatewayClient.PullRequestsForStackUpdate(
+		t.Context(),
+		cfg.Owner,
+		cfg.Repo,
+		[]int{
+			bottom.ID.(*github.PR).Number,
+			inserted.ID.(*github.PR).Number,
+			top.ID.(*github.PR).Number,
+		},
+	)
+	require.NoError(t, err, "read replaced native stack")
+	require.Len(t, pullRequests, 3)
+	for _, pullRequest := range pullRequests {
+		require.NotNil(t, pullRequest)
+		require.NotNil(t, pullRequest.Stack)
+		assert.Equal(t, []githubgateway.PullRequestStackMember{
+			{Number: bottom.ID.(*github.PR).Number, State: githubgateway.PullRequestStateOpen},
+			{Number: inserted.ID.(*github.PR).Number, State: githubgateway.PullRequestStateOpen},
+			{Number: top.ID.(*github.PR).Number, State: githubgateway.PullRequestStateOpen},
+		}, pullRequest.Stack.Members)
+	}
+	assert.Equal(t, insertedBranch, pullRequests[2].BaseRefName)
+}
+
+func TestIntegration_stackReplacementWithMergedMember(t *testing.T) {
+	cfg, sanitizers := testConfig(t)
+	remoteURL := "https://github.com/" + cfg.Owner + "/" + cfg.Repo
+	bottomBranch := fixturetest.New(_fixtures, "bottomBranch", func() string {
+		return "stack-merged-bottom-" + randomString(8)
+	}).Get(t)
+	activeBranch := fixturetest.New(_fixtures, "activeBranch", func() string {
+		return "stack-merged-active-" + randomString(8)
+	}).Get(t)
+	removedBranch := fixturetest.New(_fixtures, "removedBranch", func() string {
+		return "stack-merged-removed-" + randomString(8)
+	}).Get(t)
+	topBranch := fixturetest.New(_fixtures, "topBranch", func() string {
+		return "stack-merged-top-" + randomString(8)
+	}).Get(t)
+
+	if forgetest.Update() {
+		builder := forgetest.NewRepositoryBuilder(t, remoteURL)
+		t.Cleanup(func() {
+			for _, branch := range []string{topBranch, removedBranch, activeBranch, bottomBranch} {
+				builder.DeleteRemoteBranch(branch)
+			}
+		})
+
+		// The initial native stack follows this branch ancestry:
+		//
+		//     main
+		//       |
+		//     bottom (merged before replacement)
+		//       |
+		//     active
+		//       |
+		//     removed (omitted from the desired stack)
+		//       |
+		//      top
+		//
+		// After bottom merges, reconcile active -> top.
+		// The removed PR must stay open and keep its base;
+		// only its native membership is removed.
+		builder.CheckoutBranch("main")
+		for _, branch := range []string{bottomBranch, activeBranch, removedBranch, topBranch} {
+			builder.CreateBranch(branch)
+			builder.CheckoutBranch(branch)
+			builder.WriteFile(branch+".txt", "commit for "+branch)
+			builder.AddAllAndCommit("commit for " + branch)
+			builder.Push(branch)
+		}
+	}
+
+	rec := newRecorder(t, t.Name(), sanitizers)
+	httpClient := rec.GetDefaultClient()
+	token := forgetest.Token(t, remoteURL, "GITHUB_TOKEN")
+	httpClient.Transport = &oauth2.Transport{
+		Base:   httpClient.Transport,
+		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
+	}
+	gatewayClient := newGateway(t, httpClient)
+	repo, err := github.NewRepository(
+		t.Context(), &github.Forge{
+			Options: github.Options{Stacks: true},
+		}, cfg.Owner, cfg.Repo,
+		silogtest.New(t), gatewayClient, "",
+	)
+	require.NoError(t, err)
+
+	var openChanges []forge.ChangeID
+	t.Cleanup(func() {
+		ctx := context.WithoutCancel(t.Context())
+		for _, openChange := range slices.Backward(openChanges) {
+			assert.NoError(t, github.CloseChange(
+				ctx,
+				repo,
+				openChange.(*github.PR),
+			))
+		}
+	})
+
+	bottom, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Native stack merged-member bottom " + bottomBranch,
+		Body:    "Native stack merged-member integration test",
+		Base:    "main",
+		Head:    bottomBranch,
+	})
+	require.NoError(t, err, "create bottom change")
+	openChanges = append(openChanges, bottom.ID)
+	active, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Native stack merged-member active " + activeBranch,
+		Body:    "Native stack merged-member integration test",
+		Base:    bottomBranch,
+		Head:    activeBranch,
+	})
+	require.NoError(t, err, "create active change")
+	openChanges = append(openChanges, active.ID)
+	removed, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Native stack merged-member removed " + removedBranch,
+		Body:    "Native stack merged-member integration test",
+		Base:    activeBranch,
+		Head:    removedBranch,
+	})
+	require.NoError(t, err, "create removed change")
+	openChanges = append(openChanges, removed.ID)
+	top, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Native stack merged-member top " + topBranch,
+		Body:    "Native stack merged-member integration test",
+		Base:    removedBranch,
+		Head:    topBranch,
+	})
+	require.NoError(t, err, "create top change")
+	openChanges = append(openChanges, top.ID)
+
+	plan, err := repo.PlanStackUpdate(t.Context(), []forge.StackChange{
+		{Change: bottom.ID, BaseBranch: "main"},
+		{Change: active.ID, BaseChange: bottom.ID, BaseBranch: bottomBranch},
+		{Change: removed.ID, BaseChange: active.ID, BaseBranch: activeBranch},
+		{Change: top.ID, BaseChange: removed.ID, BaseBranch: removedBranch},
+	})
+	require.NoError(t, err, "plan initial native stack")
+	require.NoError(t, plan.Execute(t.Context()), "create initial native stack")
+	_, err = gatewayClient.MergePullRequestAsync(
+		t.Context(),
+		&githubgateway.MergePullRequestAsyncInput{
+			Owner:             cfg.Owner,
+			Repo:              cfg.Repo,
+			PullRequestNumber: bottom.ID.(*github.PR).Number,
+			Method:            githubgateway.MergeMethodSquash,
+		},
+	)
+	require.NoError(t, err, "start native stack bottom merge")
+
+	if forgetest.Update() {
+		select {
+		case <-time.After(10 * time.Second):
+		case <-t.Context().Done():
+			require.FailNow(t, "merged-member test context canceled")
+		}
+	}
+	bottomState, err := repo.FindChangeByID(t.Context(), bottom.ID)
+	require.NoError(t, err, "read merged bottom change")
+	require.Equal(t, forge.ChangeMerged, bottomState.State)
+	openChanges = openChanges[1:]
+
+	desired := []forge.StackChange{
+		{Change: active.ID, BaseBranch: "main"},
+		{Change: top.ID, BaseChange: active.ID, BaseBranch: activeBranch},
+	}
+	plan, err = repo.PlanStackUpdate(t.Context(), desired)
+	require.NoError(t, err, "plan removal after merged prefix")
+	require.NoError(t, plan.Execute(t.Context()), "replace the active stack")
+
+	pullRequests, err := gatewayClient.PullRequestsForStackUpdate(
+		t.Context(),
+		cfg.Owner,
+		cfg.Repo,
+		[]int{
+			bottom.ID.(*github.PR).Number,
+			active.ID.(*github.PR).Number,
+			removed.ID.(*github.PR).Number,
+			top.ID.(*github.PR).Number,
+		},
+	)
+	require.NoError(t, err, "read native stack after removal")
+	require.Len(t, pullRequests, 4)
+	require.NotNil(t, pullRequests[0])
+	assert.Equal(t, githubgateway.PullRequestStateMerged, pullRequests[0].State)
+	require.NotNil(t, pullRequests[2])
+	assert.Equal(t, githubgateway.PullRequestStateOpen, pullRequests[2].State)
+	assert.Nil(t, pullRequests[2].Stack, "removed PR remains open but unstacked")
+	assert.Equal(t, activeBranch, pullRequests[2].BaseRefName)
+
+	for _, pr := range []*githubgateway.StackUpdatePullRequest{pullRequests[1], pullRequests[3]} {
+		require.NotNil(t, pr)
+		require.NotNil(t, pr.Stack)
+		assert.Equal(t, []githubgateway.PullRequestStackMember{
+			{Number: active.ID.(*github.PR).Number, State: githubgateway.PullRequestStateOpen},
+			{Number: top.ID.(*github.PR).Number, State: githubgateway.PullRequestStateOpen},
+		}, pr.Stack.Members)
+	}
+	assert.Equal(t, pullRequests[1].Stack.Number, pullRequests[3].Stack.Number)
+	assert.Equal(t, "main", pullRequests[1].BaseRefName)
+	assert.Equal(t, activeBranch, pullRequests[3].BaseRefName)
+}
+
+func TestIntegration_DivergentStackMerge(t *testing.T) {
+	cfg, sanitizers := testConfig(t)
+	remoteURL := "https://github.com/" + cfg.Owner + "/" + cfg.Repo
+
+	aBranch := fixturetest.New(_fixtures, "aBranch", func() string {
+		return "divergent-stack-a-" + randomString(8)
+	}).Get(t)
+	bBranch := fixturetest.New(_fixtures, "bBranch", func() string {
+		return "divergent-stack-b-" + randomString(8)
+	}).Get(t)
+	cBranch := fixturetest.New(_fixtures, "cBranch", func() string {
+		return "divergent-stack-c-" + randomString(8)
+	}).Get(t)
+	dBranch := fixturetest.New(_fixtures, "dBranch", func() string {
+		return "divergent-stack-d-" + randomString(8)
+	}).Get(t)
+
+	// Recording provisions a disposable remote branch graph and captures its
+	// API traffic. Replay begins below with the recorded branch names and HTTP
+	// fixture, without touching GitHub.
+	if forgetest.Update() {
+		testRepo := forgetest.NewRepositoryBuilder(t, remoteURL)
+		t.Cleanup(func() {
+			for _, branch := range []string{dBranch, cBranch, bBranch, aBranch} {
+				testRepo.DeleteRemoteBranch(branch)
+			}
+		})
+
+		// Build a divergent branch graph.
+		// A-B-C becomes the native stack;
+		// D remains an unstacked pull request based on B.
+		//
+		//     main
+		//       |
+		//       A
+		//       |
+		//       B
+		//      / \
+		//     C   D
+		testRepo.CheckoutBranch("main")
+		for _, branch := range []string{aBranch, bBranch, cBranch} {
+			testRepo.CreateBranch(branch)
+			testRepo.CheckoutBranch(branch)
+			testRepo.WriteFile(branch+".txt", "commit for "+branch)
+			testRepo.AddAllAndCommit("commit for " + branch)
+			testRepo.Push(branch)
+		}
+
+		testRepo.CheckoutBranch(bBranch)
+		testRepo.CreateBranch(dBranch)
+		testRepo.CheckoutBranch(dBranch)
+		testRepo.WriteFile(dBranch+".txt", "commit for "+dBranch)
+		testRepo.AddAllAndCommit("commit for " + dBranch)
+		testRepo.Push(dBranch)
+	}
+
+	rec := newRecorder(t, t.Name(), sanitizers)
+	httpClient := rec.GetDefaultClient()
+	token := forgetest.Token(t, remoteURL, "GITHUB_TOKEN")
+	httpClient.Transport = &oauth2.Transport{
+		Base:   httpClient.Transport,
+		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
+	}
+
+	gatewayClient := newGateway(t, httpClient)
+	repo, err := github.NewRepository(
+		t.Context(), &github.Forge{
+			Options: github.Options{Stacks: true},
+		}, cfg.Owner, cfg.Repo,
+		silogtest.New(t), gatewayClient, "",
+	)
+	require.NoError(t, err)
+	a, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Divergent native stack A " + aBranch,
+		Body:    "Divergent native stack integration test",
+		Base:    "main",
+		Head:    aBranch,
+	})
+	require.NoError(t, err, "create change A")
+	b, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Divergent native stack B " + bBranch,
+		Body:    "Divergent native stack integration test",
+		Base:    aBranch,
+		Head:    bBranch,
+	})
+	require.NoError(t, err, "create change B")
+	c, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Divergent native stack C " + cBranch,
+		Body:    "Divergent native stack integration test",
+		Base:    bBranch,
+		Head:    cBranch,
+	})
+	require.NoError(t, err, "create change C")
+	d, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Divergent native stack D " + dBranch,
+		Body:    "Divergent native stack integration test",
+		Base:    bBranch,
+		Head:    dBranch,
+	})
+	require.NoError(t, err, "create change D")
+
+	stackChanges := []forge.StackChange{
+		{Change: a.ID, BaseBranch: "main"},
+		{Change: b.ID, BaseChange: a.ID, BaseBranch: aBranch},
+		{Change: c.ID, BaseChange: b.ID, BaseBranch: bBranch},
+		{Change: d.ID, BaseChange: b.ID, BaseBranch: bBranch},
+	}
+	stackPlan, err := repo.PlanStackUpdate(t.Context(), stackChanges[:3])
+	require.NoError(t, err, "plan A-B-C native stack")
+	require.NoError(t, stackPlan.Execute(t.Context()), "register A-B-C as a native stack")
+
+	plans, err := repo.PlanMergeRanges(t.Context(), []forge.MergePlanChange{
+		{Change: a.ID},
+		{Change: b.ID, BaseChange: a.ID},
+		{Change: c.ID, BaseChange: b.ID},
+		{Change: d.ID, BaseChange: b.ID},
+	})
+	require.NoError(t, err, "plan divergent native stack merge")
+	require.Len(t, plans, 2, "planned merge range count")
+	assert.Equal(t, []forge.ChangeID{a.ID, b.ID, c.ID}, plans[0].Changes())
+	assert.Equal(t, []forge.ChangeID{d.ID}, plans[1].Changes())
+
+	changeIDs := []forge.ChangeID{a.ID, b.ID, c.ID, d.ID}
+	beforeMerge, err := repo.ChangeStatuses(t.Context(), changeIDs)
+	require.NoError(t, err, "read change head hashes before merge")
+	require.Len(t, beforeMerge, len(changeIDs), "pre-merge status count")
+	dHeadHash := beforeMerge[3].HeadHash
+
+	operation, err := plans[0].Merge(t.Context(), forge.MergeRangeRequest{
+		Method: forge.MergeMethodSquash,
+		Heads: []forge.ChangeHead{
+			{
+				Change:   a.ID,
+				HeadHash: beforeMerge[0].HeadHash,
+			},
+			{
+				Change:   b.ID,
+				HeadHash: beforeMerge[1].HeadHash,
+			},
+			{
+				Change:   c.ID,
+				HeadHash: beforeMerge[2].HeadHash,
+			},
+		},
+	})
+	require.NoError(t, err, "start A-B-C squash merge")
+
+	status, err := operation.Status(t.Context())
+	require.NoError(t, err, "probe A-B-C merge operation")
+	assert.Equal(t, forge.MergeOperationPending, status,
+		"A-B-C merge operation status")
+
+	// Allow GitHub to finish merging every stack member before the one
+	// follow-up probe. Recorded responses need no wall-clock delay on replay.
+	if forgetest.Update() {
+		select {
+		case <-time.After(30 * time.Second):
+
+		case <-t.Context().Done():
+			require.FailNow(t, "divergent stack test context canceled")
+		}
+	}
+
+	status, err = operation.Status(t.Context())
+	require.NoError(t, err, "probe A-B-C merge operation")
+	assert.Equal(t, forge.MergeOperationAccepted, status,
+		"A-B-C merge operation status")
+
+	mergedStatuses, err := repo.ChangeStatuses(t.Context(), changeIDs[:3])
+	require.NoError(t, err, "read A-B-C states after merge")
+	require.Len(t, mergedStatuses, 3, "A-B-C status count")
+	for _, status := range mergedStatuses {
+		assert.Equal(t, forge.ChangeMerged, status.State,
+			"change %d state", status)
+	}
+
+	dStatuses, err := repo.ChangeStatuses(t.Context(), []forge.ChangeID{d.ID})
+	require.NoError(t, err, "read change D state after A-B-C merge")
+	require.Len(t, dStatuses, 1, "change D status count")
+	assert.Equal(t, forge.ChangeOpen, dStatuses[0].State)
+	assert.Equal(t, dHeadHash, dStatuses[0].HeadHash)
+
+	dPullRequests, err := gatewayClient.PullRequestsForMergeRange(
+		t.Context(),
+		cfg.Owner,
+		cfg.Repo,
+		[]int{d.ID.(*github.PR).Number},
+	)
+	require.NoError(t, err, "read change D after A-B-C merge")
+	require.Len(t, dPullRequests, 1, "change D pull request count")
+	dPullRequest := dPullRequests[0]
+	require.NotNil(t, dPullRequest, "change D pull request")
+	assert.Equal(t, githubgateway.PullRequestStateOpen, dPullRequest.State)
+	assert.Contains(t, []string{bBranch, "main"}, dPullRequest.BaseRefName)
+	assert.Equal(t, dBranch, dPullRequest.HeadRefName)
+	assert.Equal(t, dHeadHash.String(), dPullRequest.HeadRefOID)
+	assert.Nil(t, dPullRequest.Stack)
+
+	_, err = repo.ChangeMergeability(t.Context(), d.ID)
+	require.NoError(t, err, "read initial change D mergeability")
+
+	// GitHub can still be calculating D's mergeability after retargeting it.
+	// Allow that calculation to finish before the one follow-up read.
+	if forgetest.Update() {
+		select {
+		case <-time.After(10 * time.Second):
+
+		case <-t.Context().Done():
+			require.FailNow(t, "divergent stack test context canceled")
+		}
+	}
+
+	mergeability, err := repo.ChangeMergeability(t.Context(), d.ID)
+	require.NoError(t, err, "read change D mergeability")
+	assert.Equal(t, forge.ChangeMergeabilityReady, mergeability.State,
+		"change D mergeability: %v", mergeability.Reason)
 }
 
 func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {
@@ -161,17 +707,11 @@ func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 	}
 
-	ghc := newGitHubClient(httpClient)
+	gatewayClient := newGateway(t, httpClient)
 	repo, err := github.NewRepository(
-		t.Context(), new(github.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc, nil,
+		t.Context(), new(github.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), gatewayClient, "",
 	)
 	require.NoError(t, err)
-
-	t.Run("DoesNotExist", func(t *testing.T) {
-		_, err := repo.LabelID(t.Context(), label)
-		require.Error(t, err, "expected error for non-existent label")
-		assert.ErrorIs(t, err, github.ErrLabelNotFound)
-	})
 
 	id, err := repo.CreateLabel(t.Context(), label)
 	require.NoError(t, err, "could not create label")
@@ -180,12 +720,6 @@ func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {
 		ctx := context.WithoutCancel(t.Context())
 		assert.NoError(t,
 			repo.DeleteLabel(ctx, label), "could not delete label")
-	})
-
-	t.Run("LabelID", func(t *testing.T) {
-		gotID, err := repo.LabelID(t.Context(), label)
-		require.NoError(t, err, "could not get label ID")
-		assert.Equal(t, id, gotID, "label ID does not match")
 	})
 
 	t.Run("createIsIdempotent", func(t *testing.T) {
@@ -207,19 +741,22 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 		Base:   client.Transport,
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 	}
-	client.Transport = graphqlutil.WrapTransport(client.Transport)
-	ghc := newGitHubClient(client)
-	_, err := github.NewRepository(ctx, new(github.Forge), cfg.Owner, "does-not-exist-repo", silogtest.New(t), ghc, nil)
+	gatewayClient := newGateway(t, client)
+	_, err := github.NewRepository(ctx, new(github.Forge), cfg.Owner, "does-not-exist-repo", silogtest.New(t), gatewayClient, "")
 	require.Error(t, err)
-	assert.ErrorIs(t, err, graphqlutil.ErrNotFound)
+	assert.ErrorIs(t, err, githubgateway.ErrNotFound)
 
-	var gqlError *graphqlutil.Error
+	var gqlError *githubgateway.Error
 	if assert.ErrorAs(t, err, &gqlError) {
 		assert.Equal(t, "NOT_FOUND", gqlError.Type)
 		assert.Equal(t, []any{"repository"}, gqlError.Path)
 		assert.Contains(t, gqlError.Message, cfg.Owner+"/does-not-exist-repo")
 	}
 }
+
+type testTokenSource string
+
+func (s testTokenSource) Token(context.Context) (string, error) { return string(s), nil }
 
 const _alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -241,15 +778,15 @@ func setGitHubChangeChecksState(
 	owner string,
 	repo string,
 	headHash git.Hash,
-	state forge.ChecksState,
+	check forge.ChangeCheck,
 ) error {
 	// GitHub's GraphQL schema exposes the status rollup we read,
 	// but commit status creation remains a REST API operation.
 	// Check runs are a separate GitHub App-authenticated mechanism,
 	// so these tests create classic commit statuses instead.
 	body, err := json.Marshal(gitHubStatusRequest{
-		State:       gitHubStatusState(state),
-		Context:     "git-spice integration",
+		State:       gitHubStatusState(check.State),
+		Context:     check.Name,
 		Description: "Synthetic status for git-spice integration tests",
 	})
 	if err != nil {
@@ -292,13 +829,13 @@ type gitHubStatusRequest struct {
 	Description string `json:"description"`
 }
 
-func gitHubStatusState(state forge.ChecksState) string {
+func gitHubStatusState(state forge.ChangeCheckState) string {
 	switch state {
-	case forge.ChecksPending:
+	case forge.ChangeCheckPending:
 		return "pending"
-	case forge.ChecksPassed:
+	case forge.ChangeCheckPassed:
 		return "success"
-	case forge.ChecksFailed:
+	case forge.ChangeCheckFailed:
 		return "failure"
 	default:
 		return "error"

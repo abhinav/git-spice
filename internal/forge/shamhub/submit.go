@@ -14,20 +14,20 @@ type submitChangeRequest struct {
 	Owner string `path:"owner" json:"-"`
 	Repo  string `path:"repo" json:"-"`
 
-	Subject   string   `json:"subject,omitempty"`
-	Body      string   `json:"body,omitempty"`
-	Base      string   `json:"base,omitempty"`
-	Head      string   `json:"head,omitempty"`
-	HeadRepo  string   `json:"head_repo,omitempty"` // Format: "owner/repo", if different from target
-	Draft     bool     `json:"draft,omitempty"`
+	Subject   string   `json:"subject,omitzero"`
+	Body      string   `json:"body,omitzero"`
+	Base      string   `json:"base,omitzero"`
+	Head      string   `json:"head,omitzero"`
+	HeadRepo  string   `json:"head_repo,omitzero"` // Format: "owner/repo", if different from target
+	Draft     bool     `json:"draft,omitzero"`
 	Labels    []string `json:"labels,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
 	Assignees []string `json:"assignees,omitempty"`
 }
 
 type submitChangeResponse struct {
-	Number int    `json:"number,omitempty"`
-	URL    string `json:"url,omitempty"`
+	Number int    `json:"number,omitzero"`
+	URL    string `json:"url,omitzero"`
 }
 
 var _ = shamhubRESTHandler("POST /{owner}/{repo}/changes", (*ShamHub).handleSubmitChange)

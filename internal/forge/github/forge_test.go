@@ -3,10 +3,48 @@ package github
 import (
 	"testing"
 
+	"github.com/alecthomas/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git/giturl"
 )
+
+func TestOptions_Stacks(t *testing.T) {
+	tests := []struct {
+		name string
+		give any
+		want bool
+	}{
+		{name: "Default", want: true},
+		{name: "Enabled", give: "true", want: true},
+		{name: "Disabled", give: "false", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var opts Options
+			parser, err := kong.New(
+				&opts,
+				kong.Resolvers(kong.ResolverFunc(func(
+					_ *kong.Context,
+					_ *kong.Path,
+					flag *kong.Flag,
+				) (any, error) {
+					if flag.Tag.Get("config") == "forge.github.stacks" {
+						return tt.give, nil
+					}
+					return nil, nil
+				})),
+			)
+			require.NoError(t, err)
+
+			_, err = parser.Parse(nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, opts.Stacks)
+		})
+	}
+}
 
 func TestURLs(t *testing.T) {
 	tests := []struct {
@@ -198,4 +236,35 @@ func TestChangeURL(t *testing.T) {
 
 	got := repoID.ChangeURL(&PR{Number: 123})
 	assert.Equal(t, "https://github.com/example/repo/pull/123", got)
+}
+
+func TestRepository_ComparisonURL(t *testing.T) {
+	r := &Repository{
+		owner: "example",
+		repo:  "repo",
+		forge: &Forge{Options: Options{URL: DefaultURL}},
+	}
+
+	t.Run("SameRepository", func(t *testing.T) {
+		got := r.ComparisonURL(forge.ComparisonRequest{
+			Base: "main",
+			Head: "feat",
+		})
+		assert.Equal(t, "https://github.com/example/repo/compare/main...feat", got)
+	})
+
+	t.Run("Fork", func(t *testing.T) {
+		got := r.ComparisonURL(forge.ComparisonRequest{
+			Base: "main",
+			Head: "feat#review",
+			HeadRepository: &RepositoryID{
+				url:   DefaultURL,
+				owner: "fork",
+				name:  "repo",
+			},
+		})
+		assert.Equal(t,
+			"https://github.com/example/repo/compare/main...fork:feat%23review",
+			got)
+	})
 }

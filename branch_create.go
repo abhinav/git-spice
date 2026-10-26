@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 
@@ -29,9 +29,11 @@ type branchCreateCmd struct {
 	Below  bool   `help:"Place the branch below the target branch and restack its upstack"`
 	Target string `short:"t" placeholder:"BRANCH" help:"Branch to create the new branch above/below"`
 
-	All         bool   `short:"a" help:"Automatically stage modified and deleted files"`
-	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Commit message"`
-	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"branchCreate.restack" enum:"none,upstack" help:"Whether to restack upstack branches for --insert or --below."`
+
+	All         bool     `short:"a" help:"Automatically stage modified and deleted files"`
+	Message     []string `short:"m" xor:"commit-message-source" sep:"none" placeholder:"MSG" help:"Use the given message as the commit message. May be repeated to add multiple paragraphs."`
+	MessageFile string   `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
@@ -62,6 +64,10 @@ func (*branchCreateCmd) Help() string {
 		--insert will move the branches upstack from the target branch
 		on top of the new branch.
 		--below will create the new branch below the target branch.
+		The upstack branches will be restacked automatically.
+		Use --no-restack to disable that,
+		or the 'spice.branchCreate.restack' configuration option
+		to change the default.
 
 		For example, given the following stack, with A checked out:
 
@@ -108,7 +114,7 @@ func (cmd *branchCreateCmd) Run(
 	restackHandler RestackHandler,
 ) (err error) {
 	// If a message is specified, automatically enable commits
-	if cmd.Message != "" || cmd.MessageFile != "" {
+	if len(cmd.Message) > 0 || cmd.MessageFile != "" {
 		cmd.Commit = true
 	}
 
@@ -140,8 +146,8 @@ func (cmd *branchCreateCmd) Run(
 
 		// Downstack history for the new branch
 		// and for those restacked on top of it.
-		newMergedDownstack       *[]json.RawMessage
-		restackedMergedDownstack *[]json.RawMessage
+		newMergedDownstack       *[]jsontext.Value
+		restackedMergedDownstack *[]jsontext.Value
 	)
 	if cmd.Below {
 		if cmd.Target == trunk {
@@ -165,7 +171,7 @@ func (cmd *branchCreateCmd) Run(
 		// transfer it to the new branch.
 		if len(b.MergedDownstack) > 0 {
 			newMergedDownstack = &b.MergedDownstack
-			restackedMergedDownstack = new([]json.RawMessage)
+			restackedMergedDownstack = new([]jsontext.Value)
 		}
 
 		// TODO: Maybe this transfer should take place at submit time?
@@ -324,7 +330,7 @@ func (cmd *branchCreateCmd) Run(
 		return fmt.Errorf("update branch state: %w", err)
 	}
 
-	if cmd.Below || cmd.Insert {
+	if (cmd.Below || cmd.Insert) && !cmd.Restack.None() {
 		return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{
 			Branch: branchName,
 		})
@@ -356,7 +362,7 @@ func (cmd *branchCreateCmd) commit(
 
 	if err := wt.Commit(ctx, git.CommitRequest{
 		AllowEmpty:  len(diff) == 0,
-		Message:     cmd.Message,
+		Messages:    cmd.Message,
 		MessageFile: cmd.MessageFile,
 		NoVerify:    cmd.NoVerify,
 		All:         cmd.All,

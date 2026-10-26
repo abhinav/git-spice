@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state/storage"
@@ -12,13 +13,10 @@ import (
 
 // DB provides a key-value store that holds JSON values.
 type DB interface {
-	Get(ctx context.Context, k string, v any) error
-	Keys(ctx context.Context, dir string) ([]string, error)
+	storage.Backend
 
 	Set(ctx context.Context, k string, v any, msg string) error
 	Delete(ctx context.Context, k, msg string) error
-	Update(ctx context.Context, req storage.UpdateRequest) error
-	Clear(ctx context.Context, msg string) error
 }
 
 var _ DB = (*storage.DB)(nil)
@@ -131,19 +129,22 @@ func transferTrunkBranch(ctx context.Context, db DB, oldTrunk, newTrunk string) 
 		return fmt.Errorf("list branches: %w", err)
 	}
 
-	// This is a rare operation so we'll just dig into the state directly.
-	var sets []storage.SetRequest
-	for _, name := range branches {
-		var state branchState
-		if err := db.Get(ctx, branchKey(name), &state); err != nil {
-			return fmt.Errorf("get branch state: %w", err)
-		}
+	states := make([]branchState, len(branches))
+	reqs := make([]storage.GetRequest, len(branches))
+	for i, name := range branches {
+		reqs[i] = storage.GetRequest{Key: branchKey(name), Value: &states[i]}
+	}
+	if err := db.GetMany(ctx, reqs); err != nil {
+		return fmt.Errorf("get branch state: %w", err)
+	}
 
-		if state.Base.Name == oldTrunk {
-			state.Base.Name = newTrunk
+	var sets []storage.SetRequest
+	for i, name := range branches {
+		if states[i].Base.Name == oldTrunk {
+			states[i].Base.Name = newTrunk
 			sets = append(sets, storage.SetRequest{
 				Key:   branchKey(name),
-				Value: state,
+				Value: &states[i],
 			})
 		}
 	}
@@ -174,20 +175,24 @@ func OpenStore(ctx context.Context, db DB, logger *silog.Logger) (*Store, error)
 		logger = silog.Nop()
 	}
 
-	version, err := loadVersion(ctx, db)
-	if err != nil {
-		return nil, fmt.Errorf("load store version: %w", err)
+	version := VersionOne
+	var info repoInfo
+	err := db.GetMany(ctx, []storage.GetRequest{
+		{Key: _versionFile, Value: &version},
+		{Key: _repoJSON, Value: &info},
+	})
+	missing, ok := errors.AsType[*storage.MissingKeysError](err)
+	if err != nil && !ok {
+		return nil, fmt.Errorf("read store metadata: %w", err)
 	}
 	if err := checkVersion(version); err != nil {
 		return nil, fmt.Errorf("check store layout: %w", err)
 	}
 
-	var info repoInfo
-	if err := db.Get(ctx, _repoJSON, &info); err != nil {
-		if errors.Is(err, ErrNotExist) {
-			return nil, ErrUninitialized
-		}
-		return nil, fmt.Errorf("get repo state: %w", err)
+	// An absent version keeps the v1 default; a missing repository record
+	// means the store has not been initialized.
+	if ok && slices.Contains(missing.Indexes, 1) {
+		return nil, ErrUninitialized
 	}
 
 	if err := info.Validate(); err != nil {

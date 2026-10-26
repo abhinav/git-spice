@@ -59,8 +59,7 @@ func (cmd *stackEditCmd) Run(
 
 	stack, err := svc.ListStackLinear(ctx, cmd.Branch)
 	if err != nil {
-		var nonLinearErr *spice.NonLinearStackError
-		if errors.As(err, &nonLinearErr) {
+		if nonLinearErr, ok := errors.AsType[*spice.NonLinearStackError](err); ok {
 			// TODO: We could provide a prompt here to select a linear stack to edit from.
 			log.Errorf("%v is part of a stack with a divergent upstack.", cmd.Branch)
 			log.Errorf("%v has multiple branches above it: %s", nonLinearErr.Branch, strings.Join(nonLinearErr.Aboves, ", "))

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -33,22 +33,29 @@ func (e *notLoggedInError) Error() string {
 	return "not logged in to " + e.Forge.ID()
 }
 
-// remoteConfigURLer reads the remote URL before Git transport rewriting.
-type remoteConfigURLer interface {
+// remoteURLer reads configured and transport-resolved remote URLs.
+type remoteURLer interface {
 	// RemoteConfigURL accepts a Git remote name and returns the configured
 	// `remote.<name>.url` value before applying `url.*.insteadOf` rewriting.
 	RemoteConfigURL(context.Context, string) (string, error)
+
+	// RemoteURL accepts a Git remote name and returns the URL Git uses for
+	// transport after applying `url.*.insteadOf` rewriting.
+	RemoteURL(context.Context, string) (string, error)
 }
 
-var _ remoteConfigURLer = (*git.Repository)(nil)
+var _ remoteURLer = (*git.Repository)(nil)
 
 // remoteResolver resolves git-spice remotes to forge repository identities.
 type remoteResolver struct {
+	// HTTPClient sends forge requests; nil uses each forge's default client.
+	HTTPClient *http.Client
+
 	// Forges is the registry of forge implementations that may own a remote.
 	Forges *forge.Registry // required
 
 	// Repository is the Git repository whose remotes should be resolved.
-	Repository remoteConfigURLer // required
+	Repository remoteURLer // required
 
 	// ForgeKind names the forge selected by configuration.
 	//
@@ -72,9 +79,32 @@ func (r *remoteResolver) Resolve(
 	}
 
 	if r.ForgeKind != "" {
-		f, err := lookupForgeKind(r.Forges, r.ForgeKind)
+		resolvedRemoteURL, err := r.Repository.RemoteURL(ctx, remote)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("get resolved remote URL: %w", err)
+		}
+
+		parsedResolvedRemoteURL, err := giturl.Parse(resolvedRemoteURL)
+		if err != nil {
+			return nil, nil, fmt.Errorf("parse resolved remote URL: %w", err)
+		}
+
+		f, err := r.Forges.New(r.ForgeKind, parsedResolvedRemoteURL, &forge.NewOptions{HTTPClient: r.HTTPClient})
+		if err != nil {
+			if errors.Is(err, forge.ErrUnknown) {
+				var available []string
+				for d := range r.Forges.All() {
+					available = append(available, d.ID())
+				}
+				slices.Sort(available)
+
+				return nil, nil, fmt.Errorf(
+					"unknown forge kind %q: expected one of: %s",
+					r.ForgeKind,
+					strings.Join(available, ", "),
+				)
+			}
+			return nil, nil, fmt.Errorf("construct forge %q: %w", r.ForgeKind, err)
 		}
 
 		repoID, err := f.ParseRepositoryPath(parsedRemoteURL.Path)
@@ -84,7 +114,7 @@ func (r *remoteResolver) Resolve(
 		return f, repoID, nil
 	}
 
-	f, repoID, ok := forge.FromRemoteURL(r.Forges, parsedRemoteURL)
+	f, repoID, ok := forge.InferFromRemoteURL(r.Forges, parsedRemoteURL, &forge.NewOptions{HTTPClient: r.HTTPClient})
 	if !ok {
 		return nil, nil, &unsupportedForgeError{
 			Remote:    remote,
@@ -92,23 +122,6 @@ func (r *remoteResolver) Resolve(
 		}
 	}
 	return f, repoID, nil
-}
-
-func lookupForgeKind(forges *forge.Registry, kind string) (forge.Forge, error) {
-	f, ok := forges.Lookup(kind)
-	if ok {
-		return f, nil
-	}
-
-	ids := make(map[string]struct{})
-	for f := range forges.All() {
-		ids[f.ID()] = struct{}{}
-	}
-	return nil, fmt.Errorf(
-		"unknown forge kind %q: expected one of: %s",
-		kind,
-		strings.Join(slices.Sorted(maps.Keys(ids)), ", "),
-	)
 }
 
 // ResolveID identifies the repository for a configured Git remote.

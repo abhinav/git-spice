@@ -1,0 +1,58 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 149
+        host: 127.0.0.1:53776
+        body: '{"subject":"Mergeability conflict-head-LEenejy4","body":"Mergeability scenario test","base":"conflict-base-I5Nzd28C","head":"conflict-head-LEenejy4"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 81
+        body: |-
+            {
+              "number": 29,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/29"
+            }
+        headers:
+            Content-Length:
+                - "81"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 15.5235ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:53776
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/29/mergeability
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 49
+        body: |-
+            {
+              "state": "blocked",
+              "reason": "conflicts"
+            }
+        headers:
+            Content-Length:
+                - "49"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 25.884083ms

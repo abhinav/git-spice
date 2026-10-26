@@ -2,11 +2,12 @@ package gitlab
 
 import (
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ProjectGet fetches a single project by numeric ID or `group/project` path.
@@ -106,6 +107,56 @@ func (c *Client) MergeRequestGet(
 	return &response, resp, nil
 }
 
+// MergeRequestReviewerList lists the reviewers assigned to a merge request
+// with their current review states.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/merge_requests/#retrieve-merge-request-reviewers
+func (c *Client) MergeRequestReviewerList(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+) ([]*MergeRequestReviewer, *Response, error) {
+	var response []*MergeRequestReviewer
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/reviewers",
+			projectID,
+			mergeRequest,
+		),
+		nil,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return response, resp, nil
+}
+
+// MergeRequestApprove approves a merge request as the authenticated user.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/merge_request_approvals/#approve-merge-request
+func (c *Client) MergeRequestApprove(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+	opt *ApproveMergeRequestOptions,
+) (*Response, error) {
+	return c.post(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/approve",
+			projectID,
+			mergeRequest,
+		),
+		nil,
+		opt,
+		nil,
+	)
+}
+
 // MergeRequestUpdate updates a merge request.
 //
 // GitLab API:
@@ -198,6 +249,33 @@ func (c *Client) CommitStatusSet(
 		return nil, resp, err
 	}
 	return &response, resp, nil
+}
+
+// CommitStatusList lists commit statuses.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/commits/#list-commit-statuses
+func (c *Client) CommitStatusList(
+	ctx context.Context,
+	projectID int64,
+	sha string,
+	opt *ListCommitStatusesOptions,
+) ([]*CommitStatus, *Response, error) {
+	var response []*CommitStatus
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/repository/commits/%s/statuses",
+			projectID,
+			sha,
+		),
+		opt.encodeQuery(),
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return response, resp, nil
 }
 
 // MergeRequestNoteCreate creates a merge request note.
@@ -324,6 +402,126 @@ func (c *Client) MergeRequestDiscussionList(
 		return nil, resp, err
 	}
 	return response, resp, nil
+}
+
+// MergeRequestDiscussionCreate creates a review thread on a merge request.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/discussions/#create-a-merge-request-thread
+func (c *Client) MergeRequestDiscussionCreate(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+	opt *CreateMergeRequestDiscussionOptions,
+) (*Discussion, *Response, error) {
+	var response Discussion
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/discussions",
+			projectID,
+			mergeRequest,
+		),
+		nil,
+		opt,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// MergeRequestDiscussionResolve resolves or reopens a merge request thread.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/discussions/#resolve-a-merge-request-thread
+func (c *Client) MergeRequestDiscussionResolve(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+	discussionID string,
+	opt *ResolveMergeRequestDiscussionOptions,
+) (*Discussion, *Response, error) {
+	var response Discussion
+	resp, err := c.put(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/discussions/%s",
+			projectID,
+			mergeRequest,
+			url.PathEscape(discussionID),
+		),
+		nil,
+		opt,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// MergeRequestDiscussionNoteCreate adds a reply to a merge request thread.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/discussions/#add-note-to-a-merge-request-thread
+func (c *Client) MergeRequestDiscussionNoteCreate(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+	discussionID string,
+	opt *AddMergeRequestDiscussionNoteOptions,
+) (*DiscussionNote, *Response, error) {
+	var response DiscussionNote
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/discussions/%s/notes",
+			projectID,
+			mergeRequest,
+			url.PathEscape(discussionID),
+		),
+		nil,
+		opt,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// MergeRequestDiscussionNoteUpdate edits a note in a merge request thread.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/discussions/#update-a-merge-request-thread-note
+func (c *Client) MergeRequestDiscussionNoteUpdate(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+	discussionID string,
+	noteID int64,
+	opt *UpdateMergeRequestDiscussionNoteOptions,
+) (*DiscussionNote, *Response, error) {
+	var response DiscussionNote
+	resp, err := c.put(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/discussions/%s/notes/%d",
+			projectID,
+			mergeRequest,
+			url.PathEscape(discussionID),
+			noteID,
+		),
+		nil,
+		opt,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
 }
 
 // ProjectTemplateList lists project templates for a template type.
@@ -485,6 +683,7 @@ type User struct {
 type BasicMergeRequest struct {
 	IID                     int64        `json:"iid"`
 	SourceProjectID         int64        `json:"source_project_id"`
+	SourceBranch            string       `json:"source_branch"`
 	TargetBranch            string       `json:"target_branch"`
 	Title                   string       `json:"title"`
 	State                   string       `json:"state"`
@@ -495,6 +694,8 @@ type BasicMergeRequest struct {
 	SHA                     string       `json:"sha"`
 	WebURL                  string       `json:"web_url"`
 	ForceRemoveSourceBranch bool         `json:"force_remove_source_branch"`
+	DetailedMergeStatus     string       `json:"detailed_merge_status"`
+	HasConflicts            bool         `json:"has_conflicts"`
 }
 
 // MergeRequest matches the merge request response shape
@@ -504,7 +705,15 @@ type BasicMergeRequest struct {
 // https://docs.gitlab.com/api/merge_requests/
 type MergeRequest struct {
 	BasicMergeRequest
-	HeadPipeline *Pipeline `json:"head_pipeline,omitempty"`
+	HeadPipeline *Pipeline            `json:"head_pipeline,omitzero"`
+	DiffRefs     MergeRequestDiffRefs `json:"diff_refs"`
+}
+
+// MergeRequestDiffRefs holds the revisions needed to position a diff note.
+type MergeRequestDiffRefs struct {
+	BaseSHA  string `json:"base_sha"`
+	HeadSHA  string `json:"head_sha"`
+	StartSHA string `json:"start_sha"`
 }
 
 // Pipeline is a GitLab CI pipeline status summary.
@@ -512,7 +721,22 @@ type MergeRequest struct {
 // GitLab pipelines API:
 // https://docs.gitlab.com/api/pipelines/
 type Pipeline struct {
+	ID     int64  `json:"id"`
 	Status string `json:"status"`
+}
+
+// CommitStatus matches the subset of GitLab commit status fields
+// needed to report named change checks.
+//
+// GitLab commit statuses API:
+// https://docs.gitlab.com/api/commits/#list-commit-statuses
+type CommitStatus struct {
+	ID         int64      `json:"id"`
+	Name       string     `json:"name"`
+	Status     string     `json:"status"`
+	CreatedAt  time.Time  `json:"created_at"`
+	StartedAt  *time.Time `json:"started_at"`
+	FinishedAt *time.Time `json:"finished_at"`
 }
 
 // GitLab pipeline status values.
@@ -530,6 +754,36 @@ const (
 	PipelineStatusSkipped            = "skipped"
 	PipelineStatusManual             = "manual"
 	PipelineStatusScheduled          = "scheduled"
+)
+
+// GitLab detailed merge status values.
+//
+// https://docs.gitlab.com/api/merge_requests/#merge-status
+const (
+	DetailedMergeStatusApprovalsSyncing            = "approvals_syncing"
+	DetailedMergeStatusChecking                    = "checking"
+	DetailedMergeStatusCIMustPass                  = "ci_must_pass"
+	DetailedMergeStatusCIStillRunning              = "ci_still_running"
+	DetailedMergeStatusCommitsStatus               = "commits_status"
+	DetailedMergeStatusConflict                    = "conflict"
+	DetailedMergeStatusDiscussionsNotResolved      = "discussions_not_resolved"
+	DetailedMergeStatusDraftStatus                 = "draft_status"
+	DetailedMergeStatusJiraAssociationMissing      = "jira_association_missing"
+	DetailedMergeStatusMergeable                   = "mergeable"
+	DetailedMergeStatusMergeRequestBlocked         = "merge_request_blocked"
+	DetailedMergeStatusMergeTime                   = "merge_time"
+	DetailedMergeStatusNeedRebase                  = "need_rebase"
+	DetailedMergeStatusNotApproved                 = "not_approved"
+	DetailedMergeStatusNotOpen                     = "not_open"
+	DetailedMergeStatusPreparing                   = "preparing"
+	DetailedMergeStatusRequestedChanges            = "requested_changes"
+	DetailedMergeStatusSecurityPolicyPipelineCheck = "security_policy_pipeline_check"
+	DetailedMergeStatusSecurityPolicyViolations    = "security_policy_violations"
+	DetailedMergeStatusStatusChecksMustPass        = "status_checks_must_pass"
+	DetailedMergeStatusUnchecked                   = "unchecked"
+	DetailedMergeStatusLockedPaths                 = "locked_paths"
+	DetailedMergeStatusLockedLFSFiles              = "locked_lfs_files"
+	DetailedMergeStatusTitleRegex                  = "title_regex"
 )
 
 // NoteAuthor matches the nested author object in note responses.
@@ -567,8 +821,67 @@ type Discussion struct {
 // GitLab discussions API:
 // https://docs.gitlab.com/api/discussions/
 type DiscussionNote struct {
-	Resolvable bool `json:"resolvable"`
-	Resolved   bool `json:"resolved"`
+	ID         int64               `json:"id"`
+	Body       string              `json:"body"`
+	Author     DiscussionNoteUser  `json:"author"`
+	Position   *DiscussionPosition `json:"position,omitzero"`
+	CreatedAt  *time.Time          `json:"created_at,omitzero"`
+	Resolvable bool                `json:"resolvable"`
+	Resolved   bool                `json:"resolved"`
+}
+
+// DiscussionNoteUser matches the author embedded in a discussion note.
+type DiscussionNoteUser struct {
+	Username string `json:"username"`
+}
+
+// DiscussionPosition describes the location of a diff discussion.
+type DiscussionPosition struct {
+	// PositionType determines which coordinates identify the location.
+	PositionType string `json:"position_type"`
+
+	// HeadSHA is the change head revision targeted by the position.
+	HeadSHA string `json:"head_sha"`
+
+	NewPath   string     `json:"new_path"`
+	OldPath   string     `json:"old_path"`
+	OldLine   int64      `json:"old_line"`
+	NewLine   int64      `json:"new_line"`
+	LineRange *LineRange `json:"line_range,omitzero"`
+}
+
+// LineRange describes the inclusive endpoints of a multiline diff discussion.
+type LineRange struct {
+	Start LinePosition `json:"start"`
+	End   LinePosition `json:"end"`
+}
+
+// LinePosition describes one endpoint of a multiline diff discussion.
+type LinePosition struct {
+	LineCode string `json:"line_code"`
+	Type     string `json:"type"`
+	OldLine  int64  `json:"old_line"`
+	NewLine  int64  `json:"new_line"`
+}
+
+// ReviewerState is GitLab's state for an assigned merge request reviewer.
+type ReviewerState string
+
+// GitLab merge request reviewer states.
+const (
+	ReviewerStateUnreviewed       ReviewerState = "unreviewed"
+	ReviewerStateReviewStarted    ReviewerState = "review_started"
+	ReviewerStateReviewed         ReviewerState = "reviewed"
+	ReviewerStateRequestedChanges ReviewerState = "requested_changes"
+	ReviewerStateApproved         ReviewerState = "approved"
+	ReviewerStateUnapproved       ReviewerState = "unapproved"
+)
+
+// MergeRequestReviewer is an assigned reviewer and their review state.
+type MergeRequestReviewer struct {
+	User      BasicUser     `json:"user"`
+	State     ReviewerState `json:"state"`
+	CreatedAt time.Time     `json:"created_at"`
 }
 
 // ProjectTemplate matches the subset of project template fields
@@ -589,7 +902,7 @@ type GetMergeRequestsOptions struct{}
 
 // ListUsersOptions configures GitLab user-list requests.
 type ListUsersOptions struct {
-	Username *string `json:"username,omitempty"`
+	Username *string `json:"username,omitzero"`
 }
 
 func (o *ListUsersOptions) encodeQuery() url.Values {
@@ -605,35 +918,35 @@ func (o *ListUsersOptions) encodeQuery() url.Values {
 
 // CreateMergeRequestOptions configures merge-request creation.
 type CreateMergeRequestOptions struct {
-	Title              *string       `json:"title,omitempty"`
-	Description        *string       `json:"description,omitempty"`
-	SourceBranch       *string       `json:"source_branch,omitempty"`
-	TargetBranch       *string       `json:"target_branch,omitempty"`
-	TargetProjectID    *int64        `json:"target_project_id,omitempty"`
-	Labels             *LabelOptions `json:"labels,omitempty"`
-	AssigneeIDs        *[]int64      `json:"assignee_ids,omitempty"`
-	ReviewerIDs        *[]int64      `json:"reviewer_ids,omitempty"`
-	RemoveSourceBranch *bool         `json:"remove_source_branch,omitempty"`
+	Title              *string       `json:"title,omitzero"`
+	Description        *string       `json:"description,omitzero"`
+	SourceBranch       *string       `json:"source_branch,omitzero"`
+	TargetBranch       *string       `json:"target_branch,omitzero"`
+	TargetProjectID    *int64        `json:"target_project_id,omitzero"`
+	Labels             *LabelOptions `json:"labels,omitzero"`
+	AssigneeIDs        *[]int64      `json:"assignee_ids,omitzero"`
+	ReviewerIDs        *[]int64      `json:"reviewer_ids,omitzero"`
+	RemoveSourceBranch *bool         `json:"remove_source_branch,omitzero"`
 }
 
 // UpdateMergeRequestOptions configures merge-request updates.
 type UpdateMergeRequestOptions struct {
-	Title        *string       `json:"title,omitempty"`
-	TargetBranch *string       `json:"target_branch,omitempty"`
-	AssigneeIDs  *[]int64      `json:"assignee_ids,omitempty"`
-	ReviewerIDs  *[]int64      `json:"reviewer_ids,omitempty"`
-	AddLabels    *LabelOptions `json:"add_labels,omitempty"`
-	StateEvent   *string       `json:"state_event,omitempty"`
+	Title        *string       `json:"title,omitzero"`
+	TargetBranch *string       `json:"target_branch,omitzero"`
+	AssigneeIDs  *[]int64      `json:"assignee_ids,omitzero"`
+	ReviewerIDs  *[]int64      `json:"reviewer_ids,omitzero"`
+	AddLabels    *LabelOptions `json:"add_labels,omitzero"`
+	StateEvent   *string       `json:"state_event,omitzero"`
 }
 
 // ListProjectMergeRequestsOptions configures project merge-request listing.
 type ListProjectMergeRequestsOptions struct {
 	ListOptions
 
-	IIDs         *[]int64 `json:"iids,omitempty"`
-	State        *string  `json:"state,omitempty"`
-	OrderBy      *string  `json:"order_by,omitempty"`
-	SourceBranch *string  `json:"source_branch,omitempty"`
+	IIDs         *[]int64 `json:"iids,omitzero"`
+	State        *string  `json:"state,omitzero"`
+	OrderBy      *string  `json:"order_by,omitzero"`
+	SourceBranch *string  `json:"source_branch,omitzero"`
 }
 
 func (o *ListProjectMergeRequestsOptions) encodeQuery() url.Values {
@@ -667,9 +980,9 @@ func (o *ListProjectMergeRequestsOptions) encodeQuery() url.Values {
 
 // AcceptMergeRequestOptions configures merge-request acceptance.
 type AcceptMergeRequestOptions struct {
-	ShouldRemoveSourceBranch *bool   `json:"should_remove_source_branch,omitempty"`
-	SHA                      *string `json:"sha,omitempty"`
-	Squash                   *bool   `json:"squash,omitempty"`
+	ShouldRemoveSourceBranch *bool   `json:"should_remove_source_branch,omitzero"`
+	SHA                      *string `json:"sha,omitzero"`
+	Squash                   *bool   `json:"squash,omitzero"`
 }
 
 // SetCommitStatusOptions configures commit status creation.
@@ -678,29 +991,57 @@ type SetCommitStatusOptions struct {
 	//
 	// Supported values include pending, running, success,
 	// failed, canceled, and skipped.
-	State *string `json:"state,omitempty"`
+	State *string `json:"state,omitzero"`
 
 	// Name identifies the status context shown in GitLab.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitzero"`
 
 	// Description explains the status result.
-	Description *string `json:"description,omitempty"`
+	Description *string `json:"description,omitzero"`
+
+	// Ref identifies the branch or tag for the commit status.
+	Ref *string `json:"ref,omitzero"`
+}
+
+// ListCommitStatusesOptions configures commit-status listing.
+type ListCommitStatusesOptions struct {
+	ListOptions
+
+	// Ref filters statuses by branch or tag.
+	Ref *string `json:"ref,omitzero"`
+}
+
+func (o *ListCommitStatusesOptions) encodeQuery() url.Values {
+	values := make(url.Values)
+	if o == nil {
+		return values
+	}
+	if o.Ref != nil {
+		values.Set("ref", *o.Ref)
+	}
+	if o.PerPage != 0 {
+		values.Set("per_page", strconv.FormatInt(o.PerPage, 10))
+	}
+	if o.Page != 0 {
+		values.Set("page", strconv.FormatInt(o.Page, 10))
+	}
+	return values
 }
 
 // CreateMergeRequestNoteOptions configures note creation.
 type CreateMergeRequestNoteOptions struct {
-	Body *string `json:"body,omitempty"`
+	Body *string `json:"body,omitzero"`
 }
 
 // UpdateMergeRequestNoteOptions configures note updates.
 type UpdateMergeRequestNoteOptions struct {
-	Body *string `json:"body,omitempty"`
+	Body *string `json:"body,omitzero"`
 }
 
 // ListMergeRequestNotesOptions configures note-list requests.
 type ListMergeRequestNotesOptions struct {
 	ListOptions
-	Sort *string `json:"sort,omitempty"`
+	Sort *string `json:"sort,omitzero"`
 }
 
 func (o *ListMergeRequestNotesOptions) encodeQuery() url.Values {
@@ -723,6 +1064,59 @@ func (o *ListMergeRequestNotesOptions) encodeQuery() url.Values {
 // ListMergeRequestDiscussionsOptions configures discussion-list requests.
 type ListMergeRequestDiscussionsOptions struct {
 	ListOptions
+}
+
+// CreateMergeRequestDiscussionOptions configures a new discussion thread.
+type CreateMergeRequestDiscussionOptions struct {
+	Body     *string          `json:"body,omitzero"`
+	Position *PositionOptions `json:"position,omitzero"`
+}
+
+// PositionOptions describes a positioned discussion.
+type PositionOptions struct {
+	BaseSHA      *string           `json:"base_sha,omitzero"`
+	HeadSHA      *string           `json:"head_sha,omitzero"`
+	StartSHA     *string           `json:"start_sha,omitzero"`
+	PositionType *string           `json:"position_type,omitzero"`
+	NewPath      *string           `json:"new_path,omitzero"`
+	OldPath      *string           `json:"old_path,omitzero"`
+	OldLine      *int64            `json:"old_line,omitzero"`
+	NewLine      *int64            `json:"new_line,omitzero"`
+	LineRange    *LineRangeOptions `json:"line_range,omitzero"`
+}
+
+// LineRangeOptions configures a multiline discussion range.
+type LineRangeOptions struct {
+	Start *LinePositionOptions `json:"start,omitzero"`
+	End   *LinePositionOptions `json:"end,omitzero"`
+}
+
+// LinePositionOptions configures one endpoint of a multiline discussion.
+type LinePositionOptions struct {
+	LineCode *string `json:"line_code,omitzero"`
+	Type     *string `json:"type,omitzero"`
+	OldLine  *int64  `json:"old_line,omitzero"`
+	NewLine  *int64  `json:"new_line,omitzero"`
+}
+
+// ResolveMergeRequestDiscussionOptions configures thread resolution.
+type ResolveMergeRequestDiscussionOptions struct {
+	Resolved *bool `json:"resolved,omitzero"`
+}
+
+// AddMergeRequestDiscussionNoteOptions configures a discussion reply.
+type AddMergeRequestDiscussionNoteOptions struct {
+	Body *string `json:"body,omitzero"`
+}
+
+// UpdateMergeRequestDiscussionNoteOptions configures a discussion-note edit.
+type UpdateMergeRequestDiscussionNoteOptions struct {
+	Body *string `json:"body,omitzero"`
+}
+
+// ApproveMergeRequestOptions configures a merge request approval.
+type ApproveMergeRequestOptions struct {
+	SHA *string `json:"sha,omitzero"`
 }
 
 func (o *ListMergeRequestDiscussionsOptions) encodeQuery() url.Values {

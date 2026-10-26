@@ -11,7 +11,7 @@ git commit --allow-empty -m 'Initial commit'
 gs repo init
 
 # set up a fake GitHub remote
-shamhub init
+shamhub-setup
 shamhub new origin alice/example.git
 shamhub register alice
 git push origin main
@@ -49,7 +49,7 @@ feat 1
 -- repo/feat2.txt --
 feat 2
 -- golden/ls-after.txt --
-┏━■ feat2 (#2) ◀
+┏━━■ feat2 (#2) ◀
 main
 -- golden/final-comments.txt --
 - change: 1

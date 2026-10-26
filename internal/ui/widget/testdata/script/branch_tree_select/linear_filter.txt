@@ -23,12 +23,12 @@ feed <Enter>
 baz
 -- prompt --
 Select a branch:
-      ┏━■ qux ◀
+      ┏━━■ qux ◀
     ┏━┻□ baz
   ┏━┻□ bar
 ┏━┻□ foo
 main
 -- filter --
 Select a branch:
-┏━■ baz ◀
+┏━━■ baz ◀
 bar

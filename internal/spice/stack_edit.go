@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"io"
@@ -74,7 +74,7 @@ func (s *Service) StackEdit(ctx context.Context, req *StackEditRequest) (*StackE
 			// Also in that case, make sure to clear it
 			// from the new position of the original bottom branch.
 			if idx > 0 && branch == bottomName {
-				var newHistory []json.RawMessage
+				var newHistory []jsontext.Value
 				req.MergedDownstack = &newHistory
 			}
 		}

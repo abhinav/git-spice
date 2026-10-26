@@ -36,6 +36,7 @@ type branchCmd struct {
 	Diff branchDiffCmd `cmd:"" aliases:"di" help:"Show diff between a branch and its base"`
 
 	// Pull request management
+	Merge  branchMergeCmd  `cmd:"" aliases:"m" experiment:"merge" help:"Merge a branch into trunk"`
 	Submit branchSubmitCmd `cmd:"" aliases:"s" help:"Submit a branch"`
 }
 

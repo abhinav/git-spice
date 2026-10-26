@@ -28,6 +28,7 @@ const (
 var GitSections = []string{
 	"core",
 	"commit",
+	"color",
 }
 
 // GitConfigLister provides access to git-config output.
@@ -209,6 +210,17 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 		log:                     opts.Log,
 		warnedDeprecatedAliases: make(map[git.ConfigKey]struct{}),
 	}, nil
+}
+
+// Color reports the configured color preference, defaulting to "auto".
+// spice.color takes precedence over color.ui, including an explicit "auto".
+func (c *Config) Color() string {
+	for _, key := range []git.ConfigKey{"spice.color", "color.ui"} {
+		if values := c.items[key]; len(values) > 0 {
+			return values[len(values)-1]
+		}
+	}
+	return "auto"
 }
 
 // ExperimentEnabled reports whether the given experimental feature is enabled.

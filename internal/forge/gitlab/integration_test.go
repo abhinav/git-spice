@@ -101,10 +101,13 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL:     remoteURL,
-		PushRemoteURL: pushRemoteURL,
-		Forge:         &gitlabForge,
-		Sanitizers:    sanitizers,
+		RemoteURL:              remoteURL,
+		PushRemoteURL:          pushRemoteURL,
+		Forge:                  &gitlabForge,
+		Sanitizers:             sanitizers,
+		ReviewThreads:          true,
+		FileReviewThreads:      true,
+		ReviewThreadCommitHash: true,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			ghc := newGitLabClient(t, httpClient)
 			newRepo, err := gitlabforge.NewRepository(
@@ -114,25 +117,35 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t, err)
 			return newRepo
 		},
-		MergeChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, gitlabforge.MergeChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
-		},
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, gitlabforge.CloseChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
+			require.NoError(t, gitlabforge.CloseChange(
+				context.WithoutCancel(t.Context()),
+				repo.(*gitlabforge.Repository),
+				change.(*gitlabforge.MR),
+			))
 		},
-		SetChangeChecksState: func(
+		SetChangeCheck: func(
 			t *testing.T,
 			httpClient *http.Client,
 			repo forge.Repository,
-			_ forge.ChangeID,
+			changeID forge.ChangeID,
 			headHash git.Hash,
-			state forge.ChecksState,
+			check forge.ChangeCheck,
 		) {
 			client := newGitLabClient(t, httpClient)
-			name := "git-spice integration"
+			mr, _, err := client.MergeRequestGet(
+				t.Context(),
+				gitlabforge.RepositoryProjectID(
+					repo.(*gitlabforge.Repository),
+				),
+				changeID.(*gitlabforge.MR).Number,
+				nil,
+			)
+			require.NoError(t, err)
+
 			description := "Synthetic status for git-spice integration tests"
-			status := gitLabStatusState(state)
-			_, _, err := client.CommitStatusSet(
+			status := gitLabStatusState(check.State)
+			_, _, err = client.CommitStatusSet(
 				t.Context(),
 				gitlabforge.RepositoryProjectID(
 					repo.(*gitlabforge.Repository),
@@ -140,8 +153,9 @@ func TestIntegration(t *testing.T) {
 				headHash.String(),
 				&gitlab.SetCommitStatusOptions{
 					State:       &status,
-					Name:        &name,
+					Name:        &check.Name,
 					Description: &description,
+					Ref:         &mr.SourceBranch,
 				},
 			)
 			require.NoError(t, err)
@@ -156,6 +170,8 @@ func TestIntegration(t *testing.T) {
 		SkipMerge:             true, // Merge requires MR approval settings to be disabled
 		Reviewers:             []string{cfg.Reviewer},
 		Assignees:             []string{cfg.Assignee},
+		// TODO: Enable the combined metadata test after recording its fixtures.
+		SkipCombinedMetadata: true,
 	})
 }
 
@@ -283,13 +299,13 @@ func randomString(n int) string {
 	return string(b)
 }
 
-func gitLabStatusState(state forge.ChecksState) string {
+func gitLabStatusState(state forge.ChangeCheckState) string {
 	switch state {
-	case forge.ChecksPending:
+	case forge.ChangeCheckPending:
 		return gitlab.PipelineStatusPending
-	case forge.ChecksPassed:
+	case forge.ChangeCheckPassed:
 		return gitlab.PipelineStatusSuccess
-	case forge.ChecksFailed:
+	case forge.ChangeCheckFailed:
 		return gitlab.PipelineStatusFailed
 	default:
 		return gitlab.PipelineStatusFailed

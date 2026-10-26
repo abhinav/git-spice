@@ -5,16 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"slices"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/graphqlutil"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
 
 // PRComment is a ChangeCommentID for a GitHub PR comment.
 type PRComment struct {
-	GQLID githubv4.ID `json:"gqlID,omitempty"`
-	URL   string      `json:"url,omitempty"`
+	// GQLID is the comment's GraphQL node ID.
+	GQLID github.ID `json:"gqlID,omitzero"`
+
+	// URL is GitHub's browser URL for the comment.
+	URL string `json:"url,omitzero"`
 }
 
 var _ forge.ChangeCommentID = (*PRComment)(nil)
@@ -47,31 +50,15 @@ func (r *Repository) PostChangeComment(
 		return nil, err
 	}
 
-	var m struct {
-		AddComment struct {
-			CommentEdge struct {
-				Node struct {
-					ID  githubv4.ID `graphql:"id"`
-					URL string      `graphql:"url"`
-				} `graphql:"node"`
-			} `graphql:"commentEdge"`
-		} `graphql:"addComment(input: $input)"`
-	}
-
-	input := githubv4.AddCommentInput{
-		SubjectID: gqlID,
-		Body:      githubv4.String(markdown),
-	}
-
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	comment, err := r.gateway.AddComment(ctx, gqlID, markdown)
+	if err != nil {
 		return nil, fmt.Errorf("post comment: %w", err)
 	}
 
-	n := m.AddComment.CommentEdge.Node
-	r.log.Debug("Posted comment", "url", n.URL)
+	r.log.Debug("Posted comment", "url", comment.URL)
 	return &PRComment{
-		GQLID: n.ID,
-		URL:   n.URL,
+		GQLID: comment.ID,
+		URL:   comment.URL,
 	}, nil
 }
 
@@ -84,20 +71,8 @@ func (r *Repository) UpdateChangeComment(
 	cid := mustPRComment(id)
 	gqlID := cid.GQLID
 
-	var m struct {
-		UpdateIssueComment struct {
-			IssueComment struct {
-				ID githubv4.ID `graphql:"id"`
-			} `graphql:"issueComment"`
-		} `graphql:"updateIssueComment(input: $input)"`
-	}
-
-	input := githubv4.UpdateIssueCommentInput{
-		Body: githubv4.String(markdown),
-		ID:   gqlID,
-	}
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
-		if errors.Is(err, graphqlutil.ErrNotFound) {
+	if err := r.gateway.UpdateIssueComment(ctx, gqlID, markdown); err != nil {
+		if errors.Is(err, github.ErrNotFound) {
 			return fmt.Errorf("update comment: %w", forge.ErrNotFound)
 		}
 		return fmt.Errorf("update comment: %w", err)
@@ -117,14 +92,7 @@ func (r *Repository) DeleteChangeComment(
 	cid := mustPRComment(id)
 	gqlID := cid.GQLID
 
-	var m struct {
-		DeleteIssueComment struct {
-			ClientMutationID githubv4.String `graphql:"clientMutationId"`
-		} `graphql:"deleteIssueComment(input: $input)"`
-	}
-
-	input := githubv4.DeleteIssueCommentInput{ID: gqlID}
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gateway.DeleteIssueComment(ctx, gqlID); err != nil {
 		return fmt.Errorf("delete comment: %w", err)
 	}
 	r.log.Debug("Deleted comment", "url", cid.URL)
@@ -148,29 +116,17 @@ func (r *Repository) ListChangeComments(
 	id forge.ChangeID,
 	options *forge.ListChangeCommentsOptions,
 ) iter.Seq2[*forge.ListChangeCommentItem, error] {
-	type commentNode struct {
-		ID   githubv4.ID `graphql:"id"`
-		Body string      `graphql:"body"`
-		URL  string      `graphql:"url"`
-
-		ViewerCanUpdate bool `graphql:"viewerCanUpdate"`
-		ViewerDidAuthor bool `graphql:"viewerDidAuthor"`
-
-		CreatedAt githubv4.DateTime `graphql:"createdAt"`
-		UpdatedAt githubv4.DateTime `graphql:"updatedAt"`
-	}
-
-	var filters []func(commentNode) (keep bool)
+	var filters []func(*github.Comment) (keep bool)
 	if options != nil {
 		if len(options.BodyMatchesAll) != 0 {
 			for _, re := range options.BodyMatchesAll {
-				filters = append(filters, func(node commentNode) bool {
+				filters = append(filters, func(node *github.Comment) bool {
 					return re.MatchString(node.Body)
 				})
 			}
 		}
 		if options.CanUpdate {
-			filters = append(filters, func(node commentNode) bool {
+			filters = append(filters, func(node *github.Comment) bool {
 				return node.ViewerCanUpdate
 			})
 		}
@@ -184,63 +140,29 @@ func (r *Repository) ListChangeComments(
 	}
 
 	return func(yield func(*forge.ListChangeCommentItem, error) bool) {
-		var q struct {
-			Node struct {
-				PullRequest struct {
-					Comments struct {
-						PageInfo struct {
-							EndCursor   githubv4.String `graphql:"endCursor"`
-							HasNextPage bool            `graphql:"hasNextPage"`
-						} `graphql:"pageInfo"`
-
-						Nodes []commentNode `graphql:"nodes"`
-					} `graphql:"comments(first: $first, after: $after)"`
-				} `graphql:"... on PullRequest"`
-			} `graphql:"node(id: $id)"`
-		}
-
-		variables := map[string]any{
-			"id":    gqlID,
-			"first": githubv4.Int(_listChangeCommentsPageSize),
-			"after": (*githubv4.String)(nil),
-		}
-
-		for pageNum := 1; true; pageNum++ {
-			if err := r.client.Query(ctx, &q, variables); err != nil {
-				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
+		for node, err := range r.gateway.PullRequestComments(ctx, gqlID, &github.PaginationOptions{
+			ItemsPerPage: _listChangeCommentsPageSize,
+		}) {
+			if err != nil {
+				yield(nil, err)
 				return
 			}
 
-			for _, node := range q.Node.PullRequest.Comments.Nodes {
-				match := true
-				for _, filter := range filters {
-					if !filter(node) {
-						match = false
-						break
-					}
-				}
-				if !match {
-					continue
-				}
-
-				item := &forge.ListChangeCommentItem{
-					ID: &PRComment{
-						GQLID: node.ID,
-						URL:   node.URL,
-					},
-					Body: node.Body,
-				}
-
-				if !yield(item, nil) {
-					return
-				}
+			if slices.ContainsFunc(filters, func(keep func(*github.Comment) bool) bool {
+				return !keep(node)
+			}) {
+				continue
 			}
 
-			if !q.Node.PullRequest.Comments.PageInfo.HasNextPage {
+			if !yield(&forge.ListChangeCommentItem{
+				ID: &PRComment{
+					GQLID: node.ID,
+					URL:   node.URL,
+				},
+				Body: node.Body,
+			}, nil) {
 				return
 			}
-
-			variables["after"] = q.Node.PullRequest.Comments.PageInfo.EndCursor
 		}
 	}
 }

@@ -382,7 +382,7 @@ func TestWrite_resolvesThemeAtRenderTime(t *testing.T) {
 	require.NoError(t, Write(&out, g, opts))
 
 	got := out.String()
-	assert.Equal(t, "┏━■ feat\nmain\n", ansi.Strip(got))
+	assert.Equal(t, "┏━━■ feat\nmain\n", ansi.Strip(got))
 	assert.Contains(t, got, "\x1b[96m■\x1b[m")
 }
 

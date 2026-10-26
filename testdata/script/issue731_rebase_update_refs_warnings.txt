@@ -54,8 +54,8 @@ change A
 additional change in A
 
 -- golden/ll-before.txt --
-      ┏━■ featD ◀
-      ┃   dab4857 commit D (now)
+      ┏━━■ featD ◀
+      ┃    dab4857 commit D (now)
     ┏━┻□ featC
     ┃    f56fce0 commit C (now)
   ┏━┻□ featB
@@ -64,8 +64,8 @@ additional change in A
 ┃    eb56755 commit A (now)
 main
 -- golden/ll-after.txt --
-      ┏━■ featD ◀
-      ┃   285a1b7 commit D (now)
+      ┏━━■ featD ◀
+      ┃    285a1b7 commit D (now)
     ┏━┻□ featC
     ┃    f21feba commit C (now)
   ┏━┻□ featB

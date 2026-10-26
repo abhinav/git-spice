@@ -10,6 +10,8 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
+	"go.abhg.dev/gs/internal/sigstack"
 )
 
 // FormKeyMap defines the key bindings for a form.
@@ -179,20 +181,41 @@ type RunOptions struct {
 
 	// WithoutSignals requests that the form not register signal handlers.
 	WithoutSignals bool
+
+	// Signals coordinates signal handling with the rest of the command.
+	Signals *sigstack.Stack
 }
 
 // FormRunOptions specifies options for [Form.Run].
 type FormRunOptions = RunOptions
 
 // RunModel runs the given Bubble Tea model.
-func RunModel(model tea.Model, opts *RunOptions) error {
+func RunModel(model tea.Model, opts *RunOptions) (err error) {
 	opts = cmp.Or(opts, &RunOptions{})
 
 	var teaOpts []tea.ProgramOption
+	var printOutput *OutputWriter
+
 	if i := opts.Input; i != nil {
 		teaOpts = append(teaOpts, tea.WithInput(i))
 	}
 	if o := opts.Output; o != nil {
+		cw, _ := o.(*colorprofile.Writer)
+		if cw != nil {
+			teaOpts = append(teaOpts, tea.WithColorProfile(cw.Profile))
+			o = cw.Forward
+		}
+		if ow, ok := o.(*OutputWriter); ok {
+			// Bubble Tea renders to the raw terminal stream.
+			// Ordinary writes use printTo below during the active program run.
+			printOutput = ow
+			o = ow.Unwrap()
+		}
+		if cw != nil && cw.Profile == colorprofile.NoTTY {
+			// Bubble Tea still emits terminal controls with a NoTTY profile.
+			// Filter those out without routing frames back through OutputWriter.
+			o = &colorprofile.Writer{Forward: o, Profile: colorprofile.NoTTY}
+		}
 		teaOpts = append(teaOpts, tea.WithOutput(o))
 	}
 	if opts.Width > 0 && opts.Height > 0 {
@@ -205,12 +228,14 @@ func RunModel(model tea.Model, opts *RunOptions) error {
 	if opts.WithoutSignals {
 		teaOpts = append(teaOpts, tea.WithoutSignals())
 	}
-
 	program := tea.NewProgram(model, teaOpts...)
+	if printOutput != nil {
+		defer printOutput.printTo(program)()
+	}
 	if msg := opts.SendMsg; msg != nil {
 		go program.Send(msg)
 	}
-	_, err := program.Run()
+	_, err = program.Run()
 	return err
 }
 

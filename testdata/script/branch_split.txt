@@ -32,10 +32,10 @@ feature2
 -- repo/feature3.txt --
 feature3
 -- golden/before.txt --
-┏━■ features ◀
+┏━━■ features ◀
 main
 -- golden/after.txt --
-    ┏━■ features ◀
+    ┏━━■ features ◀
   ┏━┻□ feature2
 ┏━┻□ feature1
 main

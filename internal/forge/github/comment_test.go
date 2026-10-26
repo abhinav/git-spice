@@ -1,14 +1,14 @@
 package github
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"testing"
 	"time"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
@@ -120,9 +120,8 @@ func TestListChangeComments(t *testing.T) {
 			}
 
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				enc := json.NewEncoder(w)
-				enc.SetIndent("", "  ")
-				assert.NoError(t, enc.Encode(response))
+				enc := jsontext.NewEncoder(w, jsontext.WithIndent("  "))
+				assert.NoError(t, json.MarshalEncode(enc, response))
 			}))
 			defer srv.Close()
 
@@ -130,7 +129,7 @@ func TestListChangeComments(t *testing.T) {
 				t.Context(), new(Forge),
 				"owner", "repo",
 				silogtest.New(t),
-				githubv4.NewEnterpriseClient(srv.URL, nil),
+				newTestGateway(t, srv.URL),
 				"repoID",
 			)
 			require.NoError(t, err)

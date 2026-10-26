@@ -1,7 +1,9 @@
 package state_test
 
 import (
-	"encoding/json"
+	"context"
+	"encoding/json/jsontext"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,7 +38,7 @@ func TestStore(t *testing.T) {
 			Base:           "main",
 			BaseHash:       "123456",
 			ChangeForge:    "shamhub",
-			ChangeMetadata: json.RawMessage(`{"number": 42}`),
+			ChangeMetadata: jsontext.Value(`{"number": 42}`),
 		}},
 	})
 	require.NoError(t, err)
@@ -58,7 +60,7 @@ func TestStore(t *testing.T) {
 			Base:           "main",
 			BaseHash:       "abcdef",
 			ChangeForge:    "shamhub",
-			ChangeMetadata: json.RawMessage(`{"id": 42}`),
+			ChangeMetadata: jsontext.Value(`{"id": 42}`),
 		}},
 	}))
 
@@ -71,7 +73,7 @@ func TestStore(t *testing.T) {
 					Base:           "bar2",
 					BaseHash:       "54321",
 					ChangeForge:    "shamhub",
-					ChangeMetadata: json.RawMessage(`{"id": 43}`),
+					ChangeMetadata: jsontext.Value(`{"id": 43}`),
 				},
 			},
 		})
@@ -93,7 +95,7 @@ func TestStore(t *testing.T) {
 				Name:           "bar/baz",
 				Base:           "main",
 				ChangeForge:    "shamhub",
-				ChangeMetadata: json.RawMessage(`{"id": 44}`),
+				ChangeMetadata: jsontext.Value(`{"id": 44}`),
 				BaseHash:       "abcdef",
 			}},
 		})
@@ -262,7 +264,7 @@ func TestOpenStore_remoteMigrationMalformed(t *testing.T) {
 
 	_, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
 	require.Error(t, err)
-	assert.ErrorContains(t, err, "get repo state:")
+	assert.ErrorContains(t, err, `decode JSON for "repo":`)
 }
 
 func TestInitStore_writesVersionOneForSameRemote(t *testing.T) {
@@ -368,6 +370,29 @@ func TestStore_SetRemote_downgradesToVersionOneForSameRemote(t *testing.T) {
 	}, got)
 }
 
+func TestInitStore_changeTrunkPreservesBranches(t *testing.T) {
+	ctx := t.Context()
+	db := storage.NewDB(make(storage.MapBackend))
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: db, Trunk: "main"})
+	require.NoError(t, err)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{Name: "base", Base: "main", BaseHash: "recorded", ChangeForge: "shamhub", ChangeMetadata: jsontext.Value(`{"number":42}`)},
+			{Name: "child", Base: "base", BaseHash: "parent"},
+		},
+		Message: "seed stack",
+	}))
+	store, err = state.InitStore(ctx, state.InitStoreRequest{DB: db, Trunk: "other"})
+	require.NoError(t, err)
+	branches, err := store.LookupBranches(ctx, []string{"base", "child"})
+	require.NoError(t, err)
+	assert.Equal(t, "other", branches[0].Base)
+	assert.Equal(t, "recorded", branches[0].BaseHash.String())
+	assert.JSONEq(t, `{"number":42}`, branches[0].ChangeMetadata.String())
+	assert.Equal(t, "base", branches[1].Base)
+	assert.Equal(t, "parent", branches[1].BaseHash.String())
+}
+
 func TestOpenStore_errors(t *testing.T) {
 	t.Run("VersionMismatch", func(t *testing.T) {
 		mem := storage.MapBackend{
@@ -394,7 +419,7 @@ func TestOpenStore_errors(t *testing.T) {
 
 		_, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "get repo state:")
+		assert.ErrorContains(t, err, `decode JSON for "repo":`)
 	})
 
 	t.Run("CorruptRepo/Incomplete", func(t *testing.T) {
@@ -406,4 +431,21 @@ func TestOpenStore_errors(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "corrupt state:")
 	})
+}
+
+func TestOpenStore_batchReadError(t *testing.T) {
+	db := &failedBatchDB{DB: storage.NewDB(storage.MapBackend{
+		"version": []byte("1"),
+		"repo":    []byte(`{"trunk":"main"}`),
+	})}
+	_, err := state.OpenStore(t.Context(), db, nil)
+	assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
+}
+
+type failedBatchDB struct {
+	*storage.DB
+}
+
+func (*failedBatchDB) GetMany(context.Context, []storage.GetRequest) error {
+	return io.ErrUnexpectedEOF
 }

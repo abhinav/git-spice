@@ -1,0 +1,21 @@
+Usage: gs review delete (rm) <draft> ... [flags]
+
+Delete draft comments
+
+Deletes one or more local draft comments.
+
+Use 'gs review list --draft-only' to find the branch-local draft IDs.
+
+Arguments:
+  <draft> ...    Draft comment IDs to delete.
+
+Flags:
+  -b, --branch=BRANCH    Branch containing the drafts. Defaults to the current
+                         branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

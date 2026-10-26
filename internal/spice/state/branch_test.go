@@ -2,7 +2,8 @@ package state_test
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"errors"
 	"maps"
 	"slices"
 	"testing"
@@ -216,7 +217,7 @@ func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 			{
 				Name:           "foo",
 				Base:           "main",
-				ChangeMetadata: json.RawMessage(`{"number": 123}`),
+				ChangeMetadata: jsontext.Value(`{"number": 123}`),
 				ChangeForge:    "github",
 			},
 		},
@@ -285,6 +286,88 @@ func TestBranchTxUpsert_canClearUpstream(t *testing.T) {
 	foo, err = store.LookupBranch(ctx, "foo")
 	require.NoError(t, err)
 	assert.Equal(t, "", foo.UpstreamBranch)
+}
+
+func TestStore_LookupBranches(t *testing.T) {
+	ctx := t.Context()
+	db := &getManyDB{
+		DB: storage.NewDB(make(storage.MapBackend)),
+	}
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	upstream := "origin/foo"
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{
+				Name:           "foo",
+				Base:           "main",
+				BaseHash:       "abc123",
+				ChangeMetadata: jsontext.Value(`{"number": 123}`),
+				ChangeForge:    "github",
+				UpstreamBranch: &upstream,
+			},
+			{
+				Name: "bar",
+				Base: "foo",
+			},
+		},
+		Message: "add branches",
+	}))
+
+	branches, err := store.LookupBranches(ctx, []string{"foo", "bar"})
+	require.NoError(t, err)
+
+	require.Len(t, branches, 2)
+	assert.Equal(t, "main", branches[0].Base)
+	assert.Equal(t, "abc123", branches[0].BaseHash.String())
+	assert.Equal(t, "github", branches[0].ChangeForge)
+	assert.JSONEq(t, `{"number": 123}`, string(branches[0].ChangeMetadata))
+	assert.Equal(t, "origin/foo", branches[0].UpstreamBranch)
+	assert.Equal(t, "foo", branches[1].Base)
+	assert.Equal(t, []string{"branches/foo", "branches/bar"}, db.getManyKeys)
+	assert.Equal(t, 1, db.getManyCalls)
+}
+
+func TestStore_LookupBranch_usesGetMany(t *testing.T) {
+	ctx := t.Context()
+	db := &getManyDB{DB: storage.NewDB(make(storage.MapBackend))}
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: db, Trunk: "main"})
+	require.NoError(t, err)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{{Name: "feature", Base: "main"}},
+	}))
+	db.getManyCalls = 0
+	_, err = store.LookupBranch(ctx, "feature")
+	require.NoError(t, err)
+	assert.Equal(t, 1, db.getManyCalls)
+	assert.Equal(t, []string{"branches/feature"}, db.getManyKeys)
+}
+
+func TestStore_LookupBranches_missing(t *testing.T) {
+	ctx := t.Context()
+	db := &getManyDB{DB: storage.NewDB(make(storage.MapBackend))}
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: db, Trunk: "main"})
+	require.NoError(t, err)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{{Name: "feature", Base: "main", BaseHash: "abc123"}},
+	}))
+	db.getManyCalls = 0
+
+	responses, err := store.LookupBranches(ctx, []string{"missing", "feature", "missing", "feature"})
+	missing, ok := errors.AsType[*storage.MissingKeysError](err)
+	require.True(t, ok, "expected missing keys, got %v", err)
+	assert.Equal(t, []int{0, 2}, missing.Indexes)
+	assert.Equal(t, []string{"branches/missing", "branches/missing"}, missing.Keys)
+	require.Len(t, responses, 4)
+	assert.Nil(t, responses[0])
+	assert.Equal(t, "main", responses[1].Base)
+	assert.Nil(t, responses[2])
+	assert.Equal(t, responses[1], responses[3])
+	assert.Equal(t, 1, db.getManyCalls)
 }
 
 // Uses rapid to run randomized scenarios on the branch state
@@ -564,4 +647,23 @@ func (sm *branchStateUncorruptible) ChangeTrunk(t *rapid.T) {
 	sm.store = store
 	sm.trunk = newTrunk
 	t.Logf("changed trunk to %q", newTrunk)
+}
+
+type getManyDB struct {
+	*storage.DB
+
+	getManyCalls int
+	getManyKeys  []string
+}
+
+func (db *getManyDB) GetMany(
+	ctx context.Context,
+	reqs []storage.GetRequest,
+) error {
+	db.getManyCalls++
+	db.getManyKeys = make([]string, 0, len(reqs))
+	for _, req := range reqs {
+		db.getManyKeys = append(db.getManyKeys, req.Key)
+	}
+	return db.DB.GetMany(ctx, reqs)
 }

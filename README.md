@@ -14,7 +14,8 @@
 git-spice is a tool for stacking Git branches.
 It lets you manage and navigate stacks of branches,
 conveniently modify and rebase them,
-and create GitHub Pull Requests or GitLab Merge Requests from them.
+and create GitHub, Bitbucket, Gitea, or Forgejo Pull Requests
+or GitLab Merge Requests from them.
 
 See <https://abhinav.github.io/git-spice/> for more details.
 
@@ -52,7 +53,7 @@ $ gs sr        # stack restack
 
 - Create, edit, and navigate stacks of branches with ease.
 - Submit the entire stack or parts of it with a single command.
-  Supports GitHub, GitLab, and BitBucket.
+  Supports GitHub, GitLab, Bitbucket, Gitea, and Forgejo hosts such as Codeberg.
 - Keep using your existing workflow and adopt git-spice incrementally.
 - Completely offline operation with no external dependencies
   until you push or pull from a remote repository.
@@ -64,7 +65,7 @@ See <https://abhinav.github.io/git-spice/> for the full documentation.
 
 ## Sponsors
 
-<!-- sponsors --><a href="https://github.com/BugenZhao"><img src="https:&#x2F;&#x2F;github.com&#x2F;BugenZhao.png" width="60px" alt="User avatar: Bugen Zhao" /></a><a href="https://github.com/ichoosetoaccept"><img src="https:&#x2F;&#x2F;github.com&#x2F;ichoosetoaccept.png" width="60px" alt="User avatar: Ismar" /></a><a href="https://github.com/"><img src="https:&#x2F;&#x2F;raw.githubusercontent.com&#x2F;JamesIves&#x2F;github-sponsors-readme-action&#x2F;dev&#x2F;.github&#x2F;assets&#x2F;placeholder.png" width="60px" alt="User avatar: Private Sponsor" /></a><!-- sponsors -->
+<!-- sponsors --><a href="https://github.com/BugenZhao"><img src="https:&#x2F;&#x2F;github.com&#x2F;BugenZhao.png" width="60px" alt="User avatar: Bugen Zhao" /></a><a href="https://github.com/ichoosetoaccept"><img src="https:&#x2F;&#x2F;github.com&#x2F;ichoosetoaccept.png" width="60px" alt="User avatar: Ismar" /></a><a href="https://github.com/tavyc"><img src="https:&#x2F;&#x2F;github.com&#x2F;tavyc.png" width="60px" alt="User avatar: Octavian Cerna" /></a><a href="https://github.com/messense"><img src="https:&#x2F;&#x2F;github.com&#x2F;messense.png" width="60px" alt="User avatar: messense" /></a><a href="https://github.com/"><img src="https:&#x2F;&#x2F;raw.githubusercontent.com&#x2F;JamesIves&#x2F;github-sponsors-readme-action&#x2F;dev&#x2F;.github&#x2F;assets&#x2F;placeholder.png" width="60px" alt="User avatar: Private Sponsor" /></a><!-- sponsors -->
 
 ## License
 

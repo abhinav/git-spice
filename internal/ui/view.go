@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
+	"go.abhg.dev/gs/internal/sigstack"
 )
 
 // ErrPrompt indicates that we're not running in interactive mode.
@@ -64,14 +65,16 @@ var _ View = (*FileView)(nil)
 
 // NewFileView builds a non-interactive view for the given writer.
 func NewFileView(w io.Writer) *FileView {
+	detectOutput := unwrapOutput(w)
+
 	cpw, ok := w.(*colorprofile.Writer)
 	if !ok {
-		cpw = colorprofile.NewWriter(w, os.Environ())
+		cpw = colorprofile.NewWriter(detectOutput, os.Environ())
 	}
 
 	return &FileView{
 		w:     cpw,
-		theme: detectTheme(nil, w),
+		theme: detectTheme(nil, detectOutput),
 	}
 }
 
@@ -90,20 +93,32 @@ type TerminalView struct {
 	r io.Reader
 	w io.Writer
 
-	theme func() Theme
+	theme   func() Theme
+	signals *sigstack.Stack
 }
 
 var _ InteractiveView = (*TerminalView)(nil)
 
 // NewTerminalView builds an interactive view for the given streams.
 func NewTerminalView(r io.Reader, w io.Writer) *TerminalView {
+	detectOutput := unwrapOutput(w)
+
 	return &TerminalView{
 		r: r,
 		w: w,
 		theme: sync.OnceValue(func() Theme {
-			return detectTheme(r, w)
+			return detectTheme(r, detectOutput)
 		}),
 	}
+}
+
+// WithSignals sets the signal stack used by terminal UI components.
+//
+// If WithSignals is not called,
+// components that need signal handling create private stacks.
+func (tv *TerminalView) WithSignals(signals *sigstack.Stack) *TerminalView {
+	tv.signals = signals
+	return tv
 }
 
 func (tv *TerminalView) Write(p []byte) (int, error) {
@@ -118,9 +133,10 @@ func (tv *TerminalView) Theme() Theme {
 // Prompt prompts the user for input with the given interactive fields.
 func (tv *TerminalView) Prompt(fields ...Field) error {
 	return NewForm(fields...).Run(&FormRunOptions{
-		Input:  tv.r,
-		Output: tv.w,
-		Theme:  tv.theme(),
+		Input:   tv.r,
+		Output:  tv.w,
+		Theme:   tv.theme(),
+		Signals: tv.signals,
 	})
 }
 
@@ -139,5 +155,18 @@ func (tv *TerminalView) RunModel(
 	if opts.Theme == (Theme{}) {
 		opts.Theme = tv.theme()
 	}
+	if opts.Signals == nil {
+		opts.Signals = tv.signals
+	}
 	return RunModel(model, opts)
+}
+
+func unwrapOutput(w io.Writer) io.Writer {
+	if cw, ok := w.(*colorprofile.Writer); ok {
+		w = cw.Forward
+	}
+	if ow, ok := w.(*OutputWriter); ok {
+		w = ow.Unwrap()
+	}
+	return w
 }

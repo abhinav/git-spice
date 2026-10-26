@@ -136,8 +136,8 @@ feature 8
 > We can track it as the base for feat3, or skip it.
 "feat1"
 -- golden/ll.txt --
-        ┏━■ feat8 ◀
-        ┃   ed87235 Add feat8 (now)
+        ┏━━■ feat8 ◀
+        ┃    ed87235 Add feat8 (now)
       ┏━┻□ feat7
       ┃    72d250a Add feat7 (now)
       ┃    67f3bad Add feat6 (now)

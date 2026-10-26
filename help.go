@@ -366,7 +366,7 @@ type helpFlagGroup struct {
 func collectFlagGroups(flags [][]*kong.Flag) []helpFlagGroup {
 	// Track groups in order of appearance
 	var groups []*kong.Group
-	seenGroups := make(map[string]bool)
+	seenGroups := make(map[string]struct{})
 
 	// Flags grouped by their group key
 	flagsByGroup := make(map[string][][]*kong.Flag)
@@ -378,9 +378,9 @@ func collectFlagGroups(flags [][]*kong.Flag) []helpFlagGroup {
 			key := ""
 			if flag.Group != nil {
 				key = flag.Group.Key
-				if !seenGroups[key] {
+				if _, ok := seenGroups[key]; !ok {
 					groups = append(groups, flag.Group)
-					seenGroups[key] = true
+					seenGroups[key] = struct{}{}
 				}
 			}
 

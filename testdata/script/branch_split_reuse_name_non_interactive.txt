@@ -43,14 +43,14 @@ feature2
 -- repo/feature3.txt --
 feature3
 -- golden/before.txt --
-┏━■ features ◀
-┃   1b17c72 Add feature3 (now)
-┃   0c7ed55 Add feature2 (now)
-┃   a3a4c59 Add feature1 (now)
+┏━━■ features ◀
+┃    1b17c72 Add feature3 (now)
+┃    0c7ed55 Add feature2 (now)
+┃    a3a4c59 Add feature1 (now)
 main
 -- golden/after.txt --
-    ┏━■ feature3 ◀
-    ┃   1b17c72 Add feature3 (now)
+    ┏━━■ feature3 ◀
+    ┃    1b17c72 Add feature3 (now)
   ┏━┻□ feature2
   ┃    0c7ed55 Add feature2 (now)
 ┏━┻□ features

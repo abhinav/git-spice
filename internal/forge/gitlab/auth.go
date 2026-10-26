@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"cmp"
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -25,20 +26,20 @@ const _oauthAppID = "3467e093f73e133c18ea6008817c00f2c91ac2ee0ec60d6be8aca6fa7c6
 
 // AuthenticationToken defines the token returned by the GitLab forge.
 type AuthenticationToken struct {
-	forge.AuthenticationToken
+	forge.AuthenticationToken `json:"-"`
 
 	// AuthType specifies the kind of authentication method used.
 	//
 	// If AuthTypeGitLabCLI, AccessToken is not used.
-	AuthType AuthType `json:"auth_type,omitempty"` // required
+	AuthType AuthType `json:"auth_type,omitzero"` // required
 
 	// AccessToken is the GitLab access token.
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken string `json:"access_token,omitzero"`
 
 	// Hostname is the hostname of the GitLab instance.
 	//
 	// Used only for AuthTypeGitLabCLI.
-	Hostname string `json:"hostname,omitempty"`
+	Hostname string `json:"hostname,omitzero"`
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
@@ -150,9 +151,10 @@ func (f *Forge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.Aut
 	}
 
 	auth, err := selectAuthenticator(view, authenticatorOptions{
-		Endpoint: oauthEndpoint,
-		ClientID: f.Options.ClientID,
-		Hostname: hostname,
+		HTTPClient: f.HTTPClient,
+		Endpoint:   oauthEndpoint,
+		ClientID:   f.Options.ClientID,
+		Hostname:   hostname,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("select authenticator: %w", err)
@@ -254,9 +256,10 @@ var _authenticationMethods = []struct {
 		Description: oauthDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				ClientID: a.oauth2ClientID(),
-				Endpoint: a.Endpoint,
-				Scopes:   []string{"api"},
+				HTTPClient: a.HTTPClient,
+				ClientID:   a.oauth2ClientID(),
+				Endpoint:   a.Endpoint,
+				Scopes:     []string{"api"},
 			}
 		},
 	},
@@ -289,9 +292,10 @@ var _authenticationMethods = []struct {
 // authenticatorOptions presents the user with multiple authentication methods,
 // prompts them to choose one, and executes the chosen method.
 type authenticatorOptions struct {
-	Endpoint oauth2.Endpoint // required
-	ClientID string          // required
-	Hostname string          // required
+	HTTPClient *http.Client
+	Endpoint   oauth2.Endpoint // required
+	ClientID   string          // required
+	Hostname   string          // required
 }
 
 func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, error) {
@@ -411,6 +415,10 @@ func (a *PATAuthenticator) Authenticate(_ context.Context, view ui.View) (*Authe
 // DeviceFlowAuthenticator implements the OAuth device flow for GitHub.
 // This is used for OAuth and GitHub App authentication.
 type DeviceFlowAuthenticator struct {
+	// HTTPClient sends device authorization and token requests.
+	// If nil, OAuth uses its default HTTP client.
+	HTTPClient *http.Client
+
 	// Endpoint is the OAuth endpoint to use.
 	Endpoint oauth2.Endpoint
 
@@ -423,6 +431,9 @@ type DeviceFlowAuthenticator struct {
 
 // Authenticate executes the OAuth authentication flow.
 func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context, view ui.View) (*AuthenticationToken, error) {
+	if a.HTTPClient != nil {
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, a.HTTPClient)
+	}
 	cfg := oauth2.Config{
 		ClientID:    a.ClientID,
 		Endpoint:    a.Endpoint,
@@ -507,8 +518,7 @@ func (gc *glabCLI) Status(ctx context.Context, host string) (ok bool, err error)
 	cmd := xec.Command(ctx, nil, gc.GL, "auth", "status", "--hostname", host).
 		WithExecer(gc.execer)
 	if err := cmd.Run(); err != nil {
-		var exitErr *xec.ExitError
-		if errors.As(err, &exitErr) {
+		if _, ok := errors.AsType[*xec.ExitError](err); ok {
 			return false, nil
 		}
 
@@ -517,7 +527,7 @@ func (gc *glabCLI) Status(ctx context.Context, host string) (ok bool, err error)
 	return true, nil
 }
 
-var _tokenRe = regexp.MustCompile(`(?m)^\W+Token(?:\s+found)?:\s+([\w\.\-]+)\s*$`)
+var _tokenRe = regexp.MustCompile(`(?m)^\W+Token(?:\s+found)?(?:\s+in\s+[^:]+)?:\s+([\w.-]+)\s*$`)
 
 // Token returns the authentication token from the GitLab CLI.
 func (gc *glabCLI) Token(ctx context.Context, host string) (string, error) {
@@ -529,8 +539,7 @@ func (gc *glabCLI) Token(ctx context.Context, host string) (string, error) {
 		WithExecer(gc.execer).
 		WithStderr(&stderr)
 	if err := cmd.Run(); err != nil {
-		var exitErr *xec.ExitError
-		if errors.As(err, &exitErr) {
+		if _, ok := errors.AsType[*xec.ExitError](err); ok {
 			return "", errors.Join(
 				errors.New("glab is not authenticated"),
 				fmt.Errorf("stderr: %s", stderr.String()),

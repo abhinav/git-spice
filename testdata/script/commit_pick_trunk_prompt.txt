@@ -66,5 +66,5 @@ Feature content
 * d146e2e (HEAD -> main, feature) Add feature file
 * 63343e8 Initial commit
 -- golden/ls.txt --
-┏━□ feature
+┏━━□ feature
 main ◀

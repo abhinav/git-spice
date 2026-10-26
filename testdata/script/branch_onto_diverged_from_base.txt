@@ -39,13 +39,13 @@ feature 1
 feature 2
 
 -- golden/ls-before.txt --
-  ┏━■ feat2 ◀
-  ┃   e3b0e7d Add feature 2 (now)
+  ┏━━■ feat2 ◀
+  ┃    e3b0e7d Add feature 2 (now)
 ┏━┻□ feat1
 main
 -- golden/ls-after.txt --
-  ┏━■ feat2 ◀
-  ┃   9995287 Add feature 2 (now)
+  ┏━━■ feat2 ◀
+  ┃    9995287 Add feature 2 (now)
 ┏━┻□ feat1
 ┃    c6747e9 Add feature 1 (now)
 main

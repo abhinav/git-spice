@@ -10,7 +10,7 @@ git init
 git add conflict.txt dirty.txt
 git commit -m 'Initial commit'
 
-shamhub init
+shamhub-setup
 shamhub new origin alice/example.git
 shamhub register alice
 git push origin main

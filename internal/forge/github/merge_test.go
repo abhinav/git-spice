@@ -1,15 +1,15 @@
 package github
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
@@ -54,11 +54,11 @@ func TestRepository_MergeChange_method(t *testing.T) {
 					Variables struct {
 						Input struct {
 							PullRequestID string  `json:"pullRequestId"`
-							MergeMethod   *string `json:"mergeMethod,omitempty"`
+							MergeMethod   *string `json:"mergeMethod,omitzero"`
 						} `json:"input"`
 					} `json:"variables"`
 				}
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+				require.NoError(t, json.UnmarshalRead(r.Body, &body))
 
 				input := body.Variables.Input
 				assert.Equal(t, "prID", input.PullRequestID)
@@ -70,7 +70,7 @@ func TestRepository_MergeChange_method(t *testing.T) {
 				}
 				merged = true
 
-				require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				require.NoError(t, json.MarshalWrite(w, map[string]any{
 					"data": map[string]any{
 						"mergePullRequest": map[string]any{
 							"pullRequest": map[string]any{
@@ -82,11 +82,13 @@ func TestRepository_MergeChange_method(t *testing.T) {
 			}))
 			defer srv.Close()
 
+			gateway, err := github.NewGateway(srv.URL, nil, gatewayTestTokenSource("token"))
+			require.NoError(t, err)
 			repo, err := newRepository(
 				t.Context(), new(Forge),
 				"owner", "repo",
 				silogtest.New(t),
-				githubv4.NewEnterpriseClient(srv.URL, nil),
+				gateway,
 				"repoID",
 			)
 			require.NoError(t, err)

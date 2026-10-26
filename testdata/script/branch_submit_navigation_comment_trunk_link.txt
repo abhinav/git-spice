@@ -1,0 +1,124 @@
+# Test submit.navigationComment.trunkComparison behavior.
+# When enabled, navigation comments include a link comparing the branch
+# against trunk, using the branch's upstream name.
+#
+# By default (scope=top) only the topmost CR of a stack gets the link.
+# With scope=all, every CR stacked on top of another CR gets it.
+# A CR based directly on trunk is never eligible.
+
+as 'Test <test@example.com>'
+at '2025-01-18T21:28:29Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub-setup
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# opt in to the trunk comparison link, topmost CR only
+git config --local spice.submit.navigationComment.trunkComparison top
+
+# Create and submit a stack (main -> feature1 -> feature2 -> feature3).
+git add feature1.txt
+gs bc -m feature1
+git add feature2.txt
+gs bc -m feature2
+git add feature3.txt
+gs bc -m feature3
+gs stack submit --fill
+
+# In the default 'top' scope, only feature3 (the tip) gets the link.
+shamhub dump comments
+cmpenv stdout $WORK/golden/comments-top.txt
+
+# Switch to 'all' and resubmit.
+# Now feature2 also gets a link; feature1 (on trunk) still does not.
+git config --local spice.submit.navigationComment.trunkComparison all
+gs stack submit
+shamhub dump comments
+cmpenv stdout $WORK/golden/comments-all.txt
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
+
+-- repo/feature3.txt --
+feature 3
+
+-- golden/comments-top.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    [Compare against trunk]($SHAMHUB_URL/alice/example/compare/main...feature3)
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/comments-all.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    [Compare against trunk]($SHAMHUB_URL/alice/example/compare/main...feature2)
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    [Compare against trunk]($SHAMHUB_URL/alice/example/compare/main...feature3)
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

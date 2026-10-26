@@ -2,8 +2,7 @@ package shamhub
 
 import (
 	"bytes"
-	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"os"
 	"os/exec"
@@ -25,7 +24,7 @@ func TestForkWorkflow(t *testing.T) {
 	t.Setenv("GIT_COMMITTER_NAME", "Test")
 	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Setup ShamHub server
 	sh, err := New(Config{
@@ -124,7 +123,7 @@ func TestForkWorkflow(t *testing.T) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var changeResp submitChangeResponse
-		require.NoError(t, json.NewDecoder(resp.Body).Decode(&changeResp))
+		require.NoError(t, json.UnmarshalRead(resp.Body, &changeResp))
 		return changeResp.Number
 	}()
 
@@ -181,6 +180,6 @@ func loginAndGetToken(t *testing.T, sh *ShamHub, username string) string {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var loginResp loginResponse
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&loginResp))
+	require.NoError(t, json.UnmarshalRead(resp.Body, &loginResp))
 	return loginResp.Token
 }

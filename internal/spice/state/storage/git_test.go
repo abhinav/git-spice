@@ -1,10 +1,12 @@
 package storage
 
 import (
+	"context"
 	cryptorand "crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand/v2"
 	"os"
 	"sync"
@@ -45,6 +47,228 @@ func TestGitBackendUpdateNoChanges(t *testing.T) {
 
 	assert.Equal(t, start, end,
 		"there should be no changes in the repository")
+}
+
+func TestGitBackendUpdateNoChanges_concurrentUpdate(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	newBackend := func(repo GitRepository) *GitBackend {
+		return NewGitBackend(GitConfig{
+			Repo:        repo,
+			Ref:         "refs/data",
+			AuthorName:  "Test Author",
+			AuthorEmail: "test@example.com",
+			Log:         silogtest.New(t),
+		})
+	}
+	concurrent := NewDB(newBackend(repo))
+	require.NoError(t, concurrent.Set(ctx, "foo", "bar", "initial set"))
+
+	racingRepo := &updateTreeHookRepository{
+		GitRepository: repo,
+		BeforeUpdate: func(ctx context.Context, call int) error {
+			return concurrent.Set(
+				ctx,
+				fmt.Sprintf("concurrent/%d", call),
+				call,
+				"concurrent update",
+			)
+		},
+	}
+	db := NewDB(newBackend(racingRepo))
+
+	require.NoError(t, db.Set(ctx, "foo", "bar", "keep desired value"))
+	assert.Equal(t, 1, racingRepo.calls)
+}
+
+func TestGitBackendMove_replaysConcurrentUpdate(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	newBackend := func(repo GitRepository) *GitBackend {
+		return NewGitBackend(GitConfig{
+			Repo:        repo,
+			Ref:         "refs/data",
+			AuthorName:  "Test Author",
+			AuthorEmail: "test@example.com",
+			Log:         silogtest.New(t),
+		})
+	}
+	concurrent := NewDB(newBackend(repo))
+	require.NoError(t, concurrent.Set(ctx, "old", "before", "set old"))
+
+	racingRepo := &updateTreeHookRepository{
+		GitRepository: repo,
+		BeforeUpdate: func(ctx context.Context, call int) error {
+			if call != 1 {
+				return nil
+			}
+			return concurrent.Set(ctx, "old", "after", "update old")
+		},
+	}
+	db := NewDB(newBackend(racingRepo))
+	require.NoError(t, db.Update(ctx, UpdateRequest{
+		Moves:   []MoveRequest{{From: "old", To: "new"}},
+		Message: "move value",
+	}))
+
+	var got string
+	assert.ErrorIs(t, db.Get(ctx, "old", &got), ErrNotExist)
+	require.NoError(t, db.Get(ctx, "new", &got))
+	assert.Equal(t, "after", got)
+}
+
+func TestGitBackend_GetManyUsesReadObjects(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	wrappedRepo := &readObjectsTrackingRepository{Repository: repo}
+	backend := NewGitBackend(GitConfig{
+		Repo:        wrappedRepo,
+		Ref:         "refs/data",
+		AuthorName:  "Test Author",
+		AuthorEmail: "test@example.com",
+		Log:         silogtest.New(t),
+	})
+
+	db := NewDB(backend)
+	require.NoError(t, db.Set(ctx, "foo", "bar", "set foo"))
+	require.NoError(t, db.Set(ctx, "baz", "qux", "set baz"))
+
+	wrappedRepo.rejectReadObject = true
+	wrappedRepo.rejectHashAt = true
+
+	var got1, got2 string
+	require.NoError(t, db.GetMany(ctx, []GetRequest{
+		{Key: "foo", Value: &got1},
+		{Key: "baz", Value: &got2},
+	}))
+	assert.Equal(t, "bar", got1)
+	assert.Equal(t, "qux", got2)
+	assert.Equal(t, 1, wrappedRepo.readObjectsCalls)
+	assert.Equal(t, 2, wrappedRepo.readObjectsHashes)
+}
+
+func TestGitBackend_GetManyDecodeError(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	backend := NewGitBackend(GitConfig{
+		Repo:        repo,
+		Ref:         "refs/data",
+		AuthorName:  "Test Author",
+		AuthorEmail: "test@example.com",
+		Log:         silogtest.New(t),
+	})
+
+	db := NewDB(backend)
+	require.NoError(t, db.Set(ctx, "foo", "not a number", "set foo"))
+
+	var got int
+	err = db.GetMany(ctx, []GetRequest{{Key: "foo", Value: &got}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "decode JSON")
+}
+
+func TestGitBackend_GetMany_orderAndPaths(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+	db := NewDB(NewGitBackend(GitConfig{
+		Repo:        repo,
+		Ref:         "refs/data",
+		AuthorName:  "Test Author",
+		AuthorEmail: "test@example.com",
+		Log:         silogtest.New(t),
+	}))
+	require.NoError(t, db.Update(ctx, UpdateRequest{
+		Sets: []SetRequest{
+			{Key: "branches/nested/topic", Value: "nested"},
+			{Key: "branches/line\nwith\ttab", Value: "unusual"},
+		},
+		Message: "add values",
+	}))
+
+	var first, second, duplicate string
+	require.NoError(t, db.GetMany(ctx, []GetRequest{
+		{Key: "branches/line\nwith\ttab", Value: &first},
+		{Key: "branches/nested/topic", Value: &second},
+		{Key: "branches/line\nwith\ttab", Value: &duplicate},
+	}))
+	assert.Equal(t, "unusual", first)
+	assert.Equal(t, "nested", second)
+	assert.Equal(t, first, duplicate)
+
+	first = "unchanged"
+	err = db.GetMany(ctx, []GetRequest{
+		{Key: "branches/nested/topic", Value: &first},
+		{Key: "missing", Value: &second},
+	})
+	assert.ErrorIs(t, err, ErrNotExist)
+	assert.Equal(t, "nested", first)
+	missing, ok := errors.AsType[*MissingKeysError](err)
+	require.True(t, ok)
+	assert.Equal(t, []int{1}, missing.Indexes)
+	assert.Equal(t, []string{"missing"}, missing.Keys)
+}
+
+func TestGitBackend_GetMany_objectFailureAfterMissingKey(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		hash git.Hash
+	}{
+		{name: "StartFailure", err: assert.AnError},
+		{name: "MissingObject", hash: git.ZeroHash},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{Log: silogtest.New(t)})
+			require.NoError(t, err)
+			wrapped := &readObjectsTrackingRepository{Repository: repo}
+			db := NewDB(NewGitBackend(GitConfig{
+				Repo:        wrapped,
+				Ref:         "refs/data",
+				AuthorName:  "Test Author",
+				AuthorEmail: "test@example.com",
+				Log:         silogtest.New(t),
+			}))
+			require.NoError(t, db.Set(ctx, "present", "value", "seed object failure"))
+			wrapped.readObjectsErr = tt.err
+			wrapped.replaceObjectHash = tt.hash
+
+			var missing, present string
+			err = db.GetMany(ctx, []GetRequest{
+				{Key: "absent", Value: &missing},
+				{Key: "present", Value: &present},
+			})
+			require.Error(t, err)
+			_, partial := errors.AsType[*MissingKeysError](err)
+			assert.False(t, partial, "object failures must not guarantee partial results")
+			assert.NotErrorIs(t, err, ErrNotExist)
+			if tt.err != nil {
+				assert.ErrorIs(t, err, tt.err)
+			} else {
+				assert.ErrorIs(t, err, git.ErrNotExist)
+			}
+		})
+	}
 }
 
 func TestGitBackend_ConcurrentOperations(t *testing.T) {
@@ -252,4 +476,69 @@ func TestGitBackend_SpecialCharacterKeys(t *testing.T) {
 				"Keys list should contain %q", expectedKey)
 		}
 	})
+}
+
+type updateTreeHookRepository struct {
+	GitRepository
+	BeforeUpdate func(context.Context, int) error
+	calls        int
+}
+
+func (r *updateTreeHookRepository) UpdateTree(
+	ctx context.Context,
+	req git.UpdateTreeRequest,
+) (git.Hash, error) {
+	r.calls++
+	if err := r.BeforeUpdate(ctx, r.calls); err != nil {
+		return "", err
+	}
+	return r.GitRepository.UpdateTree(ctx, req)
+}
+
+type readObjectsTrackingRepository struct {
+	*git.Repository
+
+	rejectReadObject  bool
+	rejectHashAt      bool
+	readObjectsCalls  int
+	readObjectsHashes int
+	readObjectsErr    error
+	replaceObjectHash git.Hash
+}
+
+func (r *readObjectsTrackingRepository) HashAt(
+	ctx context.Context,
+	treeish, path string,
+) (git.Hash, error) {
+	if r.rejectHashAt {
+		return "", errors.New("per-key HashAt should not be used")
+	}
+	return r.Repository.HashAt(ctx, treeish, path)
+}
+
+func (r *readObjectsTrackingRepository) ReadObject(
+	ctx context.Context,
+	typ git.Type,
+	hash git.Hash,
+	dst io.Writer,
+) error {
+	if r.rejectReadObject {
+		return errors.New("ReadObject should not be used")
+	}
+	return r.Repository.ReadObject(ctx, typ, hash, dst)
+}
+
+func (r *readObjectsTrackingRepository) ReadObjects(
+	ctx context.Context,
+	hashes []git.Hash,
+) (*git.ObjectBatchReader, error) {
+	r.readObjectsCalls++
+	r.readObjectsHashes += len(hashes)
+	if r.readObjectsErr != nil {
+		return nil, r.readObjectsErr
+	}
+	if r.replaceObjectHash != "" {
+		hashes[0] = r.replaceObjectHash
+	}
+	return r.Repository.ReadObjects(ctx, hashes)
 }

@@ -50,13 +50,13 @@ var _ Service = (*spice.Service)(nil)
 
 // Handler handles git-spice's branch split commands.
 type Handler struct {
-	Log            *silog.Logger                            // required
-	View           ui.View                                  // required
-	Repository     GitRepository                            // required
-	Store          Store                                    // required
-	Service        Service                                  // required
-	FindForge      func(forgeID string) (forge.Forge, bool) // required
-	HighlightStyle ui.Style                                 // required
+	Log            *silog.Logger                                     // required
+	View           ui.View                                           // required
+	Repository     GitRepository                                     // required
+	Store          Store                                             // required
+	Service        Service                                           // required
+	FindForge      func(context.Context, string) (forge.Forge, bool) // required
+	HighlightStyle ui.Style                                          // required
 }
 
 // Options defines options for the SplitBranch method.
@@ -81,18 +81,18 @@ func (b *Point) Decode(ctx *kong.DecodeContext) error {
 		return err
 	}
 
-	idx := strings.LastIndex(spec, ":")
+	commit, name, ok := strings.CutLast(spec, ":")
 	switch {
-	case idx == -1:
+	case !ok:
 		return fmt.Errorf("expected COMMIT:NAME, got %q", spec)
-	case len(spec[:idx]) == 0:
+	case commit == "":
 		return fmt.Errorf("part before : cannot be empty: %q", spec)
-	case len(spec[idx+1:]) == 0:
+	case name == "":
 		return fmt.Errorf("part after : cannot be empty: %q", spec)
 	}
 
-	b.Commit = spec[:idx]
-	b.Name = spec[idx+1:]
+	b.Commit = commit
+	b.Name = name
 	return nil
 }
 
@@ -337,7 +337,7 @@ func (h *Handler) prepareChangeMetadataTransfer(
 	tx *state.BranchTx,
 ) (transfer func(), _ error) {
 	forgeID := meta.ForgeID()
-	f, ok := h.FindForge(forgeID)
+	f, ok := h.FindForge(ctx, forgeID)
 	if !ok {
 		return nil, fmt.Errorf("unknown forge: %v", forgeID)
 	}

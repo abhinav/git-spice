@@ -1,0 +1,44 @@
+# commit split --no-restack leaves upstack branches untouched.
+
+[!unix] skip # pending github.com/creack/pty/pull/155
+[!git:2.52] skip # git add -p output is fixed to Git version
+
+as 'Test <test@example.com>'
+at '2024-07-08T05:04:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt feature2.txt
+gs branch create features -m 'Add features'
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+
+git rev-parse --short feature3
+cmp stdout $WORK/golden/feature3-before.txt
+
+gs down
+
+# Split the lower branch through the real interactive staging workflow.
+with-term -final exit $WORK/input.txt -- gs commit split --no-restack -m 'Add feature 1'
+
+# Splitting rewrites features; feature3 keeps its original head when the
+# upstack restack is disabled.
+git rev-parse --short feature3
+cmp stdout $WORK/golden/feature3-before.txt
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature2.txt --
+feature 2
+-- repo/feature3.txt --
+feature 3
+-- input.txt --
+await feature1
+feed y\r
+await feature2
+feed q\r
+-- golden/feature3-before.txt --
+16e1af8

@@ -69,16 +69,15 @@ type ConfigKey string
 // Split splits the key into its three parts:
 // section, subsection, and name.
 func (k ConfigKey) Split() (section, subsection, name string) {
-	idx := strings.LastIndex(string(k), ".")
-	if idx == -1 {
+	prefix, name, ok := strings.CutLast(string(k), ".")
+	if !ok {
 		// "foo" => "", "", "foo"
 		return "", "", string(k)
 	}
 
-	name = string(k[idx+1:])
-	k = k[:idx]
+	k = ConfigKey(prefix)
 
-	idx = strings.Index(string(k), ".")
+	idx := strings.Index(string(k), ".")
 	if idx == -1 {
 		// "foo.bar" => "foo", "", "bar"
 		return string(k), "", name

@@ -1,7 +1,8 @@
 package gitlab
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -139,15 +140,14 @@ func TestListChangeComments(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				enc := json.NewEncoder(w)
-				enc.SetIndent("", "  ")
+				enc := jsontext.NewEncoder(w, jsontext.WithIndent("  "))
 				switch r.RequestURI {
 				case "/api/v4/projects/100":
-					assert.NoError(t, enc.Encode(tt.project))
+					assert.NoError(t, json.MarshalEncode(enc, tt.project))
 				case "/api/v4/user":
-					assert.NoError(t, enc.Encode(tt.user))
+					assert.NoError(t, json.MarshalEncode(enc, tt.user))
 				default:
-					assert.NoError(t, enc.Encode(tt.notes))
+					assert.NoError(t, json.MarshalEncode(enc, tt.notes))
 				}
 			}))
 			defer srv.Close()

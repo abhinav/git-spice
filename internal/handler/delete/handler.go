@@ -231,7 +231,7 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 
 	// Branches may have relationships with each other.
 	// Sort them in topological order: [close to trunk, ..., further from trunk].
-	topoBranches := graph.Toposort(slices.Sorted(maps.Keys(branchesToDelete)),
+	topoBranches, err := graph.Toposort(slices.Sorted(maps.Keys(branchesToDelete)),
 		func(branch string) (string, bool) {
 			info := branchesToDelete[branch]
 			// Branches affect each other's deletion order
@@ -239,6 +239,9 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 			_, ok := branchesToDelete[info.Base]
 			return info.Base, ok
 		})
+	if err != nil {
+		must.Failf("sort branches to delete: %v", err)
+	}
 
 	// Actual deletion will happen in the reverse of that order,
 	// deleting branches based on other branches first.

@@ -2,14 +2,16 @@ package github
 
 import (
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
 	"charm.land/lipgloss/v2"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
@@ -76,7 +78,7 @@ func (s *TokenType) UnmarshalText(text []byte) error {
 
 // AuthenticationToken defines the token returned by the GitHub forge.
 type AuthenticationToken struct {
-	forge.AuthenticationToken
+	forge.AuthenticationToken `json:"-"`
 
 	// Type indicates where the token is loaded from.
 	// This determines whether AccessToken is used.
@@ -85,7 +87,7 @@ type AuthenticationToken struct {
 	// AccessToken is the GitHub access token.
 	//
 	// Not used if Type is TokenTypeGCM or TokenTypeCLI.
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken string `json:"access_token,omitzero"`
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
@@ -94,9 +96,9 @@ var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
 func (t *AuthenticationToken) UnmarshalJSON(data []byte) error {
 	var raw struct {
 		Type        TokenType `json:"type"`
-		AccessToken string    `json:"access_token,omitempty"`
+		AccessToken string    `json:"access_token,omitzero"`
 
-		GitHubCLI bool `json:"github_cli,omitempty"` // for backward compatibility
+		GitHubCLI bool `json:"github_cli,omitzero"` // for backward compatibility
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
@@ -128,6 +130,39 @@ func (f *Forge) tokenSource(t *AuthenticationToken) (oauth2.TokenSource, error) 
 	default:
 		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken}), nil
 	}
+}
+
+func newGatewayTokenSource(
+	source oauth2.TokenSource,
+) github.TokenSource {
+	if cliSource, ok := source.(*CLITokenSource); ok {
+		return gatewayCLITokenSource{source: cliSource}
+	}
+	return gatewayOAuthTokenSource{source: source}
+}
+
+type gatewayOAuthTokenSource struct {
+	source oauth2.TokenSource
+}
+
+func (s gatewayOAuthTokenSource) Token(context.Context) (string, error) {
+	token, err := s.source.Token()
+	if err != nil {
+		return "", err
+	}
+	return token.AccessToken, nil
+}
+
+type gatewayCLITokenSource struct {
+	source *CLITokenSource
+}
+
+func (s gatewayCLITokenSource) Token(ctx context.Context) (string, error) {
+	token, err := s.source.tokenContext(ctx)
+	if err != nil {
+		return "", err
+	}
+	return token.AccessToken, nil
 }
 
 func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {
@@ -165,8 +200,9 @@ func (f *Forge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.Aut
 	}
 
 	auth, err := selectAuthenticator(view, authenticatorOptions{
-		Endpoint: oauthEndpoint,
-		ForgeURL: f.URL(),
+		HTTPClient: f.HTTPClient,
+		Endpoint:   oauthEndpoint,
+		ForgeURL:   f.URL(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("select authenticator: %w", err)
@@ -244,9 +280,10 @@ var _authenticationMethods = []struct {
 		Description: oauthDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				Endpoint: a.Endpoint,
-				ClientID: _oauthAppClientID,
-				Scopes:   []string{"repo", "read:org"},
+				HTTPClient: a.HTTPClient,
+				Endpoint:   a.Endpoint,
+				ClientID:   _oauthAppClientID,
+				Scopes:     []string{"repo", "read:org"},
 			}
 		},
 	},
@@ -255,9 +292,10 @@ var _authenticationMethods = []struct {
 		Description: oauthPublicDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				Endpoint: a.Endpoint,
-				ClientID: _oauthAppClientID,
-				Scopes:   []string{"public_repo"},
+				HTTPClient: a.HTTPClient,
+				Endpoint:   a.Endpoint,
+				ClientID:   _oauthAppClientID,
+				Scopes:     []string{"public_repo"},
 			}
 		},
 	},
@@ -266,8 +304,9 @@ var _authenticationMethods = []struct {
 		Description: githubAppDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				Endpoint: a.Endpoint,
-				ClientID: _githubAppClientID,
+				HTTPClient: a.HTTPClient,
+				Endpoint:   a.Endpoint,
+				ClientID:   _githubAppClientID,
 				// No scopes needed for GitHub App.
 			}
 		},
@@ -309,8 +348,9 @@ var _authenticationMethods = []struct {
 // authenticatorOptions presents the user with multiple authentication methods,
 // prompts them to choose one, and executes the chosen method.
 type authenticatorOptions struct {
-	Endpoint oauth2.Endpoint // required
-	ForgeURL string          // required
+	HTTPClient *http.Client
+	Endpoint   oauth2.Endpoint // required
+	ForgeURL   string          // required
 }
 
 func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, error) {
@@ -439,6 +479,10 @@ var (
 // DeviceFlowAuthenticator implements the OAuth device flow for GitHub.
 // This is used for OAuth and GitHub App authentication.
 type DeviceFlowAuthenticator struct {
+	// HTTPClient sends device authorization and token requests.
+	// If nil, OAuth uses its default HTTP client.
+	HTTPClient *http.Client
+
 	// Endpoint is the OAuth endpoint to use.
 	Endpoint oauth2.Endpoint
 
@@ -451,6 +495,9 @@ type DeviceFlowAuthenticator struct {
 
 // Authenticate executes the OAuth authentication flow.
 func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context, view ui.View) (*AuthenticationToken, error) {
+	if a.HTTPClient != nil {
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, a.HTTPClient)
+	}
 	cfg := oauth2.Config{
 		ClientID:    a.ClientID,
 		Endpoint:    a.Endpoint,
@@ -518,8 +565,7 @@ type CLIAuthenticator struct {
 func (a *CLIAuthenticator) Authenticate(ctx context.Context, _ ui.View) (*AuthenticationToken, error) {
 	cmd := xec.Command(ctx, nil, a.GH, "auth", "token").WithExecer(a.execer)
 	if err := cmd.Run(); err != nil {
-		var exitErr *xec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*xec.ExitError](err); ok {
 			return nil, errors.Join(
 				errors.New("gh is not authenticated"),
 				fmt.Errorf("stderr: %s", exitErr.Stderr),

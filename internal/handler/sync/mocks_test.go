@@ -200,6 +200,44 @@ func (c *MockGitRepositoryIsAncestorCall) DoAndReturn(f func(context.Context, gi
 	return c
 }
 
+// ListCommitsDetails mocks base method.
+func (m *MockGitRepository) ListCommitsDetails(ctx context.Context, commitRange git.CommitRange) iter.Seq2[git.CommitDetail, error] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCommitsDetails", ctx, commitRange)
+	ret0, _ := ret[0].(iter.Seq2[git.CommitDetail, error])
+	return ret0
+}
+
+// ListCommitsDetails indicates an expected call of ListCommitsDetails.
+func (mr *MockGitRepositoryMockRecorder) ListCommitsDetails(ctx, commitRange any) *MockGitRepositoryListCommitsDetailsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCommitsDetails", reflect.TypeOf((*MockGitRepository)(nil).ListCommitsDetails), ctx, commitRange)
+	return &MockGitRepositoryListCommitsDetailsCall{Call: call}
+}
+
+// MockGitRepositoryListCommitsDetailsCall wrap *gomock.Call
+type MockGitRepositoryListCommitsDetailsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryListCommitsDetailsCall) Return(arg0 iter.Seq2[git.CommitDetail, error]) *MockGitRepositoryListCommitsDetailsCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryListCommitsDetailsCall) Do(f func(context.Context, git.CommitRange) iter.Seq2[git.CommitDetail, error]) *MockGitRepositoryListCommitsDetailsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryListCommitsDetailsCall) DoAndReturn(f func(context.Context, git.CommitRange) iter.Seq2[git.CommitDetail, error]) *MockGitRepositoryListCommitsDetailsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // LocalBranches mocks base method.
 func (m *MockGitRepository) LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) iter.Seq2[git.LocalBranch, error] {
 	m.ctrl.T.Helper()

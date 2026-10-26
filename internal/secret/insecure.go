@@ -1,7 +1,8 @@
 package secret
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -97,7 +98,7 @@ func (f *InsecureStash) save(data *insecureStashData) error {
 		return nil
 	}
 
-	bs, err := json.MarshalIndent(data, "", "  ")
+	bs, err := json.Marshal(data, jsontext.WithIndent("  "))
 	if err != nil {
 		return fmt.Errorf("marshal: %w", err)
 	}

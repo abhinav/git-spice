@@ -8,29 +8,34 @@ import (
 	"iter"
 	"slices"
 	"strconv"
+	"time"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git"
 )
 
 // ChangeComment is a comment made on ShamHub.
 type ChangeComment struct {
-	ID     int
-	Change int
-	Body   string
+	ID     int    `json:"id"`
+	Change int    `json:"change"`
+	Body   string `json:"body"`
 }
 
-// ListChangeComments returns all comments on all changes in ShamHub.
+// ListChangeComments returns all ordinary change comments in ShamHub.
 func (sh *ShamHub) ListChangeComments() ([]*ChangeComment, error) {
 	sh.mu.RLock()
 	defer sh.mu.RUnlock()
 
-	comments := make([]*ChangeComment, len(sh.comments))
-	for i, c := range sh.comments {
-		comments[i] = &ChangeComment{
+	var comments []*ChangeComment
+	for _, c := range sh.comments {
+		if c.ThreadID != "" {
+			continue
+		}
+		comments = append(comments, &ChangeComment{
 			ID:     c.ID,
 			Change: c.Change,
 			Body:   c.Body,
-		}
+		})
 	}
 
 	return comments, nil
@@ -140,6 +145,23 @@ type shamComment struct {
 
 	// Resolved indicates this comment has been resolved.
 	Resolved bool
+
+	// Outdated indicates this comment is attached to an earlier revision.
+	Outdated bool
+
+	// Review-thread fields are empty for ordinary change comments.
+	Path       string
+	Line       int
+	RangeStart int
+	RangeEnd   int
+	Side       forge.ReviewThreadSide
+
+	// CommitHash is captured from a root's change head and copied to replies.
+	CommitHash git.Hash
+
+	ThreadID  ReviewThreadID
+	Author    string
+	CreatedAt time.Time
 }
 
 var (
@@ -153,12 +175,12 @@ type postCommentRequest struct {
 	Owner string `path:"owner" json:"-"`
 	Repo  string `path:"repo" json:"-"`
 
-	Change int    `json:"changeNumber,omitempty"`
-	Body   string `json:"body,omitempty"`
+	Change int    `json:"changeNumber,omitzero"`
+	Body   string `json:"body,omitzero"`
 }
 
 type postCommentResponse struct {
-	ID int `json:"id,omitempty"`
+	ID int `json:"id,omitzero"`
 }
 
 func (sh *ShamHub) handlePostChangeComment(_ context.Context, req *postCommentRequest) (*postCommentResponse, error) {
@@ -182,11 +204,11 @@ type updateCommentRequest struct {
 	Repo  string `path:"repo" json:"-"`
 	ID    int    `path:"id" json:"-"`
 
-	Body string `json:"body,omitempty"`
+	Body string `json:"body,omitzero"`
 }
 
 type updateCommentResponse struct {
-	ID int `json:"id,omitempty"`
+	ID int `json:"id,omitzero"`
 }
 
 func (sh *ShamHub) handleUpdateChangeComment(_ context.Context, req *updateCommentRequest) (*updateCommentResponse, error) {
@@ -308,7 +330,15 @@ func (r *forgeRepository) UpdateChangeComment(
 	markdown string,
 ) error {
 	cid := int(id.(ChangeCommentID))
-	u := r.apiURL.JoinPath(r.owner, r.repo, "comments", strconv.Itoa(cid))
+	return r.updateComment(ctx, cid, markdown)
+}
+
+func (r *forgeRepository) updateComment(
+	ctx context.Context,
+	id int,
+	markdown string,
+) error {
+	u := r.apiURL.JoinPath(r.owner, r.repo, "comments", strconv.Itoa(id))
 	req := updateCommentRequest{Body: markdown}
 	var res updateCommentResponse
 	if err := r.client.Patch(ctx, u.String(), req, &res); err != nil {
@@ -365,13 +395,13 @@ type listChangeCommentsRequest struct {
 
 type listChangeCommentsResponse struct {
 	Items   []listChangeCommentsItem `json:"items,omitempty"`
-	Offset  int                      `json:"offset,omitempty"`
-	HasMore bool                     `json:"hasMore,omitempty"`
+	Offset  int                      `json:"offset,omitzero"`
+	HasMore bool                     `json:"hasMore,omitzero"`
 }
 
 type listChangeCommentsItem struct {
-	ID   int    `json:"id,omitempty"`
-	Body string `json:"body,omitempty"`
+	ID   int    `json:"id,omitzero"`
+	Body string `json:"body,omitzero"`
 }
 
 func (sh *ShamHub) handleListChangeComments(_ context.Context, req *listChangeCommentsRequest) (*listChangeCommentsResponse, error) {
@@ -381,7 +411,7 @@ func (sh *ShamHub) handleListChangeComments(_ context.Context, req *listChangeCo
 	sh.mu.RLock()
 	var comments []shamComment
 	for _, c := range sh.comments {
-		if c.Change == changeNum {
+		if c.Change == changeNum && c.ThreadID == "" {
 			comments = append(comments, c)
 		}
 	}

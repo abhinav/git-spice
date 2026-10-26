@@ -26,27 +26,66 @@ type LocalBranchesOptions struct {
 	// Sort specifies an optional value for git branch --sort.
 	Sort string
 
-	// Patterns is a list of patterns to filter branches.
-	// If specified, only branches matching at least one of the patterns
-	// will be returned.
-	//
-	// Patterns may be:
-	//
-	//   - literal branch names, e.g. "main", will be matched exactly
-	//   - branch prefixes ending in '/', e.g. "feature/",
-	//     will match branches that start with "feature/"
-	//   - glob patterns, e.g. 'foo*',
-	//     will return branches that match the glob pattern
-	//     in the same '/'-section.
+	// Patterns filters branches by literal name or slash-delimited prefix.
+	// For example, "feature" and "feature/" match "feature/topic", not "feature2".
+	// A branch is returned if it matches any pattern; an empty pattern matches all.
+	// Glob patterns are not supported.
 	Patterns []string
 }
 
 // LocalBranches returns an iterator over local branches in the repository.
+// If pattern arguments exceed the platform limit, it filters the listing locally.
 func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptions) iter.Seq2[LocalBranch, error] {
 	if opts == nil {
 		opts = &LocalBranchesOptions{}
 	}
 
+	branches := r.queryLocalBranches(ctx, opts)
+	return func(yield func(LocalBranch, error) bool) {
+		var yielded bool
+		var listErr error
+		for branch, err := range branches {
+			if err != nil {
+				listErr = err
+				break
+			}
+			yielded = true
+			if !yield(branch, nil) {
+				return
+			}
+		}
+		if listErr == nil {
+			return
+		}
+		if yielded || len(opts.Patterns) == 0 || !isArgListTooLong(listErr) {
+			yield(LocalBranch{}, listErr)
+			return
+		}
+
+		// Retry once without native filters. The query iterator does not retry,
+		// so errors from this fallback cannot re-enter the recovery path.
+		prefixes := make(branchPrefixFilter, len(opts.Patterns))
+		for _, pattern := range opts.Patterns {
+			prefixes.Put(pattern)
+		}
+		for branch, err := range r.queryLocalBranches(ctx, &LocalBranchesOptions{Sort: opts.Sort}) {
+			if err != nil {
+				yield(LocalBranch{}, err)
+				return
+			}
+			if !prefixes.Matches(branch.Name) {
+				continue
+			}
+			if !yield(branch, nil) {
+				return
+			}
+		}
+	}
+}
+
+// queryLocalBranches runs one native listing and resolves its worktree paths.
+// opts must be non-nil. Retry and local filtering belong to LocalBranches.
+func (r *Repository) queryLocalBranches(ctx context.Context, opts *LocalBranchesOptions) iter.Seq2[LocalBranch, error] {
 	args := []string{"--format=%(refname) %(objectname) %(worktreepath)"}
 	if opts.Sort != "" {
 		args = append(args, "--sort="+opts.Sort)
@@ -88,10 +127,63 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 				Hash:     Hash(hash),
 				Worktree: string(bytes.TrimSpace(worktree)),
 			}
+			// Git derives %(worktreepath) by stripping a trailing /.git from
+			// the common Git directory. For a submodule, this leaves the
+			// Git directory itself instead of the checkout:
+			//
+			//     super/
+			//     ├── .git/modules/sub/  ← reported worktree path
+			//     │   └── config        core.worktree = ../../../sub
+			//     └── sub/              ← actual checkout
+			//         └── .git          file: gitdir: ../.git/modules/sub
+			//
+			// When the reported path equals r.gitDir, use rev-parse via
+			// OpenWorktree to resolve the checkout through core.worktree.
+			// Bare repositories have no checkout, so keep their paths unchanged.
+			if localBranch.Worktree == r.gitDir {
+				bare, err := r.gitCmd(ctx, "rev-parse", "--is-bare-repository").OutputChomp()
+				if err != nil {
+					yield(LocalBranch{}, fmt.Errorf("check bare repository: %w", err))
+					return
+				}
+				if bare == "false" {
+					wt, err := r.OpenWorktree(ctx, r.gitDir)
+					if err != nil {
+						yield(LocalBranch{}, fmt.Errorf("resolve worktree path: %w", err))
+						return
+					}
+					localBranch.Worktree = wt.RootDir()
+				}
+			}
 			if !yield(localBranch, nil) {
 				return
 			}
 		}
+	}
+}
+
+// branchPrefixFilter matches literal branch names and slash-delimited prefixes.
+// An empty prefix matches every branch.
+type branchPrefixFilter map[string]struct{}
+
+// Put adds a prefix, ignoring an optional trailing slash.
+func (f branchPrefixFilter) Put(prefix string) {
+	f[strings.TrimSuffix(prefix, "/")] = struct{}{}
+}
+
+func (f branchPrefixFilter) Matches(name string) bool {
+	if _, ok := f[""]; ok {
+		return true
+	}
+	for {
+		if _, ok := f[name]; ok {
+			return true
+		}
+		parent, _, ok := strings.CutLast(name, "/")
+		if !ok {
+			return false
+		}
+		name = parent
 	}
 }
 

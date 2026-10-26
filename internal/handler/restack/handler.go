@@ -76,14 +76,6 @@ const (
 	ScopeStack = ScopeUpstack | ScopeDownstack
 )
 
-// Options are optional parameters shared by the high-level restack
-// entry points ([Handler.RestackBranch], [Handler.RestackStack],
-// [Handler.RestackDownstack]).
-type Options struct {
-	// SkipConflicts indicates that conflicting branches should be skipped.
-	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
-}
-
 // Request is a request to restack one or more branches.
 type Request struct {
 	// Branch is the starting point for the restack operation.
@@ -109,6 +101,14 @@ type Request struct {
 	//
 	// Defaults to ScopeBranch.
 	Scope Scope
+}
+
+// Options are optional parameters shared by the high-level restack
+// entry points ([Handler.RestackBranch], [Handler.RestackStack],
+// [Handler.RestackDownstack]).
+type Options struct {
+	// SkipConflicts indicates that conflicting branches should be skipped.
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
 }
 
 // Restack restacks one or more branches according to the request.

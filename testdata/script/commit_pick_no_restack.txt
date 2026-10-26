@@ -1,0 +1,55 @@
+# commit pick --no-restack leaves upstack branches untouched.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2026-07-12T12:30:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+cp $WORK/extra/source.txt source.txt
+git add source.txt
+gs branch create source -m 'Add source'
+gs trunk
+git add target.txt
+gs branch create target -m 'Add target'
+git add upstack1.txt
+gs branch create upstack1 -m 'Add upstack1'
+git add upstack2.txt
+gs branch create upstack2 -m 'Add upstack2'
+
+git rev-parse --short upstack1
+cmp stdout $WORK/golden/upstack1-before.txt
+git rev-parse --short upstack2
+cmp stdout $WORK/golden/upstack2-before.txt
+
+# Pick onto the bottom branch, where automatic restacking would replay both
+# upstack branches.
+gs bottom
+gs commit pick --no-restack source
+
+# Both original heads prove that neither upstack branch was replayed.
+git rev-parse --short upstack1
+cmp stdout $WORK/golden/upstack1-before.txt
+git rev-parse --short upstack2
+cmp stdout $WORK/golden/upstack2-before.txt
+
+# The picked change must still be applied even though restacking was skipped.
+cmp source.txt $WORK/extra/source.txt
+
+-- extra/source.txt --
+Source
+-- repo/target.txt --
+Target
+-- repo/upstack1.txt --
+Upstack 1
+-- repo/upstack2.txt --
+Upstack 2
+-- golden/upstack1-before.txt --
+107d302
+-- golden/upstack2-before.txt --
+9ae7aa6

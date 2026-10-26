@@ -6,12 +6,13 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
-	"golang.org/x/oauth2"
 )
 
 // Default URLs for GitHub and its API.
@@ -35,17 +36,75 @@ type Options struct {
 	// Token is a fixed token used to authenticate with GitHub.
 	// This may be used to skip the login flow.
 	Token string `name:"github-token" hidden:"" env:"GITHUB_TOKEN" help:"GitHub API token"`
+
+	// Stacks controls whether GitHub native stack operations are used.
+	// The default is `on`.
+	// The `off` value makes stack updates and range merges return
+	// [forge.ErrUnsupported] before accessing GitHub.
+	Stacks bool `name:"github-stacks" hidden:"" config:"forge.github.stacks" default:"true" help:"Whether to use GitHub native stack operations. One of 'true' and 'false'."`
 }
 
-// Forge builds a GitHub Forge.
-type Forge struct {
+// Definition configures GitHub forge instances.
+type Definition struct {
+	changeMetadataCodec
+
+	// Options stores CLI and environment configuration.
 	Options Options
 
 	// Log specifies the logger to use.
 	Log *silog.Logger
 }
 
-var _ forge.Forge = (*Forge)(nil)
+var (
+	_ forge.Definition = (*Definition)(nil)
+	_ forge.Forge      = (*Forge)(nil)
+)
+
+// ID reports a unique key for this forge.
+func (*Definition) ID() string { return "github" }
+
+// BaseURL reports the GitHub web URL used for host matching.
+func (d *Definition) BaseURL() string {
+	return cmp.Or(d.Options.URL, DefaultURL)
+}
+
+// CLIPlugin returns the CLI plugin for the GitHub Forge.
+func (d *Definition) CLIPlugin() any { return &d.Options }
+
+// New constructs a GitHub Forge from the configured options.
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	opts = cmp.Or(opts, &forge.NewOptions{})
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
+		return nil, err
+	}
+
+	return &Forge{
+		HTTPClient: httpClient,
+		Options:    d.Options,
+		baseURL:    d.BaseURL(),
+		Log:        d.Log,
+	}, nil
+}
+
+// Forge provides a GitHub forge instance.
+type Forge struct {
+	changeMetadataCodec
+
+	// HTTPClient sends API and authentication requests.
+	// If nil, the default HTTP client is used.
+	HTTPClient *http.Client
+
+	Options Options
+	baseURL string
+
+	// Log specifies the logger to use.
+	Log *silog.Logger
+}
 
 func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
@@ -62,7 +121,7 @@ func (f *Forge) URL() string {
 
 // BaseURL reports the GitHub web URL used for host matching and links.
 func (f *Forge) BaseURL() string {
-	return f.URL()
+	return f.baseURL
 }
 
 // APIURL returns the base API URL configured for the GitHub Forge
@@ -86,9 +145,6 @@ func (f *Forge) APIURL() string {
 
 // ID reports a unique key for this forge.
 func (*Forge) ID() string { return "github" }
-
-// CLIPlugin returns the CLI plugin for the GitHub Forge.
-func (f *Forge) CLIPlugin() any { return &f.Options }
 
 // ParseRepositoryPath parses a GitHub repository path and returns a [RepositoryID]
 // if the path identifies a repository.
@@ -114,12 +170,13 @@ func (f *Forge) OpenRepository(ctx context.Context, tok forge.AuthenticationToke
 		return nil, err
 	}
 
-	ghc, err := newGitHubv4Client(ctx, f.APIURL(), tokenSource)
+	gatewayTokens := newGatewayTokenSource(tokenSource)
+	gatewayClient, err := github.NewGateway(f.APIURL(), f.HTTPClient, gatewayTokens)
 	if err != nil {
-		return nil, fmt.Errorf("create GitHub client: %w", err)
+		return nil, fmt.Errorf("create GitHub gateway: %w", err)
 	}
 
-	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), ghc, nil)
+	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), gatewayClient, "")
 }
 
 // RepositoryID is a unique identifier for a GitHub repository.
@@ -148,16 +205,6 @@ func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	owner, repo := rid.owner, rid.name
 	prNum := mustPR(id).Number
 	return fmt.Sprintf("%s/%s/%s/pull/%d", rid.url, owner, repo, prNum)
-}
-
-func newGitHubv4Client(ctx context.Context, apiURL string, tokenSource oauth2.TokenSource) (*githubv4.Client, error) {
-	graphQLAPIURL, err := url.JoinPath(apiURL, "/graphql")
-	if err != nil {
-		return nil, fmt.Errorf("build GraphQL API URL: %w", err)
-	}
-
-	httpClient := oauth2.NewClient(ctx, tokenSource)
-	return newGitHubEnterpriseClient(graphQLAPIURL, httpClient), nil
 }
 
 func extractRepoInfo(path string) (owner, repo string, err error) {

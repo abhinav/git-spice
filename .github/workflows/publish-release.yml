@@ -35,12 +35,19 @@ on:
         required: false
         default: '1'
         type: string
+      ppa_omit_orig:
+        description: >-
+          Omit the upstream orig tarball from every PPA upload.
+          Enable this when retrying an upstream version already in the PPA.
+        required: false
+        default: false
+        type: boolean
       ppa_series:
         description: >-
           Comma-separated Ubuntu series for PPA publishing.
           Set this to resume a partial PPA upload.
         required: false
-        default: noble,questing,resolute
+        default: noble,resolute
         type: string
       ppa_source_date_epoch:
         description: >-
@@ -58,6 +65,9 @@ jobs:
     name: Publish Release
     runs-on: ubuntu-latest
     environment: release
+    permissions:
+      contents: write
+      id-token: write # for Cosigning
 
     steps:
     - uses: actions/checkout@v6
@@ -162,7 +172,7 @@ jobs:
         fi
 
     - name: Update Homebrew Formula
-      uses: dawidd6/action-homebrew-bump-formula@v7
+      uses: dawidd6/action-homebrew-bump-formula@b12d2bc99c46444125e606142f28200ec71a1214 # v10
       if: inputs.skip_homebrew == false
       with:
         token: ${{ secrets.ROBOT_PAT }}
@@ -235,6 +245,9 @@ jobs:
           -sign
           -dput
         )
+        if [[ "$PPA_OMIT_ORIG" == "true" ]]; then
+          args+=(-omit-orig)
+        fi
         if [[ -n "$PPA_SOURCE_DATE_EPOCH" ]]; then
           args+=(-source-date-epoch "$PPA_SOURCE_DATE_EPOCH")
         fi
@@ -243,6 +256,7 @@ jobs:
       env:
         LAUNCHPAD_GPG_KEY_ID: ${{ secrets.LAUNCHPAD_GPG_KEY_ID }}
         LAUNCHPAD_GPG_PASSPHRASE: ${{ secrets.LAUNCHPAD_GPG_PASSPHRASE }}
+        PPA_OMIT_ORIG: ${{ inputs.ppa_omit_orig }}
         PPA_REVISION: ${{ inputs.ppa_revision }}
         PPA_SERIES: ${{ inputs.ppa_series }}
         PPA_SOURCE_DATE_EPOCH: ${{ inputs.ppa_source_date_epoch }}

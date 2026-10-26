@@ -18,14 +18,16 @@ import (
 type commitAmendCmd struct {
 	branchCreateConfig // TODO: find a way to avoid this
 
-	All         bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty  bool   `help:"Create a commit even if it contains no changes."`
-	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
-	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
+	All         bool     `short:"a" help:"Stage all changes before committing."`
+	AllowEmpty  bool     `help:"Create a commit even if it contains no changes."`
+	Message     []string `short:"m" xor:"commit-message-source" sep:"none" placeholder:"MSG" help:"Use the given message as the commit message. May be repeated to add multiple paragraphs."`
+	MessageFile string   `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
 	NoEdit   bool `help:"Don't edit the commit message"`
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"commitAmend.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
 }
 
 func (*commitAmendCmd) Help() string {
@@ -33,6 +35,9 @@ func (*commitAmendCmd) Help() string {
 	return text.Dedent(fmt.Sprintf(`
 		Staged changes are amended into the topmost commit.
 		Branches upstack are restacked if necessary.
+		Use --no-restack to disable automatic restacking,
+		or the 'spice.commitAmend.restack' configuration option
+		to change the default.
 		This is a shortcut for 'git commit --amend'
 		followed by '%[1]s upstack restack'.
 
@@ -219,7 +224,7 @@ func (cmd *commitAmendCmd) Run(
 	}
 
 	if err := wt.Commit(ctx, git.CommitRequest{
-		Message:     cmd.Message,
+		Messages:    cmd.Message,
 		MessageFile: cmd.MessageFile,
 		AllowEmpty:  cmd.AllowEmpty,
 		Amend:       true,
@@ -238,6 +243,10 @@ func (cmd *commitAmendCmd) Run(
 
 	if detachedHead {
 		log.Debug("HEAD is detached, skipping restack")
+		return nil
+	}
+
+	if cmd.Restack.None() {
 		return nil
 	}
 

@@ -2,8 +2,9 @@ Usage: gs commit (c) pick (p) [<commit>] [flags]
 
 Cherry-pick a commit
 
-Apply the changes introduced by a commit to the current branch and restack the
-upstack branches.
+Apply the changes introduced by a commit to the current branch and restack
+the upstack branches. Use --no-restack to disable automatic restacking, or the
+'spice.commitPick.restack' configuration option to change the default.
 
 If a commit is not specified, a prompt will allow picking from commits of
 upstack branches of the current branch. Use the --from option to pick a commit
@@ -19,7 +20,9 @@ Arguments:
   [<commit>]    Commit to cherry-pick
 
 Flags:
-  --from=NAME    Branch whose upstack commits will be considered.
+  --[no-]restack    Whether to restack upstack branches. (🔧
+                    spice.commitPick.restack)
+  --from=NAME       Branch whose upstack commits will be considered.
 
 Global Flags:
   -h, --help           Show help for the command

@@ -61,6 +61,9 @@ func TestHandler_TrackBranch(t *testing.T) {
 
 		mockRepo := NewMockGitRepository(ctrl)
 		mockRepo.EXPECT().
+			BranchExists(t.Context(), "feature").
+			Return(true)
+		mockRepo.EXPECT().
 			PeelToCommit(t.Context(), "develop").
 			Return(git.Hash("def456"), nil)
 
@@ -92,6 +95,9 @@ func TestHandler_TrackBranch(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
 		mockRepo := NewMockGitRepository(ctrl)
+		mockRepo.EXPECT().
+			BranchExists(t.Context(), "feature").
+			Return(true)
 		mockRepo.EXPECT().
 			PeelToCommit(t.Context(), "main").
 			Return(git.Hash("def456"), nil)
@@ -137,6 +143,9 @@ func TestHandler_TrackBranch(t *testing.T) {
 
 		mockRepo := NewMockGitRepository(ctrl)
 		mockRepo.EXPECT().
+			BranchExists(ctx, "new-feature").
+			Return(true)
+		mockRepo.EXPECT().
 			PeelToCommit(ctx, "new-feature").
 			Return("", assert.AnError)
 		mockRepo.EXPECT().
@@ -172,6 +181,9 @@ func TestHandler_TrackBranch(t *testing.T) {
 		ctrl := gomock.NewController(t)
 
 		mockRepo := NewMockGitRepository(ctrl)
+		mockRepo.EXPECT().
+			BranchExists(t.Context(), "feature").
+			Return(true)
 		mockRepo.EXPECT().
 			PeelToCommit(t.Context(), "main").
 			Return(git.Hash("main123"), nil)
@@ -209,6 +221,9 @@ func TestHandler_TrackBranch(t *testing.T) {
 
 		mockRepo := NewMockGitRepository(ctrl)
 		mockRepo.EXPECT().
+			BranchExists(t.Context(), "feature").
+			Return(true)
+		mockRepo.EXPECT().
 			PeelToCommit(t.Context(), "main").
 			Return(git.Hash("main123"), nil)
 
@@ -231,6 +246,32 @@ func TestHandler_TrackBranch(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Contains(t, logBuffer.String(), "stack state verification failed")
+	})
+
+	t.Run("CannotTrackNonBranch", func(t *testing.T) {
+		log := silog.Nop()
+		store := statetest.NewMemoryStore(t, "main", "", log)
+
+		ctrl := gomock.NewController(t)
+
+		mockRepo := NewMockGitRepository(ctrl)
+		mockRepo.EXPECT().
+			BranchExists(t.Context(), "HEAD").
+			Return(false)
+
+		handler := &Handler{
+			Log:        log,
+			Repository: mockRepo,
+			Store:      store,
+			Service:    NewMockService(ctrl),
+			View:       ui.NewFileView(t.Output()),
+		}
+
+		err := handler.TrackBranch(t.Context(), &BranchRequest{
+			Branch: "HEAD",
+			Base:   "main",
+		})
+		assert.EqualError(t, err, `branch "HEAD" does not exist`)
 	})
 }
 

@@ -42,7 +42,7 @@ var _ Store = (*state.Store)(nil)
 // Service provides access to git-spice's higher-level operations.
 type Service interface {
 	BranchGraph(context.Context, *spice.BranchGraphOptions) (*spice.BranchGraph, error)
-	CheckRestacked(context.Context, string) (git.Hash, error)
+	CheckLoadedBranchRestacked(context.Context, spice.LoadBranchItem) (git.Hash, error)
 }
 
 var _ Service = (*spice.Service)(nil)
@@ -256,22 +256,14 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				// which will panic down below when consuming
 				// the result.
 
-				// Check restack status /before/ looking up
-				// the branch in git because VerifyRestacked
-				// might update the branch's base hash
-				// if the branch was manually restacked.
-				//
-				// TODO: This is a hack.
-				// The isn't a good abstraction.
-				baseHash, err := h.Service.CheckRestacked(ctx, branch.Name)
+				// BranchGraph was loaded before restack reconciliation.
+				// When CheckRestacked heals a boundary, its error returns the
+				// reconciled value so this invocation does not render stale commits.
+				baseHash, err := h.Service.CheckLoadedBranchRestacked(ctx, branch)
 				if err != nil {
-					var needsRestack *spice.BranchNeedsRestackError
-					if errors.As(err, &needsRestack) {
-						// if the branch needs to be restacked,
-						// use the base hash stored in state
-						// so that the log doesn't show duplicated commits.
+					if needsRestack, ok := errors.AsType[*spice.BranchNeedsRestackError](err); ok {
 						item.NeedsRestack = true
-						baseHash = branch.BaseHash
+						baseHash = needsRestack.Upstream
 					} else {
 						baseHash = git.ZeroHash
 					}

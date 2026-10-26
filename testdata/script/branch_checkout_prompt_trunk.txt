@@ -25,6 +25,6 @@ feature
 -- robot.golden --
 ===
 > Select a branch to checkout: 
-> ┏━■ feature ◀
+> ┏━━■ feature ◀
 > main
 "main"

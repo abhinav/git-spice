@@ -4,41 +4,33 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/git"
 )
 
 // ChangeStatuses retrieves compact statuses for the given changes in bulk.
 func (r *Repository) ChangeStatuses(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeStatus, error) {
-	var q struct {
-		Nodes []struct {
-			PullRequest struct {
-				State      githubv4.PullRequestState `graphql:"state"`
-				HeadRefOid githubv4.GitObjectID      `graphql:"headRefOid"`
-			} `graphql:"... on PullRequest"`
-		} `graphql:"nodes(ids: $ids)"`
-	}
-
-	gqlIDs := make([]githubv4.ID, len(ids))
+	gqlIDs := make([]github.ID, len(ids))
 	for i, id := range ids {
 		pr := mustPR(id)
-		var err error
-		gqlIDs[i], err = r.graphQLID(ctx, pr)
+		gqlID, err := r.graphQLID(ctx, pr)
 		if err != nil {
 			return nil, fmt.Errorf("resolve ID %v: %w", id, err)
 		}
+		gqlIDs[i] = gqlID
 	}
 
-	if err := r.client.Query(ctx, &q, map[string]any{"ids": gqlIDs}); err != nil {
+	githubStatuses, err := r.gateway.ChangeStatuses(ctx, gqlIDs)
+	if err != nil {
 		return nil, fmt.Errorf("retrieve change states: %w", err)
 	}
 
 	statuses := make([]forge.ChangeStatus, len(ids))
-	for i, pr := range q.Nodes {
+	for i, status := range githubStatuses {
 		statuses[i] = forge.ChangeStatus{
-			State:    forgeChangeState(pr.PullRequest.State),
-			HeadHash: git.Hash(pr.PullRequest.HeadRefOid),
+			State:    forgeChangeState(status.State),
+			HeadHash: git.Hash(status.HeadRefOID),
 		}
 	}
 

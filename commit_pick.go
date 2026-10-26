@@ -28,6 +28,9 @@ func (*commitPickCmd) Help() string {
 	return text.Dedent(`
 		Apply the changes introduced by a commit to the current branch
 		and restack the upstack branches.
+		Use --no-restack to disable automatic restacking,
+		or the 'spice.commitPick.restack' configuration option
+		to change the default.
 
 		If a commit is not specified, a prompt will allow picking
 		from commits of upstack branches of the current branch.

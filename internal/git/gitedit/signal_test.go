@@ -58,7 +58,7 @@ import (
 //	  └─ asserts: exit 0, correct message on stdout
 func TestIntegrationEditor_signalAbsorbed(t *testing.T) {
 	if os.Getenv("_GITEDIT_SIGNAL_TEST") == "1" {
-		os.Exit(signalTestSubprocess())
+		os.Exit(signalTestSubprocess(t.Context()))
 		return
 	}
 
@@ -154,7 +154,7 @@ func TestIntegrationEditor_signalAbsorbed(t *testing.T) {
 // signalTestSubprocess runs inside the re-exec'd test binary.
 // It creates a real git repo, configures an Editor
 // with a real sigstack.Stack, and prints the resulting message.
-func signalTestSubprocess() (exitCode int) {
+func signalTestSubprocess(ctx context.Context) (exitCode int) {
 	fixture, err := gittest.LoadFixtureScript(
 		[]byte(os.Getenv("_GITEDIT_FIXTURE")),
 	)
@@ -164,7 +164,6 @@ func signalTestSubprocess() (exitCode int) {
 	}
 	defer fixture.Cleanup()
 
-	ctx := context.Background()
 	repo, err := git.Open(
 		ctx, fixture.Dir(),
 		git.OpenOptions{Log: silog.Nop()},

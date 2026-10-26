@@ -48,9 +48,9 @@ Feature 3
 -- robot.golden --
 ===
 > Select a branch to move onto: 
-> ┏━□ bbb
-> ┣━□ ccc
-> ┣━□ aaa
+> ┏━━□ bbb
+> ┣━━□ ccc
+> ┣━━□ aaa
 > main ◀
 >
 > Moving the upstack of bbb onto another branch

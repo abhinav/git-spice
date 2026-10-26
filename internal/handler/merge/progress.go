@@ -1,0 +1,344 @@
+package merge
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sync"
+
+	tea "charm.land/bubbletea/v2"
+	"go.abhg.dev/gs/internal/graph"
+	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/widget/mergeprogress"
+)
+
+// mergeProgress reports merge-loop progress to either the terminal widget
+// or the non-interactive log stream.
+type mergeProgress interface {
+	Event(mergeProgressEvent)
+}
+
+// mergeProgressEvent is one progress event emitted by the merge loop.
+type mergeProgressEvent struct {
+	// Kind identifies the merge-loop state being reported.
+	Kind mergeProgressEventKind
+
+	// Item identifies the branch and change being updated.
+	Item *mergeItem
+
+	// URL is the forge URL associated with merge request events.
+	URL string
+
+	// Base is the target branch associated with retargeting events.
+	Base string
+}
+
+// mergeProgressEventKind identifies the operation state being reported.
+type mergeProgressEventKind uint8
+
+const (
+	mergeProgressPreparing              mergeProgressEventKind = iota // branch preparation started
+	mergeProgressPrepareFailed                                        // local preparation failed
+	mergeProgressRetargeting                                          // retargeting to trunk started
+	mergeProgressRetargetFailed                                       // retargeting to trunk failed
+	mergeProgressWaitingForForgeHead                                  // forge HEAD still stale
+	mergeProgressForgeHeadFailed                                      // forge HEAD did not update
+	mergeProgressWaitingForMergeability                               // merge readiness still pending
+	mergeProgressMergeabilityReady                                    // ready to merge
+	mergeProgressMergeabilityFailed                                   // merge readiness blocked or timed out
+	mergeProgressMerging                                              // forge merge request started
+	mergeProgressMergeFailed                                          // forge merge request failed
+	mergeProgressWaitingForMerge                                      // waiting for merged state
+	mergeProgressMergeIncomplete                                      // merged state did not appear
+	mergeProgressMerged                                               // merged state observed
+	mergeProgressFailed                                               // branch failed by scheduler policy
+	mergeProgressSkipped                                              // branch skipped by scheduler policy
+)
+
+// logMergeProgress reports merge progress through sparse log messages.
+type logMergeProgress struct {
+	log *silog.Logger
+
+	mu   sync.Mutex
+	last map[string]mergeProgressEvent
+}
+
+func newLogMergeProgress(log *silog.Logger) *logMergeProgress {
+	return &logMergeProgress{
+		log:  log,
+		last: make(map[string]mergeProgressEvent),
+	}
+}
+
+func (p *logMergeProgress) Event(event mergeProgressEvent) {
+	item := event.Item
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.last[item.branch] == event {
+		return
+	}
+	p.last[item.branch] = event
+
+	switch event.Kind {
+	case mergeProgressRetargeting:
+		p.log.Infof("%s: retargeting %v onto %s",
+			event.Item.branch, event.Item.changeID, event.Base)
+	case mergeProgressWaitingForForgeHead:
+		p.log.Infof("%s: waiting for HEAD to update", event.Item.branch)
+	case mergeProgressWaitingForMergeability:
+		p.log.Infof("%s: waiting for merge readiness", event.Item.branch)
+	case mergeProgressMerging:
+		p.log.Infof("%s: merging %v: %s",
+			event.Item.branch, event.Item.changeID, event.URL)
+	case mergeProgressWaitingForMerge:
+		p.log.Debugf("%s: waiting for merge", event.Item.branch)
+	case mergeProgressFailed:
+		// The returned item error becomes the fatal command error.
+		// Logging this scheduler state would duplicate the failure
+		// without adding the operation that failed.
+	case mergeProgressSkipped:
+		p.log.Warnf("%s: skipped", event.Item.branch)
+	}
+}
+
+// mergeProgressGroup reports each event to multiple progress renderers.
+type mergeProgressGroup []mergeProgress
+
+func (g mergeProgressGroup) Event(event mergeProgressEvent) {
+	for _, progress := range g {
+		progress.Event(event)
+	}
+}
+
+// widgetMergeProgress reports merge progress through a Bubble Tea model.
+type widgetMergeProgress struct {
+	runner ui.ModelView
+	theme  ui.Theme
+
+	events chan tea.Msg
+	// err is written before stopped is closed
+	// and read only after receiving from stopped.
+	// Closing stopped synchronizes the write with the read.
+	err error
+
+	stopped chan struct{}
+	cancel  context.CancelFunc
+}
+
+func newWidgetMergeProgress(
+	runner ui.ModelView,
+	theme ui.Theme,
+) *widgetMergeProgress {
+	return &widgetMergeProgress{
+		runner: runner,
+		theme:  theme,
+	}
+}
+
+// Start launches the Bubble Tea progress model
+// and returns a context canceled when the user cancels the widget.
+//
+// The caller must call Finish after the merge loop exits
+// so the model goroutine can stop and report renderer errors.
+func (p *widgetMergeProgress) Start(
+	ctx context.Context,
+	items []*mergeItem,
+) context.Context {
+	ctx, p.cancel = context.WithCancel(ctx)
+	p.events = make(chan tea.Msg, 1)
+	p.stopped = make(chan struct{})
+
+	model := &mergeProgressModel{
+		Widget: mergeprogress.New(mergeProgressItems(items)...).
+			WithTheme(p.theme),
+		events: p.events,
+	}
+	go func() {
+		p.err = p.runner.RunModel(model, nil)
+		if errors.Is(model.Err(), mergeprogress.ErrCanceled) {
+			p.cancel()
+		}
+		close(p.stopped)
+	}()
+	return ctx
+}
+
+func mergeProgressItems(items []*mergeItem) []mergeprogress.Item {
+	indexByBranch := make(map[string]int, len(items))
+	branches := make([]string, len(items))
+	for idx, item := range items {
+		branches[idx] = item.branch
+		indexByBranch[item.branch] = idx
+	}
+
+	branches = graph.BreadthFirstSort(branches,
+		func(idx int, _ string) int {
+			parentIdx, ok := indexByBranch[items[idx].base]
+			if !ok {
+				return -1
+			}
+			return parentIdx
+		})
+
+	progressItems := make([]mergeprogress.Item, len(branches))
+	for idx, branch := range branches {
+		progressItems[idx] = mergeprogress.Item{
+			ID:    branch,
+			State: mergeprogress.StatePending,
+		}
+	}
+	return progressItems
+}
+
+func (p *widgetMergeProgress) Event(event mergeProgressEvent) {
+	if p.events == nil {
+		return
+	}
+
+	select {
+	case p.events <- widgetProgressEvent(event):
+	case <-p.stopped:
+	}
+}
+
+func (p *widgetMergeProgress) Finish() error {
+	if p.events == nil {
+		return nil
+	}
+
+	select {
+	case p.events <- mergeProgressDone{}:
+	case <-p.stopped:
+	}
+	<-p.stopped
+	if p.err != nil {
+		return fmt.Errorf("run merge progress: %w", p.err)
+	}
+	return nil
+}
+
+type mergeProgressModel struct {
+	*mergeprogress.Widget
+
+	events <-chan tea.Msg
+}
+
+func (m *mergeProgressModel) Init() tea.Cmd {
+	return tea.Batch(m.Widget.Init(), waitMergeProgressEvent(m.events))
+}
+
+func (m *mergeProgressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if _, ok := msg.(mergeProgressDone); ok {
+		return m, tea.Quit
+	}
+
+	model, cmd := m.Widget.Update(msg)
+	if widget, ok := model.(*mergeprogress.Widget); ok {
+		m.Widget = widget
+	}
+	return m, tea.Batch(cmd, waitMergeProgressEvent(m.events))
+}
+
+// mergeProgressDone tells the Bubble Tea model
+// that the merge loop has stopped publishing events.
+type mergeProgressDone struct{}
+
+// waitMergeProgressEvent blocks the Bubble Tea update loop
+// until the merge loop publishes the next progress message.
+func waitMergeProgressEvent(events <-chan tea.Msg) tea.Cmd {
+	return func() tea.Msg {
+		return <-events
+	}
+}
+
+func widgetProgressEvent(event mergeProgressEvent) mergeprogress.Event {
+	item := event.Item
+	switch event.Kind {
+	case mergeProgressPreparing:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
+		}
+	case mergeProgressPrepareFailed:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
+		}
+	case mergeProgressRetargeting:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
+		}
+	case mergeProgressRetargetFailed:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
+		}
+	case mergeProgressWaitingForForgeHead:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
+		}
+	case mergeProgressForgeHeadFailed:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
+		}
+	case mergeProgressWaitingForMergeability:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
+		}
+	case mergeProgressMergeabilityReady:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
+		}
+	case mergeProgressMergeabilityFailed:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
+		}
+	case mergeProgressMerging:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
+		}
+	case mergeProgressMergeFailed:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
+		}
+	case mergeProgressWaitingForMerge:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
+		}
+	case mergeProgressMergeIncomplete:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
+		}
+	case mergeProgressMerged:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateMerged,
+		}
+	case mergeProgressFailed:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
+		}
+	case mergeProgressSkipped:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateSkipped,
+		}
+	default:
+		panic(fmt.Sprintf("unknown merge progress event kind: %d",
+			event.Kind))
+	}
+}

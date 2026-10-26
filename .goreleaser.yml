@@ -41,6 +41,16 @@ builds:
     flags:
       - -trimpath
 
+signs:
+  - artifacts: checksum
+    signature: ${artifact}.sigstore.json
+    cmd: cosign
+    args:
+      - sign-blob
+      - --bundle=${signature}
+      - --yes
+      - ${artifact}
+
 archives:
   - ids: [git-spice]
     formats: tar.gz

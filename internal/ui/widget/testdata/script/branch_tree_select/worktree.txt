@@ -25,9 +25,9 @@ feed <Enter>
 ]
 -- prompt --
 Select a branch:
-  ┏━■ feat2 (#456) [wt: /tmp/wt2] ◀
+  ┏━━■ feat2 (#456) [wt: /tmp/wt2] ◀
 ┏━┻□ feat1 [wt: /home/user/wt1]
-┃ ┏━□ feat4 (#789)
+┃ ┏━━□ feat4 (#789)
 ┣━┻□ feat3
 main
 -- filter --

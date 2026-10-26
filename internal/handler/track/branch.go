@@ -15,7 +15,7 @@ import (
 
 // BranchRequest is the request for tracking a branch.
 type BranchRequest struct {
-	// Branch is the name of the branch to track.
+	// Branch is the name of the local branch to track.
 	Branch string // required
 
 	// Base is the name of the base branch this branch merges into.
@@ -30,6 +30,9 @@ func (h *Handler) TrackBranch(ctx context.Context, req *BranchRequest) error {
 	log, store := h.Log, h.Store
 	if req.Branch == store.Trunk() {
 		return errors.New("cannot track trunk branch")
+	}
+	if !h.Repository.BranchExists(ctx, req.Branch) {
+		return fmt.Errorf("branch %q does not exist", req.Branch)
 	}
 
 	if req.Base == "" {
@@ -67,8 +70,7 @@ func (h *Handler) TrackBranch(ctx context.Context, req *BranchRequest) error {
 	log.Infof("%v: tracking with base %v", req.Branch, req.Base)
 
 	if err := h.Service.VerifyRestacked(ctx, req.Branch); err != nil {
-		var restackErr *spice.BranchNeedsRestackError
-		if errors.As(err, &restackErr) {
+		if _, ok := errors.AsType[*spice.BranchNeedsRestackError](err); ok {
 			log.Infof("%v: branch is behind its base and needs to be restacked.", req.Branch)
 			log.Infof("%v: run '%s branch restack --branch=%v' to restack it", req.Branch, cli.Name(), req.Branch)
 		} else {

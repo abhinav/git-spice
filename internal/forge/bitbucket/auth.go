@@ -2,7 +2,7 @@ package bitbucket
 
 import (
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"strings"
@@ -31,7 +31,7 @@ const (
 
 // AuthenticationToken defines the token returned by the Bitbucket forge.
 type AuthenticationToken struct {
-	forge.AuthenticationToken
+	forge.AuthenticationToken `json:"-"`
 
 	// AuthType specifies the authentication method used.
 	AuthType AuthType `json:"auth_type"`
@@ -40,7 +40,7 @@ type AuthenticationToken struct {
 	//
 	// Not used if AuthType is AuthTypeGCM,
 	// as the token is loaded from git-credential-manager on demand.
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken string `json:"access_token,omitzero"`
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
@@ -62,10 +62,14 @@ func (f *Forge) AuthenticationFlow(
 ) (forge.AuthenticationToken, error) {
 	log := f.logger()
 
-	if f.Options.Token != "" {
+	if f.token != "" {
 		log.Error("Already authenticated with BITBUCKET_TOKEN.")
 		log.Error("Unset BITBUCKET_TOKEN to login with a different method.")
 		return nil, errors.New("already authenticated")
+	}
+
+	if f.kind == KindDataCenter {
+		return f.serverAuthenticationFlow(ctx, view)
 	}
 
 	method, err := f.selectAuthMethod(view)
@@ -150,7 +154,7 @@ func (f *Forge) apiTokenAuth(_ context.Context, view ui.View) (*AuthenticationTo
 	f.logger().Info("  pullrequest:write - create and edit pull requests")
 	f.logger().Info("  account - read workspace members for reviewer lookup")
 
-	token, err := promptRequired(view, "Enter API token", "API token is required")
+	token, err := promptRequired(view, "Enter API token", "", "API token is required")
 	if err != nil {
 		return nil, fmt.Errorf("prompt for API token: %w", err)
 	}
@@ -161,10 +165,11 @@ func (f *Forge) apiTokenAuth(_ context.Context, view ui.View) (*AuthenticationTo
 	}, nil
 }
 
-func promptRequired(view ui.View, title, errMsg string) (string, error) {
+func promptRequired(view ui.View, title, description, errMsg string) (string, error) {
 	var value string
 	err := ui.Run(view, ui.NewInput().
 		WithTitle(title).
+		WithDescription(description).
 		WithValidate(requiredValidator(errMsg)).
 		WithValue(&value),
 	)
@@ -188,7 +193,7 @@ func (f *Forge) SaveAuthenticationToken(
 	bbt := t.(*AuthenticationToken)
 
 	// If the user has set BITBUCKET_TOKEN, we should not save it to the stash.
-	if f.Options.Token != "" && f.Options.Token == bbt.AccessToken {
+	if f.token != "" && f.token == bbt.AccessToken {
 		return nil
 	}
 
@@ -209,10 +214,10 @@ func (f *Forge) SaveAuthenticationToken(
 // git-credential-manager on demand.
 func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.AuthenticationToken, error) {
 	// Environment variable takes highest precedence.
-	if f.Options.Token != "" {
+	if f.token != "" {
 		return &AuthenticationToken{
 			AuthType:    AuthTypeEnvironmentVariable,
-			AccessToken: f.Options.Token,
+			AccessToken: f.token,
 		}, nil
 	}
 

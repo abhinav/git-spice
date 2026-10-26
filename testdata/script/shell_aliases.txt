@@ -63,7 +63,17 @@ git config spice.shorthand.echo-args '!echo "arg1=$1 arg2=$2"'
 gs echo-args hello world
 stdout 'arg1=hello arg2=world'
 
+# Test shell alias stdin forwarding.
+git config spice.shorthand.echo-stdin '!cat'
+stdin stdin.txt
+exec gs echo-stdin
+stdout 'line one'
+stdout 'line two'
+
 -- repo/foo.txt --
 foo content
 -- repo/bar.txt --
 bar content
+-- repo/stdin.txt --
+line one
+line two

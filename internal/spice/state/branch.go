@@ -3,7 +3,8 @@ package state
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"iter"
@@ -31,12 +32,12 @@ type branchStateBase struct {
 }
 
 type branchUpstreamState struct {
-	Branch string `json:"branch,omitempty"`
+	Branch string `json:"branch,omitzero"`
 }
 
 type branchChangeState struct {
 	Forge  string
-	Change json.RawMessage
+	Change jsontext.Value
 }
 
 func (bs *branchChangeState) MarshalJSON() ([]byte, error) {
@@ -44,7 +45,7 @@ func (bs *branchChangeState) MarshalJSON() ([]byte, error) {
 }
 
 func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
-	var m map[string]json.RawMessage
+	var m map[string]jsontext.Value
 	if err := json.Unmarshal(data, &m); err != nil {
 		return fmt.Errorf("unmarshal change state: %w", err)
 	}
@@ -63,10 +64,10 @@ func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
 
 type branchState struct {
 	Base     branchStateBase      `json:"base"`
-	Upstream *branchUpstreamState `json:"upstream,omitempty"`
-	Change   *branchChangeState   `json:"change,omitempty"`
+	Upstream *branchUpstreamState `json:"upstream,omitzero"`
+	Change   *branchChangeState   `json:"change,omitzero"`
 
-	MergedDownstack []json.RawMessage `json:"merged,omitempty"`
+	MergedDownstack []jsontext.Value `json:"merged,omitempty"`
 }
 
 // branchKey returns the path to the JSON file for the given branch
@@ -90,7 +91,7 @@ type LookupResponse struct {
 
 	// ChangeMetadata holds the metadata for the published change.
 	// This is forge-specific and must be deserialized by the forge.
-	ChangeMetadata json.RawMessage
+	ChangeMetadata jsontext.Value
 
 	// ChangeForge is the forge that the change was published to.
 	ChangeForge string
@@ -106,17 +107,66 @@ type LookupResponse struct {
 	// MergedDownstack is in the order that the branches were merged.
 	// For example, if the stack was main -> A -> B -> C,
 	// where C is this branch, MergedDownstack will be [A, B].
-	MergedDownstack []json.RawMessage
+	MergedDownstack []jsontext.Value
 }
 
 // LookupBranch returns information about a tracked branch.
 // If the branch is not found, [ErrNotExist] will be returned.
 func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse, error) {
-	state, err := s.lookupBranchState(ctx, name)
+	responses, err := s.LookupBranches(ctx, []string{name})
 	if err != nil {
 		return nil, err
 	}
 
+	return responses[0], nil
+}
+
+// LookupBranches returns information about tracked branches.
+// The returned slice matches the order of names.
+//
+// Missing branches have nil responses and are identified by the indexes in
+// [storage.MissingKeysError]. All other responses are valid in that case.
+// Other errors return no responses.
+func (s *Store) LookupBranches(
+	ctx context.Context,
+	names []string,
+) ([]*LookupResponse, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	states := make([]branchState, len(names))
+	reqs := make([]storage.GetRequest, len(names))
+	for i, name := range names {
+		reqs[i] = storage.GetRequest{
+			Key:   branchKey(name),
+			Value: &states[i],
+		}
+	}
+
+	err := s.db.GetMany(ctx, reqs)
+	var missing []int
+	if missingErr, ok := errors.AsType[*storage.MissingKeysError](err); ok {
+		missing = missingErr.Indexes
+	} else if err != nil {
+		return nil, fmt.Errorf("load branches: %w", err)
+	}
+
+	responses := make([]*LookupResponse, len(states))
+	for i := range states {
+		if len(missing) > 0 && missing[0] == i {
+			missing = missing[1:]
+			continue
+		}
+		responses[i] = branchStateLookupResponse(&states[i])
+	}
+	if err != nil {
+		return responses, fmt.Errorf("load branches: %w", err)
+	}
+	return responses, nil
+}
+
+func branchStateLookupResponse(state *branchState) *LookupResponse {
 	res := &LookupResponse{
 		Base:            state.Base.Name,
 		BaseHash:        git.Hash(state.Base.Hash),
@@ -132,7 +182,7 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 		res.UpstreamBranch = upstream.Branch
 	}
 
-	return res, nil
+	return res
 }
 
 // lookupBranchState loads the state of the given branch from the store.
@@ -177,24 +227,26 @@ func (s *Store) listBranches(ctx context.Context) iter.Seq2[string, error] {
 type BranchTx struct {
 	store *Store
 
-	states map[string]*branchState // cached states with changes
-	sets   map[string]struct{}     // branches to set
-	dels   map[string]struct{}     // branches to delete
+	states  map[string]*branchState // cached states with changes
+	sets    map[string]struct{}     // branches to set
+	dels    map[string]struct{}     // branches to delete
+	renames map[string]string       // old branch name to new branch name
 }
 
 // BeginBranchTx starts a new transaction for updating the branch graph.
 // Changes are not persisted until Commit is called.
 func (s *Store) BeginBranchTx() *BranchTx {
 	return &BranchTx{
-		store:  s,
-		states: make(map[string]*branchState),
-		sets:   make(map[string]struct{}),
-		dels:   make(map[string]struct{}),
+		store:   s,
+		states:  make(map[string]*branchState),
+		sets:    make(map[string]struct{}),
+		dels:    make(map[string]struct{}),
+		renames: make(map[string]string),
 	}
 }
 
 // Null is a JSON null value.
-var Null = json.RawMessage("null")
+var Null = jsontext.Value("null")
 
 // UpsertRequest is a request to add or update information about a branch.
 type UpsertRequest struct {
@@ -218,7 +270,7 @@ type UpsertRequest struct {
 	// Use Null to clear the current metadata.
 	//
 	// Leave this unset to keep the current metadata.
-	ChangeMetadata json.RawMessage
+	ChangeMetadata jsontext.Value
 
 	// ChangeForge is the forge that recorded the change.
 	//
@@ -231,7 +283,7 @@ type UpsertRequest struct {
 
 	// MergedDownstack is a list of branches that were previously
 	// downstack from this branch that have since been merged into trunk.
-	MergedDownstack *[]json.RawMessage
+	MergedDownstack *[]jsontext.Value
 }
 
 // Upsert adds or updates information about a branch.
@@ -350,12 +402,52 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 	return nil
 }
 
+// Rename changes a tracked branch name while preserving its stored state.
+// Commit also moves state owned by the branch, such as review drafts.
+func (tx *BranchTx) Rename(
+	ctx context.Context,
+	oldName, newName string,
+) error {
+	if oldName == "" || newName == "" {
+		return errors.New("old and new branch names are required")
+	}
+	if oldName == tx.store.trunk || newName == tx.store.trunk {
+		return ErrTrunk
+	}
+
+	oldState, err := tx.state(ctx, oldName)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.state(ctx, newName); err == nil {
+		return fmt.Errorf("branch %v is already tracked", newName)
+	} else if !errors.Is(err, ErrNotExist) {
+		return err
+	}
+
+	newState := *oldState
+	tx.states[newName] = &newState
+	delete(tx.states, oldName)
+	tx.dels[oldName] = struct{}{}
+
+	if _, modified := tx.sets[oldName]; modified {
+		// The persisted source does not include earlier transaction changes.
+		// Write the changed state under its new name instead of moving it.
+		tx.sets[newName] = struct{}{}
+	} else {
+		tx.renames[oldName] = newName
+	}
+	delete(tx.sets, oldName)
+	return nil
+}
+
 // Commit persists all planned changes to the store.
 // If there are no changes, this is a no-op.
 func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 	req := updateBranchesRequest{
 		Sets:    make([]setBranchStateRequest, 0, len(tx.sets)),
 		Deletes: slices.Collect(maps.Keys(tx.dels)),
+		Renames: maps.Clone(tx.renames),
 		Message: msg,
 	}
 
@@ -375,6 +467,7 @@ func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 	clear(tx.sets)
 	clear(tx.dels)
 	clear(tx.states)
+	clear(tx.renames)
 	return nil
 }
 
@@ -401,9 +494,24 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 		// seen prevents underlying branches from being listed twice.
 		seen := make(map[string]struct{})
 
+		// A renamed branch is visible under its destination name even when
+		// its persisted state can move without being rewritten.
+		for _, branch := range tx.renames {
+			if _, deleted := tx.dels[branch]; deleted {
+				continue
+			}
+			if !yield(branch, nil) {
+				return
+			}
+			seen[branch] = struct{}{}
+		}
+
 		// Entries in tx.sets take precedence unless they are deleted.
 		for branch := range tx.sets {
 			if _, ok := tx.dels[branch]; ok {
+				continue
+			}
+			if _, ok := seen[branch]; ok {
 				continue
 			}
 
@@ -494,17 +602,18 @@ type setBranchStateRequest struct {
 }
 
 // updateBranchesRequest is a request to update the state of multiple branches.
-// The request can set the state of branches, delete branches, or both.
+// The request can set, delete, or rename branches in one transaction.
 // A message is recorded with the update.
 type updateBranchesRequest struct {
 	Sets    []setBranchStateRequest
 	Deletes []string
+	Renames map[string]string
 	Message string // required
 }
 
 // updateBranches atomically updates the state of multiple branches in the store.
 func (s *Store) updateBranches(ctx context.Context, req updateBranchesRequest) error {
-	if len(req.Sets) == 0 && len(req.Deletes) == 0 {
+	if len(req.Sets) == 0 && len(req.Deletes) == 0 && len(req.Renames) == 0 {
 		return nil
 	}
 
@@ -520,13 +629,36 @@ func (s *Store) updateBranches(ctx context.Context, req updateBranchesRequest) e
 		}
 	}
 
-	dels := make([]string, len(req.Deletes))
-	for idx, del := range req.Deletes {
-		dels[idx] = branchKey(del)
+	var dels []string
+	for _, del := range req.Deletes {
+		if _, renamed := req.Renames[del]; !renamed {
+			dels = append(
+				dels,
+				branchKey(del),
+				reviewDraftsJSON(del),
+			)
+		}
+	}
+
+	var moves []storage.MoveRequest
+	for _, oldName := range slices.Sorted(maps.Keys(req.Renames)) {
+		newName := req.Renames[oldName]
+		moves = append(
+			moves,
+			storage.MoveRequest{
+				From: branchKey(oldName),
+				To:   branchKey(newName),
+			},
+			storage.MoveRequest{
+				From: reviewDraftsJSON(oldName),
+				To:   reviewDraftsJSON(newName),
+			},
+		)
 	}
 
 	updReq := storage.UpdateRequest{
 		Sets:    sets,
+		Moves:   moves,
 		Deletes: dels,
 		Message: req.Message,
 	}

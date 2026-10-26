@@ -1,0 +1,876 @@
+package github
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
+	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.uber.org/mock/gomock"
+)
+
+func TestRepository_UpdateStackCreate(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: newStackPullRequest(nil),
+		2: newStackPullRequest(nil),
+	})
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{1, 2},
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_UpdateStackCurrent(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := newPullRequestStack(42, 1, 2)
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: newStackPullRequest(stack),
+		2: newStackPullRequest(stack),
+	})
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_UpdateStackExtend(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := newPullRequestStack(42, 1, 2)
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: newStackPullRequest(stack),
+		2: newStackPullRequest(stack),
+		3: newStackPullRequest(nil),
+	})
+	gateway.EXPECT().AddPullRequestsToStack(gomock.Any(), &github.AddPullRequestsToStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		StackNumber:  42,
+		PullRequests: []int{3},
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "base"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_UpdateStackInsertsIntoLinearStack(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := newPullRequestStack(42, 1, 2)
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: stackPullRequest("PR_1", "main", stack),
+		2: stackPullRequest("PR_2", "a", stack),
+		3: stackPullRequest("PR_3", "a", nil),
+	})
+	gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), &github.UnstackPullRequestStackInput{
+		Owner:       "acme",
+		Repo:        "repo",
+		StackNumber: 42,
+	}).Return(&github.UnstackPullRequestStackResult{}, nil)
+	gateway.EXPECT().UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+		PullRequestID: "PR_2",
+		BaseRefName:   new("c"),
+	}).Return(nil)
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{1, 3, 2},
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "main"},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 1}, BaseBranch: "a"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 3}, BaseBranch: "c"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_UpdateStackRemovesMember(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := newPullRequestStack(42, 1, 2, 3)
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: stackPullRequest("PR_1", "main", stack),
+		3: stackPullRequest("PR_3", "b", stack),
+	})
+	gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), gomock.Any()).
+		Return(&github.UnstackPullRequestStackResult{}, nil)
+	gateway.EXPECT().UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+		PullRequestID: "PR_3",
+		BaseRefName:   new("a"),
+	}).Return(nil)
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{1, 3},
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "main"},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 1}, BaseBranch: "a"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_UpdateStackRemovesMemberAfterMergedPrefix(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := &github.PullRequestStack{
+		Number: 42,
+		Members: []github.PullRequestStackMember{
+			{Number: 1, State: github.PullRequestStateMerged},
+			{Number: 2, State: github.PullRequestStateOpen},
+			{Number: 3, State: github.PullRequestStateOpen},
+			{Number: 4, State: github.PullRequestStateOpen},
+		},
+	}
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		2: stackPullRequest("PR_2", "main", stack),
+		4: stackPullRequest("PR_4", "removed", stack),
+	})
+	// Drop #3 from the active chain without including historical #1 in either
+	// the request or the replacement stack. GitHub may retain #1 on unstack.
+	gomock.InOrder(
+		gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), &github.UnstackPullRequestStackInput{
+			Owner: "acme", Repo: "repo", StackNumber: 42,
+		}).Return(&github.UnstackPullRequestStackResult{RemainingPullRequests: []int{1}}, nil),
+		gateway.EXPECT().UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+			PullRequestID: "PR_4", BaseRefName: new("bottom"),
+		}).Return(nil),
+		gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+			Owner: "acme", Repo: "repo", PullRequests: []int{2, 4},
+		}).Return(nil),
+	)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 2}, BaseBranch: "main"},
+		{Change: &PR{Number: 4}, BaseChange: &PR{Number: 2}, BaseBranch: "bottom"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_PlanStackUpdate_closedMembers(t *testing.T) {
+	tests := []struct {
+		name        string
+		givePRs     map[int]*stackResourceModelPR
+		giveMembers []int
+		giveChanges []forge.StackChange
+		wantMembers []int
+		wantTrace   []string
+	}{
+		{
+			// Closing b leaves it at the top of [a, b]. Appending c, which
+			// targets a, requires replacing the resource with [a, c].
+			name: "ClosedTop",
+			givePRs: map[int]*stackResourceModelPR{
+				1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+				2: {head: "b", base: "a", state: github.PullRequestStateClosed, headInRepository: true},
+				3: {head: "c", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
+			},
+			giveMembers: []int{1, 2},
+			giveChanges: []forge.StackChange{
+				{Change: &PR{Number: 1}},
+				{Change: &PR{Number: 3}, BaseChange: &PR{Number: 1}, BaseBranch: "a"},
+			},
+			wantMembers: []int{1, 3},
+			wantTrace:   []string{"unstack #42", "create [1 3]"},
+		},
+		{
+			// Unlike a merged prefix, closed a still blocks b. Release it
+			// before connecting [b, c], without changing b's existing base.
+			name: "ClosedBottom",
+			givePRs: map[int]*stackResourceModelPR{
+				1: {head: "a", base: "main", state: github.PullRequestStateClosed, headInRepository: true},
+				2: {head: "b", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
+				3: {head: "c", base: "b", state: github.PullRequestStateOpen, headInRepository: true},
+			},
+			giveMembers: []int{1, 2},
+			giveChanges: []forge.StackChange{
+				{Change: &PR{Number: 1}},
+				{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+				{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+			},
+			wantMembers: []int{2, 3},
+			wantTrace:   []string{"unstack #42", "create [2 3]"},
+		},
+		{
+			// Closing middle b preserves [a, b, c] and c's base b.
+			// To connect [a, c], release membership before retargeting c.
+			name: "ClosedMiddle",
+			givePRs: map[int]*stackResourceModelPR{
+				1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+				2: {head: "b", base: "a", state: github.PullRequestStateClosed, headInRepository: true},
+				3: {head: "c", base: "b", state: github.PullRequestStateOpen, headInRepository: true},
+			},
+			giveMembers: []int{1, 2, 3},
+			giveChanges: []forge.StackChange{
+				{Change: &PR{Number: 1}},
+				{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+				{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "a"},
+			},
+			wantMembers: []int{1, 3},
+			wantTrace:   []string{"unstack #42", "retarget 3 to \"a\"", "create [1 3]"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := &stackResourceModel{
+				pullRequests: tt.givePRs,
+				stacks:       map[int][]int{42: tt.giveMembers},
+				branches:     map[string]struct{}{"main": {}, "a": {}, "b": {}, "c": {}},
+				nextStack:    42,
+			}
+			err := executeStackUpdate(t.Context(), newStackRepository(t, model), tt.giveChanges)
+			require.NoError(t, err)
+			assert.Equal(t, map[int][]int{43: tt.wantMembers}, model.stacks)
+			assert.Equal(t, tt.wantTrace, model.trace)
+		})
+	}
+}
+
+func TestRepository_UpdateStackSplitsExistingStack(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := newPullRequestStack(42, 1, 2)
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: stackPullRequest("PR_1", "main", stack),
+		2: stackPullRequest("PR_2", "a", stack),
+	})
+	gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), gomock.Any()).
+		Return(&github.UnstackPullRequestStackResult{}, nil)
+	gateway.EXPECT().UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+		PullRequestID: "PR_2",
+		BaseRefName:   new("main"),
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "main"},
+		{Change: &PR{Number: 2}, BaseBranch: "main"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_UpdateStackLeavesLockedStackUnchanged(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := &github.PullRequestStack{
+		Number: 42,
+		Members: []github.PullRequestStackMember{
+			{Number: 4, State: github.PullRequestStateMerged},
+			{Number: 1, State: github.PullRequestStateOpen},
+			{Number: 2, State: github.PullRequestStateOpen, Locked: true},
+		},
+	}
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: stackPullRequest("PR_1", "main", stack),
+		2: stackPullRequest("PR_2", "a", stack),
+		3: stackPullRequest("PR_3", "a", nil),
+	})
+
+	var logs strings.Builder
+	repo := newStackRepository(t, gateway)
+	repo.log = silog.New(&logs, &silog.Options{Level: silog.LevelDebug})
+	err := executeStackUpdate(t.Context(), repo, []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "main"},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 1}, BaseBranch: "a"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 3}, BaseBranch: "c"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, logs.String(),
+		"#1: Leaving pull request and its upstack in existing GitHub native stack #42: queued or auto-merge pull requests prevent restructuring")
+}
+
+func TestRepository_UpdateStackReplacesStackWithMergedPrefix(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := &github.PullRequestStack{
+		Number: 42,
+		Members: []github.PullRequestStackMember{
+			{Number: 1, State: github.PullRequestStateMerged},
+			{Number: 2, State: github.PullRequestStateOpen},
+		},
+	}
+	merged := newStackPullRequest(stack)
+	merged.State = github.PullRequestStateMerged
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: merged,
+		2: stackPullRequest("PR_2", "a", stack),
+		3: stackPullRequest("PR_3", "a", nil),
+	})
+	gomock.InOrder(
+		gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), &github.UnstackPullRequestStackInput{
+			Owner: "acme", Repo: "repo", StackNumber: 42,
+		}).Return(&github.UnstackPullRequestStackResult{}, nil),
+		gateway.EXPECT().UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+			PullRequestID: "PR_2", BaseRefName: new("c"),
+		}).Return(nil),
+		gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+			Owner: "acme", Repo: "repo", PullRequests: []int{3, 2},
+		}).Return(nil),
+	)
+
+	var logs strings.Builder
+	repo := newStackRepository(t, gateway)
+	repo.log = silog.New(&logs, &silog.Options{Level: silog.LevelDebug})
+	err := executeStackUpdate(t.Context(), repo, []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "main"},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 1}, BaseBranch: "a"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 3}, BaseBranch: "c"},
+	})
+	require.NoError(t, err)
+	assert.NotContains(t, logs.String(), "Leaving pull request")
+}
+
+func TestRepository_PlanStackUpdateDoesNotWrite(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: newStackPullRequest(nil),
+		2: newStackPullRequest(nil),
+	})
+	writes := 0
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(context.Context, *github.CreatePullRequestStackInput) error {
+			writes++
+			return nil
+		})
+
+	plan, err := newStackRepository(t, gateway).PlanStackUpdate(
+		t.Context(),
+		[]forge.StackChange{
+			{Change: &PR{Number: 1}, BaseBranch: "base"},
+			{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		},
+	)
+	require.NoError(t, err)
+	assert.Zero(t, writes)
+	require.NoError(t, plan.Execute(t.Context()))
+	assert.Equal(t, 1, writes)
+	assert.EqualError(t, plan.Execute(t.Context()), "GitHub stack update plan was already executed")
+}
+
+func TestRepository_PlanStackUpdate_reversesStack(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	gateway := NewMockGithubGateway(mockCtrl)
+	stack := newPullRequestStack(42, 1, 2, 3)
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: stackPullRequest("PR_1", "main", stack),
+		2: stackPullRequest("PR_2", "a", stack),
+		3: stackPullRequest("PR_3", "b", stack),
+	})
+
+	// Reverse native membership [a, b, c] into [c, b, a].
+	// Detach c from b before pointing b at c, then a at b,
+	// so intermediate base relationships remain acyclic.
+	gomock.InOrder(
+		gateway.EXPECT().
+			UnstackPullRequestStack(gomock.Any(), &github.UnstackPullRequestStackInput{
+				Owner: "acme", Repo: "repo", StackNumber: 42,
+			}).
+			Return(&github.UnstackPullRequestStackResult{}, nil),
+		gateway.EXPECT().
+			UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+				PullRequestID: "PR_3", BaseRefName: new("main"),
+			}).
+			Return(nil),
+		gateway.EXPECT().
+			UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+				PullRequestID: "PR_2", BaseRefName: new("c"),
+			}).
+			Return(nil),
+		gateway.EXPECT().
+			UpdatePullRequest(gomock.Any(), &github.UpdatePullRequestInput{
+				PullRequestID: "PR_1", BaseRefName: new("b"),
+			}).
+			Return(nil),
+		gateway.EXPECT().
+			CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+				Owner: "acme", Repo: "repo", PullRequests: []int{3, 2, 1},
+			}).
+			Return(nil),
+	)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 3}, BaseBranch: "c"},
+		{Change: &PR{Number: 3}, BaseBranch: "main"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_UpdateStackDivergent(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: newStackPullRequest(nil),
+		2: newStackPullRequest(nil),
+		3: newStackPullRequest(nil),
+		4: newStackPullRequest(nil),
+		5: newStackPullRequest(nil),
+	})
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{1, 3, 4},
+	}).Return(nil)
+
+	var logs strings.Builder
+	repo := newStackRepository(t, gateway)
+	repo.log = silog.New(&logs, &silog.Options{Level: silog.LevelDebug})
+	err := executeStackUpdate(t.Context(), repo, []forge.StackChange{
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 4}, BaseChange: &PR{Number: 3}, BaseBranch: "base"},
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 5}, BaseChange: &PR{Number: 2}, BaseBranch: "base"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, strings.Count(logs.String(),
+		"#2: Leaving pull request and its upstack out of the GitHub native stack: the change tree diverges from the selected linear path"))
+	assert.NotContains(t, logs.String(), "#5:")
+}
+
+func TestRepository_UpdateStackPrefersExistingStackOverLongerPath(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := newPullRequestStack(42, 1, 2, 4)
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: newStackPullRequest(stack),
+		2: newStackPullRequest(stack),
+		3: newStackPullRequest(nil),
+		4: newStackPullRequest(stack),
+		5: newStackPullRequest(nil),
+	})
+
+	var logs strings.Builder
+	repo := newStackRepository(t, gateway)
+	repo.log = silog.New(&logs, &silog.Options{Level: silog.LevelDebug})
+	err := executeStackUpdate(t.Context(), repo, []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "base"},
+		{Change: &PR{Number: 4}, BaseChange: &PR{Number: 2}, BaseBranch: "base"},
+		{Change: &PR{Number: 5}, BaseChange: &PR{Number: 3}, BaseBranch: "base"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, strings.Count(logs.String(),
+		"#3: Leaving pull request and its upstack out of the GitHub native stack: the change tree diverges from the selected linear path"))
+	assert.NotContains(t, logs.String(), "#4:")
+	assert.NotContains(t, logs.String(), "incompatible membership")
+}
+
+func TestRepository_UpdateStackReplacesIncompatibleLinearStack(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := newPullRequestStack(42, 1, 3)
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: newStackPullRequest(stack),
+		2: newStackPullRequest(stack),
+	})
+	gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), &github.UnstackPullRequestStackInput{
+		Owner:       "acme",
+		Repo:        "repo",
+		StackNumber: 42,
+	}).Return(&github.UnstackPullRequestStackResult{}, nil)
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{1, 2},
+	}).Return(nil)
+
+	repo := newStackRepository(t, gateway)
+	err := executeStackUpdate(t.Context(), repo, []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_UpdateStackMultipleExistingStacksDiverge(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: newStackPullRequest(newPullRequestStack(42, 1)),
+		2: newStackPullRequest(newPullRequestStack(43, 2)),
+		3: newStackPullRequest(nil),
+	})
+
+	var logs strings.Builder
+	repo := newStackRepository(t, gateway)
+	repo.log = silog.New(&logs, &silog.Options{Level: silog.LevelDebug})
+	err := executeStackUpdate(t.Context(), repo, []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, logs.String(),
+		"#1: Leaving pull request and its upstack in existing GitHub native stacks: pull requests belong to different native stacks")
+}
+
+func TestRepository_UpdateStackUnsupported(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	gateway.EXPECT().CheckPullRequestStacks(gomock.Any(), "acme", "repo").
+		Return(github.ErrNotFound)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.ErrorIs(t, err, forge.ErrUnsupported)
+	assert.ErrorIs(t, err, github.ErrNotFound)
+}
+
+func TestRepository_UpdateStackWriteNotFoundIsFailure(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: newStackPullRequest(nil),
+		2: newStackPullRequest(nil),
+	})
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), gomock.Any()).
+		Return(github.ErrNotFound)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.ErrorIs(t, err, github.ErrNotFound)
+	assert.NotErrorIs(t, err, forge.ErrUnsupported)
+}
+
+func TestRepository_UpdateStackDisabled(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	repo, err := newRepository(
+		t.Context(),
+		new(Forge),
+		"acme",
+		"repo",
+		silogtest.New(t),
+		gateway,
+		"repo-id",
+	)
+	require.NoError(t, err)
+
+	_, err = repo.PlanStackUpdate(t.Context(), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.ErrorIs(t, err, forge.ErrUnsupported)
+}
+
+func TestRepository_UpdateStackMissingChange(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{1: nil})
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.ErrorIs(t, err, forge.ErrNotFound)
+}
+
+func TestRepository_UpdateStackLookupFailure(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	gateway.EXPECT().CheckPullRequestStacks(gomock.Any(), "acme", "repo").Return(nil)
+	gateway.EXPECT().PullRequestsForStackUpdate(
+		gomock.Any(),
+		"acme",
+		"repo",
+		[]int{1},
+	).Return(nil, github.ErrForbidden)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.ErrorIs(t, err, github.ErrForbidden)
+}
+
+func TestRepository_UpdateStackCanceled(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	gateway.EXPECT().CheckPullRequestStacks(gomock.Any(), "acme", "repo").Return(nil)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := executeStackUpdate(ctx, newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+func TestRepository_UpdateStackMultipleRoots(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1:  newStackPullRequest(nil),
+		2:  newStackPullRequest(nil),
+		10: newStackPullRequest(nil),
+		11: newStackPullRequest(nil),
+	})
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{1, 2},
+	}).Return(nil)
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{10, 11},
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 11}, BaseChange: &PR{Number: 10}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 10}, BaseBranch: "base"},
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_UpdateStackContinuesAfterFailure(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1:  newStackPullRequest(nil),
+		2:  newStackPullRequest(nil),
+		10: newStackPullRequest(nil),
+		11: newStackPullRequest(nil),
+	})
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{1, 2},
+	}).Return(github.ErrForbidden)
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{10, 11},
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 10}, BaseBranch: "base"},
+		{Change: &PR{Number: 11}, BaseChange: &PR{Number: 10}, BaseBranch: "base"},
+	})
+	require.ErrorIs(t, err, github.ErrForbidden)
+}
+
+func TestRepository_UpdateStackReconnectsAboveMergedChange(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	merged := newStackPullRequest(nil)
+	merged.State = github.PullRequestStateMerged
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1: merged,
+		2: newStackPullRequest(nil),
+		3: newStackPullRequest(nil),
+	})
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner:        "acme",
+		Repo:         "repo",
+		PullRequests: []int{2, 3},
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "base"},
+	})
+	require.NoError(t, err)
+}
+
+func TestRepository_PlanStackUpdate_preservesDownstackBase(t *testing.T) {
+	// Base-to-above relationships when only C is submitted:
+	//
+	//   Local:  A ─→ B ─→ C
+	//   Remote: main ─┬─ A
+	//                 ├─ B
+	//                 └─ C
+	//
+	// Submitting C may stack B and C; it must not publish B's pending base edit.
+	model := &stackResourceModel{
+		pullRequests: map[int]*stackResourceModelPR{
+			1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			2: {head: "b", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			3: {head: "c", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+		},
+		stacks:   make(map[int][]int),
+		branches: map[string]struct{}{"main": {}, "a": {}, "b": {}, "c": {}},
+	}
+	require.NoError(t, executeStackUpdate(t.Context(), newStackRepository(t, model), []forge.StackChange{
+		{Change: &PR{Number: 1}},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+	}))
+	assert.Equal(t, "main", model.pullRequests[2].base)
+	assert.Equal(t, map[int][]int{1: {2, 3}}, model.stacks)
+	assert.Equal(t, []string{`retarget 3 to "b"`, "create [2 3]"}, model.trace)
+}
+
+func TestRepository_PlanStackUpdate_replacesAboveMembership(t *testing.T) {
+	// Base-to-above relationships, with brackets marking native membership:
+	//
+	//   Before: main ─┬─ [A ─→ B]
+	//                 └─ [C ─→ D]
+	//   After:  main ── [A ─→ B ─→ C] ─→ D
+	//
+	// Only C is submitted against B. Releasing C's old membership also releases
+	// D, but D stays based on C and does not join the resulting native stack.
+	model := &stackResourceModel{
+		pullRequests: map[int]*stackResourceModelPR{
+			1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			2: {head: "b", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
+			3: {head: "c", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			4: {head: "d", base: "c", state: github.PullRequestStateOpen, headInRepository: true},
+		},
+		stacks: map[int][]int{41: {1, 2}, 42: {3, 4}}, nextStack: 42,
+		branches: map[string]struct{}{"main": {}, "a": {}, "b": {}, "c": {}, "d": {}},
+	}
+	require.NoError(t, executeStackUpdate(t.Context(), newStackRepository(t, model), []forge.StackChange{
+		{Change: &PR{Number: 1}},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+	}))
+	assert.Equal(t, map[int][]int{41: {1, 2, 3}}, model.stacks)
+	assert.Equal(t, "c", model.pullRequests[4].base)
+	assert.Equal(t, github.PullRequestStateOpen, model.pullRequests[4].state)
+	assert.Equal(t, []string{"unstack #42", `retarget 3 to "b"`, "append [3] to #41"}, model.trace)
+}
+
+func TestRepository_PlanStackUpdate_replacementFailure(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := newPullRequestStack(41, 1, 2)
+	bottom := stackPullRequest("PR_1", "main", stack)
+	bottom.HeadRefName = "a"
+	middle := stackPullRequest("PR_2", "a", stack)
+	middle.HeadRefName = "b"
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1:  bottom,
+		2:  middle,
+		3:  stackPullRequest("PR_3", "main", newPullRequestStack(42, 3, 4)),
+		10: stackPullRequest("PR_10", "main", nil),
+		11: stackPullRequest("PR_11", "other", nil),
+	})
+	gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), &github.UnstackPullRequestStackInput{
+		Owner: "acme", Repo: "repo", StackNumber: 42,
+	}).Return(nil, github.ErrForbidden)
+	// Failed release must prevent both C's retarget and append to A/B.
+	// The unrelated component still publishes its membership.
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner: "acme", Repo: "repo", PullRequests: []int{10, 11},
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+		{Change: &PR{Number: 10}, BaseBranch: "main"},
+		{Change: &PR{Number: 11}, BaseChange: &PR{Number: 10}, BaseBranch: "other"},
+	})
+	require.ErrorIs(t, err, github.ErrForbidden)
+}
+
+func TestRepository_PlanStackUpdate_lockedReplacement(t *testing.T) {
+	model := &stackResourceModel{
+		pullRequests: map[int]*stackResourceModelPR{
+			1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			2: {head: "b", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
+			3: {head: "c", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			4: {head: "d", base: "c", state: github.PullRequestStateOpen, headInRepository: true, locked: true},
+		},
+		stacks: map[int][]int{41: {1, 2}, 42: {3, 4}}, nextStack: 42,
+		branches: map[string]struct{}{"main": {}, "a": {}, "b": {}, "c": {}, "d": {}},
+	}
+	require.NoError(t, executeStackUpdate(t.Context(), newStackRepository(t, model), []forge.StackChange{
+		{Change: &PR{Number: 1}},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+	}))
+	assert.Empty(t, model.trace, "a blocked replacement must not dissolve either native stack")
+	assert.Equal(t, map[int][]int{41: {1, 2}, 42: {3, 4}}, model.stacks)
+	assert.Equal(t, "main", model.pullRequests[3].base)
+}
+
+func newStackRepository(t *testing.T, gateway githubGateway) *Repository {
+	return &Repository{
+		owner:         "acme",
+		repo:          "repo",
+		gateway:       gateway,
+		log:           silogtest.New(t),
+		stacksEnabled: true,
+	}
+}
+
+func newStackPullRequest(stack *github.PullRequestStack) *github.StackUpdatePullRequest {
+	return &github.StackUpdatePullRequest{
+		State:               github.PullRequestStateOpen,
+		BaseRefName:         "base",
+		Stack:               stack,
+		HeadRepositoryOwner: "acme",
+		HeadRepositoryName:  "repo",
+	}
+}
+
+func newPullRequestStack(number int, members ...int) *github.PullRequestStack {
+	stack := &github.PullRequestStack{Number: number}
+	for _, member := range members {
+		stack.Members = append(stack.Members, github.PullRequestStackMember{
+			Number: member,
+			State:  github.PullRequestStateOpen,
+		})
+	}
+	return stack
+}
+
+func stackPullRequest(
+	id github.ID,
+	base string,
+	stack *github.PullRequestStack,
+) *github.StackUpdatePullRequest {
+	pullRequest := newStackPullRequest(stack)
+	pullRequest.ID = id
+	pullRequest.BaseRefName = base
+	return pullRequest
+}
+
+func expectPullRequests(
+	t *testing.T,
+	gateway *MockGithubGateway,
+	pullRequests map[int]*github.StackUpdatePullRequest,
+) {
+	t.Helper()
+	gateway.EXPECT().CheckPullRequestStacks(gomock.Any(), "acme", "repo").Return(nil)
+	gateway.EXPECT().PullRequestsForStackUpdate(
+		gomock.Any(),
+		"acme",
+		"repo",
+		gomock.Any(),
+	).DoAndReturn(func(
+		_ context.Context,
+		_, _ string,
+		numbers []int,
+	) ([]*github.StackUpdatePullRequest, error) {
+		require.Len(t, numbers, len(pullRequests))
+		result := make([]*github.StackUpdatePullRequest, len(numbers))
+		for i, number := range numbers {
+			var ok bool
+			result[i], ok = pullRequests[number]
+			require.True(t, ok, "unexpected pull request #%d", number)
+		}
+		return result, nil
+	})
+}
+
+func executeStackUpdate(
+	ctx context.Context,
+	repository *Repository,
+	changes []forge.StackChange,
+) error {
+	plan, err := repository.PlanStackUpdate(ctx, changes)
+	if err != nil {
+		return err
+	}
+	return plan.Execute(ctx)
+}
