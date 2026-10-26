@@ -67,12 +67,103 @@ func TestHandler_updateStackRepresentations(t *testing.T) {
 	require.Len(t, stackRepo.plans, 1)
 
 	assert.ElementsMatch(t, []forge.StackChange{
-		{Change: submitFakeChangeID("pr-1"), BaseBranch: "main"},
+		{Change: submitFakeChangeID("pr-1")},
 		{Change: submitFakeChangeID("pr-2"), BaseChange: submitFakeChangeID("pr-1"), BaseBranch: "remote-bottom"},
 		{Change: submitFakeChangeID("pr-3"), BaseChange: submitFakeChangeID("pr-2"), BaseBranch: "middle"},
-		{Change: submitFakeChangeID("pr-4"), BaseChange: submitFakeChangeID("pr-2"), BaseBranch: "middle"},
-		{Change: submitFakeChangeID("pr-5"), BaseBranch: "remote-unpublished"},
 	}, stackRepo.plans[0])
+}
+
+func TestHandler_updateStackRepresentations_submissionScope(t *testing.T) {
+	tests := []struct {
+		name      string
+		branches  []spice.LoadBranchItem
+		submitted []string
+		want      []forge.StackChange
+	}{
+		{
+			name: "UnpublishedIntermediate",
+			branches: []spice.LoadBranchItem{
+				{Name: "a", Base: "main", Change: submitFakeChange("a")},
+				{Name: "b", Base: "a"},
+				{Name: "c", Base: "b", Change: submitFakeChange("c")},
+			},
+			submitted: []string{"a"},
+			want: []forge.StackChange{
+				{Change: submitFakeChangeID("a"), BaseBranch: "main"},
+			},
+		},
+		{
+			name: "PublishedAboveIsNotSubmitted",
+			branches: []spice.LoadBranchItem{
+				{Name: "a", Base: "main", Change: submitFakeChange("a")},
+				{Name: "b", Base: "a", Change: submitFakeChange("b")},
+				{Name: "c", Base: "b", Change: submitFakeChange("c")},
+			},
+			submitted: []string{"b"},
+			want: []forge.StackChange{
+				{Change: submitFakeChangeID("a")},
+				{Change: submitFakeChangeID("b"), BaseChange: submitFakeChangeID("a"), BaseBranch: "a"},
+			},
+		},
+		{
+			name: "SubmittedTopIncludesItsDownstack",
+			branches: []spice.LoadBranchItem{
+				{Name: "a", Base: "main", Change: submitFakeChange("a")},
+				{Name: "b", Base: "a", Change: submitFakeChange("b")},
+				{Name: "c", Base: "b", Change: submitFakeChange("c")},
+				{Name: "d", Base: "c", Change: submitFakeChange("d")},
+			},
+			submitted: []string{"c"},
+			want: []forge.StackChange{
+				{Change: submitFakeChangeID("a")},
+				{Change: submitFakeChangeID("b"), BaseChange: submitFakeChangeID("a")},
+				{Change: submitFakeChangeID("c"), BaseChange: submitFakeChangeID("b"), BaseBranch: "b"},
+			},
+		},
+		{
+			name: "SiblingIsNotSubmitted",
+			branches: []spice.LoadBranchItem{
+				{Name: "a", Base: "main", Change: submitFakeChange("a")},
+				{Name: "b", Base: "a", Change: submitFakeChange("b")},
+				{Name: "c", Base: "a", Change: submitFakeChange("c")},
+			},
+			submitted: []string{"b"},
+			want: []forge.StackChange{
+				{Change: submitFakeChangeID("a")},
+				{Change: submitFakeChangeID("b"), BaseChange: submitFakeChangeID("a"), BaseBranch: "a"},
+			},
+		},
+		{
+			name: "RemoteBaseWithoutPullRequest",
+			branches: []spice.LoadBranchItem{
+				{Name: "a", Base: "main", UpstreamBranch: "remote-a"},
+				{Name: "b", Base: "a", Change: submitFakeChange("b")},
+			},
+			submitted: []string{"b"},
+			want: []forge.StackChange{
+				{Change: submitFakeChangeID("b"), BaseBranch: "remote-a"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			stackRepo := &submitStackRepository{Repository: forgetest.NewMockRepository(ctrl)}
+			service := NewMockService(ctrl)
+			service.EXPECT().BranchGraph(gomock.Any(), nil).Return(
+				spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+					Trunk: "main", Branches: tt.branches,
+				}), nil,
+			)
+			handler := newStackFinalizationTestHandler(forgetest.NewMockForge(ctrl), stackRepo, service)
+			require.NoError(t, handler.updateStackRepresentations(
+				t.Context(), &Options{NavComment: NavCommentNever},
+				&submitStackUpdates{requestedBranches: tt.submitted}, tt.submitted, tt.submitted,
+			))
+			require.Len(t, stackRepo.plans, 1)
+			assert.ElementsMatch(t, tt.want, stackRepo.plans[0])
+		})
+	}
 }
 
 func TestHandler_updateStackRepresentations_unsupported(t *testing.T) {

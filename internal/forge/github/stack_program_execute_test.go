@@ -182,7 +182,8 @@ func TestExecuteGitHubStackProgram_keepsSuccessfulWritesAfterFailure(t *testing.
 			1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
 			2: {head: "b", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
 		},
-		stacks: make(map[int][]int),
+		stacks:   make(map[int][]int),
+		branches: map[string]struct{}{"main": {}, "a": {}, "b": {}},
 	}
 	program := githubStackProgram{
 		githubStackTry{Body: []githubStackInstruction{

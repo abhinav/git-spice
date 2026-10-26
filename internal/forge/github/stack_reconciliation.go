@@ -34,8 +34,8 @@ func reconcileGitHubStacks(changes []githubStackChange) githubStackReconciliatio
 	// Selecting native membership therefore need not include every desired PR,
 	// and omitting a PR does not authorize changing its requested base.
 	forest, projectionWarnings, errs := projectChangeTrees(changes)
-	selections, selectionWarnings := forest.selectChangeTrees()
-	program, programWarnings := compileGitHubStackProgram(selections)
+	groups, selectionWarnings := forest.selectChangeTrees()
+	program, programWarnings := compileGitHubStackProgram(groups)
 	return githubStackReconciliation{
 		program: program,
 		warnings: slices.Concat(
@@ -161,36 +161,41 @@ func projectChangeTrees(
 	return forest, warnings, errs
 }
 
-// githubStackSelection groups desired base-up paths
-// that touch the same observed native stack.
-type githubStackSelection struct {
-	// remoteStack is the observed native stack,
-	// including its current membership.
-	//
-	// It is nil for a new, independent stack.
-	remoteStack *github.PullRequestStack
+// githubStackGroup collects desired base-up paths
+// connected by their observed native stacks.
+// All paths share the group's dissolution prerequisites;
+// after those succeed, each path can be updated independently.
+type githubStackGroup struct {
+	// remoteStacks contains the observed native stacks touched by these paths,
+	// including members outside the request. A path may join several old stacks;
+	// several paths may split one old stack. Shared resources keep their writes
+	// in one failure scope so dissolution happens once, before dependent writes.
+	remoteStacks []*github.PullRequestStack
 
 	// paths contains one complete selected linear chain per projected tree,
 	// with each chain ordered bottom-to-top.
+	// Paths are nonempty and disjoint: a PR appears in at most one path.
 	//
-	// Multiple paths occur when desired trees split one existing remoteStack:
+	// Multiple paths occur when desired trees split one existing remote stack:
 	// existing [a, b, c, d] becomes desired [a, b] and [c, d].
 	// These are separate desired chains sharing one unstack prerequisite,
 	// after which each chain can be updated independently.
 	//
-	// With no remoteStack, there is only one path.
+	// One path may also join several remote stacks:
+	// existing [a, b] and [c, d] become desired [a, b, c].
+	// The compiler can retain [a, b], but must release c from [c, d] first.
+	// With no remote stacks, there is only one path.
 	paths [][]githubStackChange
 }
 
 // selectChangeTrees chooses one linear path per projected tree
-// and groups paths sharing an existing stack around one unstack prerequisite.
+// and groups paths sharing resources around their dissolution prerequisites.
 // A tree rejected for incompatible native membership protects its stacks
 // from updates by other trees.
 // Omitted trees and divergent upstacks produce warnings.
-func (f *githubStackForest) selectChangeTrees() ([]githubStackSelection, []string) {
-	var selections []githubStackSelection
+func (f *githubStackForest) selectChangeTrees() ([]githubStackGroup, []string) {
+	var candidates []githubStackGroup
 	var warnings []string
-	byStack := make(map[int]int)
 	protectedStacks := make(map[int]struct{})
 
 	// Each bottom owns a complete projected tree, not just newly submitted PRs.
@@ -200,10 +205,11 @@ func (f *githubStackForest) selectChangeTrees() ([]githubStackSelection, []strin
 	//   Desired:     #1 ─→ #2
 	//                #3 ─→ #4
 	//
-	// Group those paths by remote stack so they share one unstack prerequisite
-	// before either path can retarget bases and publish membership.
+	// Conversely, one desired path may touch several current stacks.
+	// Path selection settles the desired chains; grouping then gives every
+	// connected set its shared prerequisites before any dependent base edits.
 	for _, bottom := range f.bottoms {
-		selected, remoteStack, warning := f.selectLinearPath(bottom)
+		selected, remoteStacks, warning := f.selectLinearPath(bottom)
 		if warning != "" {
 			warnings = append(warnings, warning)
 			// Desired trees are disjoint, but unstack mutates a whole observed stack.
@@ -238,51 +244,109 @@ func (f *githubStackForest) selectChangeTrees() ([]githubStackSelection, []strin
 			}
 		}
 
-		if remoteStack != nil {
-			if index, exists := byStack[remoteStack.Number]; exists {
-				selections[index].paths = append(selections[index].paths, selected)
-				continue
-			}
-			byStack[remoteStack.Number] = len(selections)
-		}
-		selections = append(selections, githubStackSelection{
-			remoteStack: remoteStack,
-			paths:       [][]githubStackChange{selected},
+		candidates = append(candidates, githubStackGroup{
+			remoteStacks: remoteStacks,
+			paths:        [][]githubStackChange{selected},
 		})
 	}
 	// Only settle shared-stack writes after every tree has had a chance
 	// to protect its existing membership.
-	var updates []githubStackSelection
-	for _, selection := range selections {
-		stack := selection.remoteStack
-		if stack == nil {
-			updates = append(updates, selection)
+	var updates []githubStackGroup
+	for _, group := range groupGitHubStackPaths(candidates) {
+		var protected *github.PullRequestStack
+		for _, stack := range group.remoteStacks {
+			if _, ok := protectedStacks[stack.Number]; ok {
+				protected = stack
+				break
+			}
+		}
+		if protected == nil {
+			updates = append(updates, group)
 			continue
 		}
-		if _, protected := protectedStacks[stack.Number]; !protected {
-			updates = append(updates, selection)
-			continue
-		}
-		for _, path := range selection.paths {
+		for _, path := range group.paths {
 			warnings = append(warnings, fmt.Sprintf(
 				"#%d: Leaving pull request and its upstack in existing GitHub native stack #%d: another change tree sharing this stack cannot be reconciled",
 				path[0].number,
-				stack.Number,
+				protected.Number,
 			))
 		}
 	}
 	return updates, warnings
 }
 
+// groupGitHubStackPaths collects paths connected through native resources.
+// A path can join several old stacks, and another path can split any of them.
+// Those paths must share every dissolution prerequisite, including connections
+// reached indirectly through another path, so each resource is released once.
+func groupGitHubStackPaths(candidates []githubStackGroup) []githubStackGroup {
+	// Paths and resources form a second graph, distinct from PR base edges.
+	// Here a line means "path touches resource", not "is based on":
+	//
+	//   #41 ── path A ── #42 ── path B ── #43
+	//
+	// A and B must share a failure scope even though they touch different
+	// outer resources. Releasing #42 twice would fail; updating either path
+	// before all required releases succeed could leave native membership
+	// blocking its base edits. byStack lets the walk cross from each resource
+	// to every path that depends on it, including these indirect connections.
+	byStack := make(map[int][]int)
+	for index, candidate := range candidates {
+		for _, stack := range candidate.remoteStacks {
+			byStack[stack.Number] = append(byStack[stack.Number], index)
+		}
+	}
+
+	var groups []githubStackGroup
+	seen := make(map[int]struct{})
+	for index := range candidates {
+		if _, ok := seen[index]; ok {
+			continue
+		}
+
+		// Seed a new group with a path not reached by an earlier walk.
+		seen[index] = struct{}{}
+		var remaining ring.Q[int]
+		remaining.Push(index)
+
+		var group githubStackGroup
+		stacks := make(map[int]struct{})
+		for !remaining.Empty() {
+			candidate := candidates[remaining.Pop()]
+			group.paths = append(group.paths, candidate.paths...)
+
+			for _, stack := range candidate.remoteStacks {
+				if _, ok := stacks[stack.Number]; ok {
+					continue
+				}
+				stacks[stack.Number] = struct{}{}
+				group.remoteStacks = append(group.remoteStacks, stack)
+
+				// Follow this resource to paths not yet queued in this group.
+				for _, connected := range byStack[stack.Number] {
+					if _, ok := seen[connected]; !ok {
+						seen[connected] = struct{}{}
+						remaining.Push(connected)
+					}
+				}
+			}
+		}
+
+		groups = append(groups, group)
+	}
+	return groups
+}
+
 // selectLinearPath returns one desired base-up path
-// and the existing native stack it touches, if any.
+// and the existing native stacks it touches, if any.
 // A nonempty warning means the tree was omitted.
 // Divergent trees must preserve a compatible existing prefix;
 // a linear tree may replace incompatible membership.
 func (f *githubStackForest) selectLinearPath(
 	bottom int,
-) ([]githubStackChange, *github.PullRequestStack, string) {
-	var remoteStack *github.PullRequestStack
+) ([]githubStackChange, []*github.PullRequestStack, string) {
+	var remoteStacks []*github.PullRequestStack
+	seenStacks := make(map[int]struct{})
 	var divergent bool
 
 	// Inspect the whole tree before choosing a path.
@@ -303,20 +367,24 @@ func (f *githubStackForest) selectLinearPath(
 		if currentStack == nil {
 			continue
 		}
-		if remoteStack == nil {
-			remoteStack = currentStack
-			continue
-		}
-		if remoteStack.Number != currentStack.Number {
-			return nil, nil, fmt.Sprintf(
-				"#%d: Leaving pull request and its upstack in existing GitHub native stacks: pull requests belong to different native stacks",
-				bottom,
-			)
+		if _, ok := seenStacks[currentStack.Number]; !ok {
+			seenStacks[currentStack.Number] = struct{}{}
+			remoteStacks = append(remoteStacks, currentStack)
 		}
 	}
+	if divergent && len(remoteStacks) > 1 {
+		return nil, nil, fmt.Sprintf(
+			"#%d: Leaving pull request and its upstack in existing GitHub native stacks: pull requests belong to different native stacks",
+			bottom,
+		)
+	}
 
+	// In a linear tree, replacing several resources cannot choose one sibling
+	// over another. A divergent tree has no such unambiguous replacement:
+	// it must preserve the one existing resource or leave the tree unchanged.
 	extensionBase := bottom
-	if remoteStack != nil {
+	if len(remoteStacks) > 0 {
+		remoteStack := remoteStacks[0]
 		// Existing membership is compatible only when all its open members
 		// form a prefix starting at bottom.
 		// Preserve that prefix before choosing its longest extension:
@@ -376,11 +444,12 @@ func (f *githubStackForest) selectLinearPath(
 		selected = append(selected, f.changesByNumber[number])
 	}
 	slices.Reverse(selected)
-	return selected, remoteStack, ""
+	return selected, remoteStacks, ""
 }
 
 // openStackMemberNumbers returns open member PR numbers in stack order
-// for prefix selection and append operations.
+// for path selection. Closed members still require release before executing
+// that path, even when its open members form a compatible prefix.
 func openStackMemberNumbers(members []github.PullRequestStackMember) []int {
 	var numbers []int
 	for _, member := range members {

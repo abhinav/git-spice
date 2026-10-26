@@ -164,6 +164,85 @@ func TestRepository_UpdateStackRemovesMemberAfterMergedPrefix(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestRepository_PlanStackUpdate_closedMembers(t *testing.T) {
+	tests := []struct {
+		name        string
+		givePRs     map[int]*stackResourceModelPR
+		giveMembers []int
+		giveChanges []forge.StackChange
+		wantMembers []int
+		wantTrace   []string
+	}{
+		{
+			// Closing b leaves it at the top of [a, b]. Appending c, which
+			// targets a, requires replacing the resource with [a, c].
+			name: "ClosedTop",
+			givePRs: map[int]*stackResourceModelPR{
+				1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+				2: {head: "b", base: "a", state: github.PullRequestStateClosed, headInRepository: true},
+				3: {head: "c", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
+			},
+			giveMembers: []int{1, 2},
+			giveChanges: []forge.StackChange{
+				{Change: &PR{Number: 1}},
+				{Change: &PR{Number: 3}, BaseChange: &PR{Number: 1}, BaseBranch: "a"},
+			},
+			wantMembers: []int{1, 3},
+			wantTrace:   []string{"unstack #42", "create [1 3]"},
+		},
+		{
+			// Unlike a merged prefix, closed a still blocks b. Release it
+			// before connecting [b, c], without changing b's existing base.
+			name: "ClosedBottom",
+			givePRs: map[int]*stackResourceModelPR{
+				1: {head: "a", base: "main", state: github.PullRequestStateClosed, headInRepository: true},
+				2: {head: "b", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
+				3: {head: "c", base: "b", state: github.PullRequestStateOpen, headInRepository: true},
+			},
+			giveMembers: []int{1, 2},
+			giveChanges: []forge.StackChange{
+				{Change: &PR{Number: 1}},
+				{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+				{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+			},
+			wantMembers: []int{2, 3},
+			wantTrace:   []string{"unstack #42", "create [2 3]"},
+		},
+		{
+			// Closing middle b preserves [a, b, c] and c's base b.
+			// To connect [a, c], release membership before retargeting c.
+			name: "ClosedMiddle",
+			givePRs: map[int]*stackResourceModelPR{
+				1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+				2: {head: "b", base: "a", state: github.PullRequestStateClosed, headInRepository: true},
+				3: {head: "c", base: "b", state: github.PullRequestStateOpen, headInRepository: true},
+			},
+			giveMembers: []int{1, 2, 3},
+			giveChanges: []forge.StackChange{
+				{Change: &PR{Number: 1}},
+				{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+				{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "a"},
+			},
+			wantMembers: []int{1, 3},
+			wantTrace:   []string{"unstack #42", "retarget 3 to \"a\"", "create [1 3]"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := &stackResourceModel{
+				pullRequests: tt.givePRs,
+				stacks:       map[int][]int{42: tt.giveMembers},
+				branches:     map[string]struct{}{"main": {}, "a": {}, "b": {}, "c": {}},
+				nextStack:    42,
+			}
+			err := executeStackUpdate(t.Context(), newStackRepository(t, model), tt.giveChanges)
+			require.NoError(t, err)
+			assert.Equal(t, map[int][]int{43: tt.wantMembers}, model.stacks)
+			assert.Equal(t, tt.wantTrace, model.trace)
+		})
+	}
+}
+
 func TestRepository_UpdateStackSplitsExistingStack(t *testing.T) {
 	gateway := NewMockGithubGateway(gomock.NewController(t))
 	stack := newPullRequestStack(42, 1, 2)
@@ -415,11 +494,12 @@ func TestRepository_UpdateStackReplacesIncompatibleLinearStack(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRepository_UpdateStackMultipleExistingStacks(t *testing.T) {
+func TestRepository_UpdateStackMultipleExistingStacksDiverge(t *testing.T) {
 	gateway := NewMockGithubGateway(gomock.NewController(t))
 	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
 		1: newStackPullRequest(newPullRequestStack(42, 1)),
 		2: newStackPullRequest(newPullRequestStack(43, 2)),
+		3: newStackPullRequest(nil),
 	})
 
 	var logs strings.Builder
@@ -428,6 +508,7 @@ func TestRepository_UpdateStackMultipleExistingStacks(t *testing.T) {
 	err := executeStackUpdate(t.Context(), repo, []forge.StackChange{
 		{Change: &PR{Number: 1}, BaseBranch: "base"},
 		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 1}, BaseBranch: "base"},
 	})
 	require.NoError(t, err)
 	assert.Contains(t, logs.String(),
@@ -598,6 +679,118 @@ func TestRepository_UpdateStackReconnectsAboveMergedChange(t *testing.T) {
 		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "base"},
 	})
 	require.NoError(t, err)
+}
+
+func TestRepository_PlanStackUpdate_preservesDownstackBase(t *testing.T) {
+	// Base-to-above relationships when only C is submitted:
+	//
+	//   Local:  A ─→ B ─→ C
+	//   Remote: main ─┬─ A
+	//                 ├─ B
+	//                 └─ C
+	//
+	// Submitting C may stack B and C; it must not publish B's pending base edit.
+	model := &stackResourceModel{
+		pullRequests: map[int]*stackResourceModelPR{
+			1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			2: {head: "b", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			3: {head: "c", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+		},
+		stacks:   make(map[int][]int),
+		branches: map[string]struct{}{"main": {}, "a": {}, "b": {}, "c": {}},
+	}
+	require.NoError(t, executeStackUpdate(t.Context(), newStackRepository(t, model), []forge.StackChange{
+		{Change: &PR{Number: 1}},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+	}))
+	assert.Equal(t, "main", model.pullRequests[2].base)
+	assert.Equal(t, map[int][]int{1: {2, 3}}, model.stacks)
+	assert.Equal(t, []string{`retarget 3 to "b"`, "create [2 3]"}, model.trace)
+}
+
+func TestRepository_PlanStackUpdate_replacesAboveMembership(t *testing.T) {
+	// Base-to-above relationships, with brackets marking native membership:
+	//
+	//   Before: main ─┬─ [A ─→ B]
+	//                 └─ [C ─→ D]
+	//   After:  main ── [A ─→ B ─→ C] ─→ D
+	//
+	// Only C is submitted against B. Releasing C's old membership also releases
+	// D, but D stays based on C and does not join the resulting native stack.
+	model := &stackResourceModel{
+		pullRequests: map[int]*stackResourceModelPR{
+			1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			2: {head: "b", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
+			3: {head: "c", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			4: {head: "d", base: "c", state: github.PullRequestStateOpen, headInRepository: true},
+		},
+		stacks: map[int][]int{41: {1, 2}, 42: {3, 4}}, nextStack: 42,
+		branches: map[string]struct{}{"main": {}, "a": {}, "b": {}, "c": {}, "d": {}},
+	}
+	require.NoError(t, executeStackUpdate(t.Context(), newStackRepository(t, model), []forge.StackChange{
+		{Change: &PR{Number: 1}},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+	}))
+	assert.Equal(t, map[int][]int{41: {1, 2, 3}}, model.stacks)
+	assert.Equal(t, "c", model.pullRequests[4].base)
+	assert.Equal(t, github.PullRequestStateOpen, model.pullRequests[4].state)
+	assert.Equal(t, []string{"unstack #42", `retarget 3 to "b"`, "append [3] to #41"}, model.trace)
+}
+
+func TestRepository_PlanStackUpdate_replacementFailure(t *testing.T) {
+	gateway := NewMockGithubGateway(gomock.NewController(t))
+	stack := newPullRequestStack(41, 1, 2)
+	bottom := stackPullRequest("PR_1", "main", stack)
+	bottom.HeadRefName = "a"
+	middle := stackPullRequest("PR_2", "a", stack)
+	middle.HeadRefName = "b"
+	expectPullRequests(t, gateway, map[int]*github.StackUpdatePullRequest{
+		1:  bottom,
+		2:  middle,
+		3:  stackPullRequest("PR_3", "main", newPullRequestStack(42, 3, 4)),
+		10: stackPullRequest("PR_10", "main", nil),
+		11: stackPullRequest("PR_11", "other", nil),
+	})
+	gateway.EXPECT().UnstackPullRequestStack(gomock.Any(), &github.UnstackPullRequestStackInput{
+		Owner: "acme", Repo: "repo", StackNumber: 42,
+	}).Return(nil, github.ErrForbidden)
+	// Failed release must prevent both C's retarget and append to A/B.
+	// The unrelated component still publishes its membership.
+	gateway.EXPECT().CreatePullRequestStack(gomock.Any(), &github.CreatePullRequestStackInput{
+		Owner: "acme", Repo: "repo", PullRequests: []int{10, 11},
+	}).Return(nil)
+
+	err := executeStackUpdate(t.Context(), newStackRepository(t, gateway), []forge.StackChange{
+		{Change: &PR{Number: 1}},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+		{Change: &PR{Number: 10}, BaseBranch: "main"},
+		{Change: &PR{Number: 11}, BaseChange: &PR{Number: 10}, BaseBranch: "other"},
+	})
+	require.ErrorIs(t, err, github.ErrForbidden)
+}
+
+func TestRepository_PlanStackUpdate_lockedReplacement(t *testing.T) {
+	model := &stackResourceModel{
+		pullRequests: map[int]*stackResourceModelPR{
+			1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			2: {head: "b", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
+			3: {head: "c", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			4: {head: "d", base: "c", state: github.PullRequestStateOpen, headInRepository: true, locked: true},
+		},
+		stacks: map[int][]int{41: {1, 2}, 42: {3, 4}}, nextStack: 42,
+		branches: map[string]struct{}{"main": {}, "a": {}, "b": {}, "c": {}, "d": {}},
+	}
+	require.NoError(t, executeStackUpdate(t.Context(), newStackRepository(t, model), []forge.StackChange{
+		{Change: &PR{Number: 1}},
+		{Change: &PR{Number: 2}, BaseChange: &PR{Number: 1}},
+		{Change: &PR{Number: 3}, BaseChange: &PR{Number: 2}, BaseBranch: "b"},
+	}))
+	assert.Empty(t, model.trace, "a blocked replacement must not dissolve either native stack")
+	assert.Equal(t, map[int][]int{41: {1, 2}, 42: {3, 4}}, model.stacks)
+	assert.Equal(t, "main", model.pullRequests[3].base)
 }
 
 func newStackRepository(t *testing.T, gateway githubGateway) *Repository {

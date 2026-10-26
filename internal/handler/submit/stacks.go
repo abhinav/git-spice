@@ -78,7 +78,7 @@ func (h *Handler) updateStackRepresentations(
 
 	// The reloaded graph includes change metadata created during submission,
 	// but only completedBranches finished all submission steps successfully.
-	// Native reconciliation needs the desired membership of a whole tree.
+	// Native reconciliation can dissolve existing membership.
 	// If any requested branch is unfinished, exclude its tree so a partial
 	// submission cannot remove existing native membership.
 	completed := make(map[string]struct{}, len(completedBranches))
@@ -113,34 +113,42 @@ func (h *Handler) updateStackRepresentations(
 	// values from the shared graph snapshot.
 	var stackChanges []forge.StackChange
 	if stackRepo != nil {
-		// Reconcile the whole tree, not just the submitted branch:
+		// Build membership from completed submissions and their downstack,
+		// not the whole local tree. With lines connecting bases to aboves:
 		//
-		//     bottom ─┬─ left ── submitted
-		//             └─ right ── cousin
+		//   bottom ─┬─ middle ── submitted ── above
+		//           └─ sibling ── cousin
 		//
-		// The forge's existing stack may follow the right path.
-		// Include that path so the forge can account for its membership
-		// when deciding how to stack the submitted path.
-		seenBottoms := make(map[string]struct{})
+		// Submitting only "submitted" includes bottom, middle, and submitted.
+		// Above, sibling, and cousin may have PRs, but this invocation has not
+		// published their branches or prepared their base edits.
+		// The forge still discovers any existing native membership through
+		// the included PRs; it does not need those other PRs in this request.
+		//
+		// Inclusion permits native membership, not pending base edits.
+		// Only completed submissions get BaseBranch; leaving it unset for
+		// downstack context tells the forge to preserve the observed remote base.
+		seen := make(map[string]struct{})
 		for _, submittedBranch := range completeBranches {
-			bottom := graph.Bottom(submittedBranch)
-			if _, ok := seenBottoms[bottom]; ok {
-				continue
-			}
-			seenBottoms[bottom] = struct{}{}
-
-			for name := range graph.Upstack(bottom) {
+			for name := range graph.Downstack(submittedBranch) {
+				if _, ok := seen[name]; ok {
+					break // this branch and its downstack have already been included
+				}
+				seen[name] = struct{}{}
 				branch, _ := graph.Lookup(name)
 				if branch.Change == nil {
 					continue
 				}
 
-				change := forge.StackChange{
-					Change:     branch.Change.ChangeID(),
-					BaseBranch: branch.Base,
+				change := forge.StackChange{Change: branch.Change.ChangeID()}
+				_, submitted := completed[name]
+				if submitted {
+					change.BaseBranch = branch.Base
 				}
 				if base, ok := graph.Lookup(branch.Base); ok {
-					change.BaseBranch = cmp.Or(base.UpstreamBranch, change.BaseBranch)
+					if submitted {
+						change.BaseBranch = cmp.Or(base.UpstreamBranch, change.BaseBranch)
+					}
 					if base.Change != nil {
 						change.BaseChange = base.Change.ChangeID()
 					}

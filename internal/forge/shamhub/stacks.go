@@ -57,13 +57,23 @@ func (sh *ShamHub) updateStack(
 			changesByNumber[change.Number] = change
 		}
 	}
-	for _, member := range changes {
+	for i := range changes {
+		member := &changes[i]
 		change := changesByNumber[member.Number]
 		if change == nil {
 			return fmt.Errorf("change %d (%s/%s) not found", member.Number, owner, repo)
 		}
 		if change.State != shamChangeOpen {
 			return fmt.Errorf("change %d is not open", member.Number)
+		}
+		// Membership context must not publish a pending local base edit.
+		// Keep the remote base and retain the requested membership edge
+		// only if it already agrees with that base.
+		if member.BaseBranch == "" {
+			member.BaseBranch = change.Base.Name
+			if base := changesByNumber[member.Base]; base != nil && base.Head.Name != member.BaseBranch {
+				member.Base = 0
+			}
 		}
 		if member.Base == 0 {
 			continue

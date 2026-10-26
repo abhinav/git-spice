@@ -69,6 +69,23 @@ func TestStackRepository_UpdateStack_replacesTouchedComponent(t *testing.T) {
 		sh.stackBases[repoID{Owner: "alice", Name: "example"}])
 }
 
+func TestStackRepository_UpdateStack_preservesDownstackBase(t *testing.T) {
+	sh, repo := newMergeabilityTestRepository(t)
+	seedStackChanges(sh)
+	sh.changes[1].Base.Name = "main"
+	stacks := &stackRepository{forgeRepository: repo}
+
+	require.NoError(t, executeStackUpdate(t.Context(), stacks, []forge.StackChange{
+		{Change: ChangeID(1)},
+		{Change: ChangeID(2), BaseChange: ChangeID(1)},
+		{Change: ChangeID(4), BaseChange: ChangeID(2), BaseBranch: "left"},
+	}))
+
+	assert.Equal(t, "main", sh.changes[1].Base.Name)
+	assert.Equal(t, map[int]int{1: 0, 2: 0, 4: 2},
+		sh.stackBases[repoID{Owner: "alice", Name: "example"}])
+}
+
 func TestStackRepository_PlanMergeRanges_usesStoredDivergence(t *testing.T) {
 	sh, repo := newMergeabilityTestRepository(t)
 	seedStackChanges(sh)

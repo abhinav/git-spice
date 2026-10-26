@@ -374,14 +374,14 @@ func TestReconcileGitHubStacks_preservesSharedStacksForOmittedTrees(t *testing.T
 		{
 			// Current: #42 has 1 -> 2, #99 has 3 -> 4,
 			// and #120 has 5 -> 6.
-			// Desired: 2 -> 3 -> 5, with separate roots 1, 4, and 6.
-			// Rejecting the mixed-stack tree must protect all three stacks,
-			// including #120 beyond the first conflicting member.
+			// Desired: 2 -> 3 -> {5, 7}, with separate roots 1, 4, and 6.
+			// Rejecting the divergent mixed-stack tree must protect all three
+			// stacks, including #120 beyond the first conflicting member.
 			name: "MultipleStacksTree",
 			currentStacks: map[int][]int{
 				42: {1, 2}, 99: {3, 4}, 120: {5, 6},
 			},
-			desiredBases: map[int]int{1: 0, 2: 0, 3: 2, 4: 0, 5: 3, 6: 0, 10: 0, 11: 10},
+			desiredBases: map[int]int{1: 0, 2: 0, 3: 2, 4: 0, 5: 3, 6: 0, 7: 3, 10: 0, 11: 10},
 			warningRoots: []int{1, 2, 4, 6},
 		},
 		{
@@ -400,9 +400,11 @@ func TestReconcileGitHubStacks_preservesSharedStacksForOmittedTrees(t *testing.T
 			model := &stackResourceModel{
 				pullRequests: make(map[int]*stackResourceModelPR),
 				stacks:       tt.currentStacks,
+				branches:     map[string]struct{}{"main": {}},
 				nextStack:    120,
 			}
 			for number := range tt.desiredBases {
+				model.branches[fmt.Sprintf("branch-%d", number)] = struct{}{}
 				model.pullRequests[number] = &stackResourceModelPR{
 					head:             fmt.Sprintf("branch-%d", number),
 					base:             "main",

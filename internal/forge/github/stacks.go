@@ -73,6 +73,31 @@ func (r *Repository) PlanStackUpdate(
 				strings.EqualFold(pullRequest.HeadRepositoryName, r.repo)
 		}
 	}
+	// An unset baseBranch contributes membership context without requesting
+	// a base edit. Resolve it from GitHub before reconciling the desired forest:
+	// retain a local BaseChange only if the PR already targets that base's head.
+	// For example, when only c requests a base edit, with base-to-above arrows:
+	//
+	//   Local:    a ─→ b ─→ c
+	//   Resolved: a            (b's PR still targets main)
+	//             b ─→ c
+	//
+	// Drop b's edge to a rather than publish b's pending edit.
+	// This leaves b/c eligible for native membership without changing b's base.
+	byNumber := make(map[int]*github.StackUpdatePullRequest, len(desired))
+	for _, change := range desired {
+		byNumber[change.number] = change.pullRequest
+	}
+	for i := range desired {
+		change := &desired[i]
+		if change.baseBranch != "" || change.pullRequest == nil {
+			continue
+		}
+		change.baseBranch = change.pullRequest.BaseRefName
+		if base := byNumber[change.baseNumber]; base != nil && base.HeadRefName != change.baseBranch {
+			change.baseNumber = 0
+		}
+	}
 	reconciliation := reconcileGitHubStacks(desired)
 	for _, warning := range reconciliation.warnings {
 		r.log.Warnf("%s", warning)
@@ -119,7 +144,9 @@ type githubStackChange struct {
 	// baseNumber is the desired base PR in this request, or zero for a root.
 	baseNumber int
 
-	// baseBranch is the desired provider-facing base, not the observed base.
+	// baseBranch is the requested provider-facing base.
+	// PlanStackUpdate replaces an empty value with the observed remote base
+	// and drops baseNumber if that local edge would require a base edit.
 	baseBranch string
 
 	pullRequest      *github.StackUpdatePullRequest
