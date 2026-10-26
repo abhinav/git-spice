@@ -42,8 +42,8 @@ linters:
         - charm.land/lipgloss/v2.Fprintln
 
         # This is always a strings.Builder, and can't fail.
-        - (go.abhg.dev/gs/internal/ui.Writer).WriteString
-        - (go.abhg.dev/gs/internal/ui.Writer).Write
+        - (go.abhg.dev/git-spice/internal/ui.Writer).WriteString
+        - (go.abhg.dev/git-spice/internal/ui.Writer).Write
 
     depguard:
       rules:
@@ -63,14 +63,14 @@ linters:
 
     loggercheck:
       rules:
-        - (*go.abhg.dev/gs/internal/log.Logger).Trace
-        - (*go.abhg.dev/gs/internal/log.Logger).Debug
-        - (*go.abhg.dev/gs/internal/log.Logger).Info
-        - (*go.abhg.dev/gs/internal/log.Logger).Warn
-        - (*go.abhg.dev/gs/internal/log.Logger).Error
-        - (*go.abhg.dev/gs/internal/log.Logger).Fatal
-        - (*go.abhg.dev/gs/internal/log.Logger).Log
-        - (*go.abhg.dev/gs/internal/log.Logger).With
+        - (*go.abhg.dev/git-spice/internal/log.Logger).Trace
+        - (*go.abhg.dev/git-spice/internal/log.Logger).Debug
+        - (*go.abhg.dev/git-spice/internal/log.Logger).Info
+        - (*go.abhg.dev/git-spice/internal/log.Logger).Warn
+        - (*go.abhg.dev/git-spice/internal/log.Logger).Error
+        - (*go.abhg.dev/git-spice/internal/log.Logger).Fatal
+        - (*go.abhg.dev/git-spice/internal/log.Logger).Log
+        - (*go.abhg.dev/git-spice/internal/log.Logger).With
 
     usetesting:
       context-background: true
