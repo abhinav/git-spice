@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state/storage"
@@ -171,20 +172,24 @@ func OpenStore(ctx context.Context, db DB, logger *silog.Logger) (*Store, error)
 		logger = silog.Nop()
 	}
 
-	version, err := loadVersion(ctx, db)
-	if err != nil {
-		return nil, fmt.Errorf("load store version: %w", err)
+	version := VersionOne
+	var info repoInfo
+	err := db.GetMany(ctx, []storage.GetRequest{
+		{Key: _versionFile, Value: &version},
+		{Key: _repoJSON, Value: &info},
+	})
+	missing, ok := errors.AsType[*storage.MissingKeysError](err)
+	if err != nil && !ok {
+		return nil, fmt.Errorf("read store metadata: %w", err)
 	}
 	if err := checkVersion(version); err != nil {
 		return nil, fmt.Errorf("check store layout: %w", err)
 	}
 
-	var info repoInfo
-	if err := db.Get(ctx, _repoJSON, &info); err != nil {
-		if errors.Is(err, ErrNotExist) {
-			return nil, ErrUninitialized
-		}
-		return nil, fmt.Errorf("get repo state: %w", err)
+	// An absent version keeps the v1 default; a missing repository record
+	// means the store has not been initialized.
+	if ok && slices.Contains(missing.Indexes, 1) {
+		return nil, ErrUninitialized
 	}
 
 	if err := info.Validate(); err != nil {
