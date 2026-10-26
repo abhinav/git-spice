@@ -107,7 +107,7 @@ text "feat3" color red
 
 ## Native stack merges
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.33.0 -->
 <!-- gs:badge:github -->
 
 On supported forges such as GitHub,

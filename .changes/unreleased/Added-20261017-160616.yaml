@@ -1,3 +1,0 @@
-kind: Added
-body: 'forge: Extra HTTP headers can be configured with `spice.http.$host.header` and `spice.http.$host.headerFromEnv`.'
-time: 2026-10-17T16:06:16.684512-07:00

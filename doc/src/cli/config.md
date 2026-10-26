@@ -294,7 +294,7 @@ should print a message when switching branches.
 
 ### spice.color
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.33.0 -->
 
 Whether git-spice writes colored output.
 This overrides Git's own [`color.ui`](https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorui) setting,
@@ -361,7 +361,7 @@ See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
 
 ### spice.forge.github.stacks
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.33.0 -->
 
 Whether to use GitHub native stack operations.
 
@@ -548,7 +548,7 @@ Defaults to `5s`.
 
 ### spice.http.$host.header
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.33.0 -->
 
 Additional literal HTTP header in `Name: value` form.
 Applies only to HTTP requests made directly by git-spice.
@@ -564,7 +564,7 @@ for usage, destination matching, and redirects.
 
 ### spice.http.$host.headerFromEnv
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.33.0 -->
 
 Like [`spice.http.$host.header`](#spicehttphostheader),
 but `$NAME` and `${NAME}` in the value are expanded from the environment.
@@ -1075,7 +1075,7 @@ are included in navigation comments posted to CRs.
 
 - `all` (default): include all downstack CRs (both open and merged)
 - `open`: only include CRs open at the time of submission
-- <!-- gs:version unreleased --> number > 0: include at most this many downstack CRs,
+- <!-- gs:version v0.33.0 --> number > 0: include at most this many downstack CRs,
   counting both open and merged CRs nearest to the current CR
 
 For example:

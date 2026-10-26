@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'log: Reduced branch-state reads when listing branches.'
-time: 2026-06-26T08:37:18.483623-07:00
