@@ -244,7 +244,7 @@ that have already been submitted.
 
 ### Native stacks
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.33.0 -->
 <!-- gs:badge:github -->
 
 On supported forges such as GitHub,

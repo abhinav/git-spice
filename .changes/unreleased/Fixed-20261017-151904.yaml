@@ -1,4 +1,0 @@
-kind: Fixed
-body: >-
-  ui: Fix terminal keyboard state left in a broken state after a prompt.
-time: 2026-10-17T15:19:04.756911-07:00

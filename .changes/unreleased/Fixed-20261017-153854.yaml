@@ -1,5 +1,0 @@
-kind: Fixed
-body: >-
-  ui: Branch selection is updated to the best match as the filter changes,
-  retaining focus among matches tied for the highest fuzzy score.
-time: 2026-10-17T15:38:54.485726-07:00

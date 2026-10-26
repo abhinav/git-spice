@@ -538,7 +538,7 @@ It is intended only for CI/CD environments where you have no other choice.
 
 ## Access gateways
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.33.0 -->
 
 If an access gateway such as Cloudflare Access guards your forge,
 configure extra HTTP headers alongside the forge's normal authentication.
