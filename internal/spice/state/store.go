@@ -129,19 +129,22 @@ func transferTrunkBranch(ctx context.Context, db DB, oldTrunk, newTrunk string) 
 		return fmt.Errorf("list branches: %w", err)
 	}
 
-	// This is a rare operation so we'll just dig into the state directly.
-	var sets []storage.SetRequest
-	for _, name := range branches {
-		var state branchState
-		if err := db.Get(ctx, branchKey(name), &state); err != nil {
-			return fmt.Errorf("get branch state: %w", err)
-		}
+	states := make([]branchState, len(branches))
+	reqs := make([]storage.GetRequest, len(branches))
+	for i, name := range branches {
+		reqs[i] = storage.GetRequest{Key: branchKey(name), Value: &states[i]}
+	}
+	if err := db.GetMany(ctx, reqs); err != nil {
+		return fmt.Errorf("get branch state: %w", err)
+	}
 
-		if state.Base.Name == oldTrunk {
-			state.Base.Name = newTrunk
+	var sets []storage.SetRequest
+	for i, name := range branches {
+		if states[i].Base.Name == oldTrunk {
+			states[i].Base.Name = newTrunk
 			sets = append(sets, storage.SetRequest{
 				Key:   branchKey(name),
-				Value: state,
+				Value: &states[i],
 			})
 		}
 	}

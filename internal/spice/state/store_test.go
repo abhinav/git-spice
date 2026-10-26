@@ -370,6 +370,29 @@ func TestStore_SetRemote_downgradesToVersionOneForSameRemote(t *testing.T) {
 	}, got)
 }
 
+func TestInitStore_changeTrunkPreservesBranches(t *testing.T) {
+	ctx := t.Context()
+	db := storage.NewDB(make(storage.MapBackend))
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: db, Trunk: "main"})
+	require.NoError(t, err)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{Name: "base", Base: "main", BaseHash: "recorded", ChangeForge: "shamhub", ChangeMetadata: jsontext.Value(`{"number":42}`)},
+			{Name: "child", Base: "base", BaseHash: "parent"},
+		},
+		Message: "seed stack",
+	}))
+	store, err = state.InitStore(ctx, state.InitStoreRequest{DB: db, Trunk: "other"})
+	require.NoError(t, err)
+	branches, err := store.LookupBranches(ctx, []string{"base", "child"})
+	require.NoError(t, err)
+	assert.Equal(t, "other", branches[0].Base)
+	assert.Equal(t, "recorded", branches[0].BaseHash.String())
+	assert.JSONEq(t, `{"number":42}`, branches[0].ChangeMetadata.String())
+	assert.Equal(t, "base", branches[1].Base)
+	assert.Equal(t, "parent", branches[1].BaseHash.String())
+}
+
 func TestOpenStore_errors(t *testing.T) {
 	t.Run("VersionMismatch", func(t *testing.T) {
 		mem := storage.MapBackend{
