@@ -51,9 +51,9 @@ func (w *mergeWorkspace) PrepareChange(ctx context.Context, item *mergeItem) err
 	return nil
 }
 
-// PrepareRange aligns every member and captures its resulting head commit.
-// Unlike an ordinary item, a range must also verify its bottom member:
-// the provider requires the entire range to be restacked before merging it.
+// PrepareRange aligns members with their branch bases and collects their heads.
+// Like ordinary merging, a range does not rebase its trunk-based bottom merely
+// because trunk advanced. Its preflight head remains valid.
 func (w *mergeWorkspace) PrepareRange(ctx context.Context, items []*mergeItem) ([]forge.ChangeHead, error) {
 	release, err := w.acquire(ctx)
 	if err != nil {
@@ -63,8 +63,10 @@ func (w *mergeWorkspace) PrepareRange(ctx context.Context, items []*mergeItem) (
 
 	heads := make([]forge.ChangeHead, len(items))
 	for idx, item := range items {
-		if err := w.prepare(ctx, item); err != nil {
-			return nil, fmt.Errorf("prepare %q: %w", item.branch, err)
+		if item.base != w.Trunk {
+			if err := w.prepare(ctx, item); err != nil {
+				return nil, fmt.Errorf("prepare %q: %w", item.branch, err)
+			}
 		}
 		heads[idx] = forge.ChangeHead{Change: item.changeID, HeadHash: item.headHash}
 	}

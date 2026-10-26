@@ -74,6 +74,53 @@ func TestStackRepository_MergeRange_squash(t *testing.T) {
 	)
 }
 
+func TestStackRepository_MergeRange_advancedTrunk(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		method  forge.MergeMethod
+		commits string
+	}{
+		{name: "Merge", method: forge.MergeMethodMerge, commits: "1"},
+		{name: "Squash", method: forge.MergeMethodSquash, commits: "2"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fixture := newMergeRangeFixture(t)
+			fixture.request.Method = tt.method
+
+			// Advance the receiving branch without changing either submitted head.
+			workDir := t.TempDir()
+			worktree, err := git.Clone(t.Context(),
+				fixture.sh.RepoURL("alice", "example"), workDir,
+				git.CloneOptions{Log: silogtest.New(t)},
+			)
+			require.NoError(t, err)
+			writeCommitAndPush(t, worktree, workDir,
+				"trunk.txt", "trunk\n", "Advance trunk", "main")
+			trunkHash, err := worktree.Head(t.Context())
+			require.NoError(t, err)
+
+			operation, err := fixture.plan().Merge(t.Context(), fixture.request)
+			require.NoError(t, err)
+			require.NotNil(t, operation)
+			assertMergeRangeCompleted(t, fixture)
+
+			// Merging the stack must retain work added on both sides of the fork.
+			for _, name := range []string{"trunk", "bottom", "top"} {
+				contents, err := fixture.sh.gitCmd(t.Context(), "alice", "example",
+					"show", "main:"+name+".txt",
+				).OutputChomp()
+				require.NoError(t, err)
+				assert.Equal(t, name, contents)
+			}
+			count, err := fixture.sh.gitCmd(t.Context(), "alice", "example",
+				"rev-list", "--first-parent", "--count", trunkHash.String()+"..main",
+			).OutputChomp()
+			require.NoError(t, err)
+			assert.Equal(t, tt.commits, count)
+		})
+	}
+}
+
 func TestStackRepository_MergeRange_squashUpstackRevert(t *testing.T) {
 	fixture := newMergeRangeFixture(t)
 	fixture.request.Method = forge.MergeMethodSquash

@@ -149,6 +149,10 @@ type preparedMergeRange struct {
 	// rootBaseHash is the target branch value used by the publishing CAS.
 	rootBaseHash string
 
+	// rootMergeBaseHash is the fork point of the bottom change and its target.
+	// It can precede rootBaseHash when the target advanced independently.
+	rootMergeBaseHash string
+
 	// changes retains the validated server records in bottom-to-top order.
 	changes []preparedMergeRangeChange
 }
@@ -322,7 +326,19 @@ func (sh *ShamHub) prepareMergeRange(
 				expected.Number, baseHash, prepared.changes[i-1].headHash,
 			)
 		}
-		if err := sh.gitCmd(
+		if i == 0 {
+			// The target may have advanced since the bottom change was submitted.
+			// Apply the stack's delta from its fork point onto the current target;
+			// using the current target as the merge base would discard its new work.
+			mergeBase, err := sh.gitCmd(
+				ctx, owner, repo, "merge-base", baseHash, headHash,
+			).OutputChomp()
+			if err != nil {
+				return preparedMergeRange{}, fmt.Errorf("find change %d merge base: %w", expected.Number, err)
+			}
+			prepared.rootBaseHash = baseHash
+			prepared.rootMergeBaseHash = mergeBase
+		} else if err := sh.gitCmd(
 			ctx,
 			owner,
 			repo,
@@ -337,9 +353,6 @@ func (sh *ShamHub) prepareMergeRange(
 			)
 		}
 
-		if i == 0 {
-			prepared.rootBaseHash = baseHash
-		}
 		prepared.changes[i] = preparedMergeRangeChange{
 			index:    changeIndex,
 			change:   change,
@@ -365,7 +378,7 @@ func (sh *ShamHub) buildMergeRangeCommit(
 			repo,
 			"merge-tree",
 			"--write-tree",
-			"--merge-base="+prepared.rootBaseHash,
+			"--merge-base="+prepared.rootMergeBaseHash,
 			prepared.rootBaseHash,
 			top.headHash,
 		).OutputChomp()
@@ -391,7 +404,7 @@ func (sh *ShamHub) buildMergeRangeCommit(
 		// Squashing rewrites ancestry: parent follows the new commits, while
 		// base follows the original stack heads. Pinning base applies only
 		// this PR's delta onto parent, including reversions of lower changes.
-		base := prepared.rootBaseHash
+		base := prepared.rootMergeBaseHash
 		parent := prepared.rootBaseHash
 		for _, change := range prepared.changes {
 			tree, err := sh.gitCmd(
