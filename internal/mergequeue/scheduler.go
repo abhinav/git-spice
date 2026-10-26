@@ -464,8 +464,10 @@ func (s *Scheduler) Run(ctx context.Context) (retErr error) {
 		runBarrier()
 	}()
 
-	// preparing reports whether a Prepare call has been started
-	// and hasn't yet reported on resultc.
+	// preparing stays true from dispatch until its result is consumed.
+	// Dispatch waits until that result is consumed:
+	// the worker can receive again as soon as it buffers a result,
+	// but an older result must not clear the flag for a newer call.
 	var preparing bool
 
 	// running counts Run workers that have started
@@ -559,9 +561,10 @@ func (s *Scheduler) Run(ctx context.Context) (retErr error) {
 		}
 
 		preparec := (chan<- *node)(preparec)
-		if readyNode == nil || len(resultc) > 0 || barrierDirty {
+		if readyNode == nil || preparing || len(resultc) > 0 || barrierDirty {
 			// A nil channel never resolves
 			// so if there's nothing to schedule
+			// or the previous Prepare result has not been consumed,
 			// or a result is already waiting,
 			// or the barrier must run before the next Prepare,
 			// this select arm won't resolve.
