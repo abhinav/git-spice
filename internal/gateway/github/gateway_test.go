@@ -14,36 +14,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewGateway_endpoint(t *testing.T) {
-	tests := []struct {
-		name     string
-		give     string
-		wantGQL  string
-		wantREST string
-	}{
-		{
-			name:     "GitHub",
-			give:     "https://api.github.com",
-			wantGQL:  "https://api.github.com/graphql",
-			wantREST: "https://api.github.com",
+func TestNewGateway_endpoints(t *testing.T) {
+	var requests []string
+	gateway, err := NewGateway(Config{
+		Deployment: Deployment{
+			URL:    "https://github.example.com",
+			APIURL: "https://proxy.example.com/service",
 		},
-		{
-			name:     "Enterprise",
-			give:     "https://github.example.com/api",
-			wantGQL:  "https://github.example.com/api/graphql",
-			wantREST: "https://github.example.com/api/v3",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gateway, err := NewGateway(tt.give, nil, tokenSourceFunc(func(context.Context) (string, error) {
-				return "token", nil
-			}))
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantGQL, gateway.graphQLEndpoint)
-			assert.Equal(t, tt.wantREST, gateway.restBaseURL.String())
-		})
-	}
+		Tokens: tokenSourceFunc(func(context.Context) (string, error) {
+			return "token", nil
+		}),
+		HTTPClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			requests = append(requests, r.URL.String())
+			body := "[]"
+			if r.Method == http.MethodPost {
+				body = `{"data":{"repository":{"id":"R_123"}}}`
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(body)),
+			}, nil
+		})},
+	})
+	require.NoError(t, err)
+
+	id, err := gateway.RepositoryID(t.Context(), "octo", "hello")
+	require.NoError(t, err)
+	assert.Equal(t, ID("R_123"), id)
+	require.NoError(t, gateway.CheckPullRequestStacks(t.Context(), "octo", "hello"))
+	assert.Equal(t, []string{
+		"https://proxy.example.com/service/graphql",
+		"https://proxy.example.com/service/v3/repos/octo/hello/stacks",
+	}, requests)
 }
 
 func TestGateway_RepositoryID_request(t *testing.T) {
@@ -69,11 +71,15 @@ func TestGateway_RepositoryID_request(t *testing.T) {
 	})
 
 	var tokenCalls int
-	gateway, err := NewGateway("https://github.example.com/api", &http.Client{Transport: transport}, tokenSourceFunc(func(ctx context.Context) (string, error) {
-		assert.Same(t, t.Context(), ctx)
-		tokenCalls++
-		return "secret", nil
-	}))
+	gateway, err := NewGateway(Config{
+		Deployment: Deployment{URL: "https://github.example.com"},
+		HTTPClient: &http.Client{Transport: transport},
+		Tokens: tokenSourceFunc(func(ctx context.Context) (string, error) {
+			assert.Same(t, t.Context(), ctx)
+			tokenCalls++
+			return "secret", nil
+		}),
+	})
 	require.NoError(t, err)
 
 	id, err := gateway.RepositoryID(t.Context(), "octo", "hello")
@@ -84,9 +90,11 @@ func TestGateway_RepositoryID_request(t *testing.T) {
 
 func TestGateway_RepositoryID_tokenError(t *testing.T) {
 	want := errors.New("token unavailable")
-	gateway, err := NewGateway("https://api.github.com", nil, tokenSourceFunc(func(context.Context) (string, error) {
-		return "", want
-	}))
+	gateway, err := NewGateway(Config{
+		Tokens: tokenSourceFunc(func(context.Context) (string, error) {
+			return "", want
+		}),
+	})
 	require.NoError(t, err)
 
 	_, err = gateway.RepositoryID(t.Context(), "octo", "hello")
@@ -96,9 +104,11 @@ func TestGateway_RepositoryID_tokenError(t *testing.T) {
 func TestGateway_RepositoryID_cancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	gateway, err := NewGateway("https://api.github.com", nil, tokenSourceFunc(func(ctx context.Context) (string, error) {
-		return "", ctx.Err()
-	}))
+	gateway, err := NewGateway(Config{
+		Tokens: tokenSourceFunc(func(ctx context.Context) (string, error) {
+			return "", ctx.Err()
+		}),
+	})
 	require.NoError(t, err)
 
 	_, err = gateway.RepositoryID(ctx, "octo", "hello")
@@ -258,9 +268,12 @@ func newResponseGateway(t *testing.T, body string) *Gateway {
 
 func newTestGateway(t *testing.T, transport http.RoundTripper) *Gateway {
 	t.Helper()
-	gateway, err := NewGateway("https://api.github.com", &http.Client{Transport: transport}, tokenSourceFunc(func(context.Context) (string, error) {
-		return "token", nil
-	}))
+	gateway, err := NewGateway(Config{
+		HTTPClient: &http.Client{Transport: transport},
+		Tokens: tokenSourceFunc(func(context.Context) (string, error) {
+			return "token", nil
+		}),
+	})
 	require.NoError(t, err)
 	return gateway
 }

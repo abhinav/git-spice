@@ -63,7 +63,7 @@ func (c *Gateway) executeGQL(ctx context.Context, query string, variables, resul
 		return fmt.Errorf("encode GraphQL request: %w", err)
 	}
 
-	req, err := c.newRequest(ctx, http.MethodPost, c.graphQLEndpoint, &body)
+	req, err := c.newRequest(ctx, http.MethodPost, c.graphQLEndpoint.String(), &body)
 	if err != nil {
 		return err
 	}

@@ -82,7 +82,10 @@ func TestRepository_MergeChange_method(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			gateway, err := github.NewGateway(srv.URL, nil, gatewayTestTokenSource("token"))
+			gateway, err := github.NewGateway(github.Config{
+				Deployment: github.Deployment{APIURL: srv.URL},
+				Tokens:     gatewayTestTokenSource("token"),
+			})
 			require.NoError(t, err)
 			repo, err := newRepository(
 				t.Context(), new(Forge),

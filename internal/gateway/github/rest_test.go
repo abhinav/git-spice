@@ -15,18 +15,17 @@ import (
 
 func TestGateway_RESTAuthenticationRefresh(t *testing.T) {
 	var tokenCalls int
-	gateway, err := NewGateway(
-		"https://api.github.com",
-		&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+	gateway, err := NewGateway(Config{
+		HTTPClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 			assert.Equal(t, fmt.Sprintf("Bearer token-%d", tokenCalls), r.Header.Get("Authorization"))
 			return restJSONResponse(http.StatusCreated, `{}`), nil
 		})},
-		tokenSourceFunc(func(ctx context.Context) (string, error) {
+		Tokens: tokenSourceFunc(func(ctx context.Context) (string, error) {
 			assert.Same(t, t.Context(), ctx)
 			tokenCalls++
 			return fmt.Sprintf("token-%d", tokenCalls), nil
 		}),
-	)
+	})
 	require.NoError(t, err)
 
 	for range 2 {
@@ -42,16 +41,15 @@ func TestGateway_RESTAuthenticationRefresh(t *testing.T) {
 
 func TestGateway_RESTTokenError(t *testing.T) {
 	want := errors.New("token unavailable")
-	gateway, err := NewGateway(
-		"https://api.github.com",
-		&http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+	gateway, err := NewGateway(Config{
+		HTTPClient: &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			t.Fatal("HTTP request made after token failure")
 			return nil, nil
 		})},
-		tokenSourceFunc(func(context.Context) (string, error) {
+		Tokens: tokenSourceFunc(func(context.Context) (string, error) {
 			return "", want
 		}),
-	)
+	})
 	require.NoError(t, err)
 
 	err = gateway.CreatePullRequestStack(t.Context(), &CreatePullRequestStackInput{

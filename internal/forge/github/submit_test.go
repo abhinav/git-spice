@@ -67,11 +67,11 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 		}))
 	}))
 	defer srv.Close()
-	gatewayClient, err := github.NewGateway(
-		srv.URL,
-		srv.Client(),
-		gatewayTestTokenSource("token"),
-	)
+	gatewayClient, err := github.NewGateway(github.Config{
+		Deployment: github.Deployment{APIURL: srv.URL},
+		HTTPClient: srv.Client(),
+		Tokens:     gatewayTestTokenSource("token"),
+	})
 	require.NoError(t, err)
 
 	repo, err := newRepository(
@@ -176,11 +176,11 @@ func TestRepository_addPullRequestMetadata(t *testing.T) {
 		}
 	}))
 	defer srv.Close()
-	gatewayClient, err := github.NewGateway(
-		srv.URL,
-		srv.Client(),
-		gatewayTestTokenSource("token"),
-	)
+	gatewayClient, err := github.NewGateway(github.Config{
+		Deployment: github.Deployment{APIURL: srv.URL},
+		HTTPClient: srv.Client(),
+		Tokens:     gatewayTestTokenSource("token"),
+	})
 	require.NoError(t, err)
 
 	repo, err := newRepository(
