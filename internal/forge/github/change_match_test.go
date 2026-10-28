@@ -171,7 +171,7 @@ func TestRepository_MatchChangesToBranches_filtersPushRepository(t *testing.T) {
 		[]string{"feature"},
 		&forge.MatchChangesToBranchesOptions{
 			PushRepository: &RepositoryID{
-				url:   DefaultURL,
+				url:   "https://github.com",
 				owner: "other",
 				name:  "fork",
 			},

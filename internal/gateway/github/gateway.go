@@ -1,10 +1,11 @@
 // Package github provides the typed GitHub API operations needed by git-spice.
 //
-// The package owns GitHub's GraphQL and REST wire protocols,
+// The package owns GitHub's deployment URL conventions,
+// GraphQL and REST wire protocols,
 // authenticated request execution,
 // and response error models.
-// Callers supply credentials through [TokenSource] and adapt the typed results
-// to their own domain models.
+// Callers supply a [Deployment] through [Config] and credentials through
+// [TokenSource], and adapt the typed results to their own domain models.
 // The package does not own credential discovery, persistence, or login flows.
 package github
 
@@ -15,7 +16,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 // maxErrorBody limits the diagnostic content retained from an HTTP error
@@ -34,16 +34,16 @@ type TokenSource interface {
 // A Gateway is safe for concurrent use when its HTTP client and token source are
 // safe for concurrent use.
 // Each HTTP request retrieves a token with the operation context and uses the
-// configured GitHub endpoint.
+// configured GitHub endpoints.
 // A typed operation may issue multiple requests when GitHub exposes related
 // data through separate API nodes.
 // GitHub responses containing both data and errors return only the errors;
 // callers never observe a partial result.
 type Gateway struct {
-	// graphQLEndpoint is derived from the configured API base URL.
-	graphQLEndpoint string
+	// graphQLEndpoint is the complete URL for GraphQL requests.
+	graphQLEndpoint *url.URL
 
-	// restBaseURL is the REST API root derived from the configured API base URL.
+	// restBaseURL is the root to which REST resource paths are appended.
 	restBaseURL *url.URL
 
 	// httpClient performs requests after the gateway has supplied authentication.
@@ -53,42 +53,40 @@ type Gateway struct {
 	tokens TokenSource
 }
 
-// NewGateway builds a client for a GitHub API base URL.
-//
-// apiURLStr is the API base URL reported by the forge configuration.
-// For GitHub Enterprise Server, this is the common `/api` root from which
-// NewGateway derives `/api/graphql` and `/api/v3`.
-// A nil HTTP client uses [http.DefaultClient].
-// The tokens source is required and is consulted for every HTTP request.
-func NewGateway(apiURLStr string, httpClient *http.Client, tokens TokenSource) (*Gateway, error) {
-	apiURL, err := url.Parse(apiURLStr)
+// Config configures a Gateway's deployment and authenticated HTTP requests.
+type Config struct {
+	// Deployment selects the GitHub installation.
+	// Its zero value selects GitHub.com.
+	Deployment Deployment
+
+	// Tokens supplies credentials for every HTTP request.
+	Tokens TokenSource // required
+
+	// HTTPClient sends requests to both endpoints.
+	// If nil, [http.DefaultClient] is used.
+	HTTPClient *http.Client
+}
+
+// NewGateway resolves the deployment's API addresses and builds a client.
+func NewGateway(cfg Config) (*Gateway, error) {
+	endpoints, err := cfg.Deployment.apiEndpoints()
 	if err != nil {
-		return nil, fmt.Errorf("parse API URL: %w", err)
+		return nil, err
 	}
 
-	graphQLURL := apiURL.JoinPath("graphql")
-
-	// TODO: Accept complete GraphQL and REST endpoint URLs instead of deriving
-	// both endpoints from GitHub's common API base URL.
-	// GitHub.com serves GraphQL below the REST API host,
-	// while GitHub Enterprise Server uses /api/graphql and /api/v3.
-	restBaseURL := apiURL
-	if !strings.EqualFold(apiURL.Hostname(), "api.github.com") {
-		restBaseURL = apiURL.JoinPath("v3")
-	}
-
+	httpClient := cfg.HTTPClient
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
-	if tokens == nil {
+	if cfg.Tokens == nil {
 		return nil, errors.New("token source is required")
 	}
 
 	return &Gateway{
-		graphQLEndpoint: graphQLURL.String(),
-		restBaseURL:     restBaseURL,
+		graphQLEndpoint: endpoints.GraphQLEndpoint,
+		restBaseURL:     endpoints.RESTBaseURL,
 		httpClient:      httpClient,
-		tokens:          tokens,
+		tokens:          cfg.Tokens,
 	}, nil
 }
 

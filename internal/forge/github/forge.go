@@ -7,18 +7,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
-)
-
-// Default URLs for GitHub and its API.
-const (
-	DefaultURL    = "https://github.com"
-	DefaultAPIURL = "https://api.github.com"
 )
 
 // Options defines command line options for the GitHub Forge.
@@ -44,6 +37,10 @@ type Options struct {
 	Stacks bool `name:"github-stacks" hidden:"" config:"forge.github.stacks" default:"true" help:"Whether to use GitHub native stack operations. One of 'true' and 'false'."`
 }
 
+func (o Options) deployment() github.Deployment {
+	return github.Deployment{URL: o.URL, APIURL: o.APIURL}
+}
+
 // Definition configures GitHub forge instances.
 type Definition struct {
 	changeMetadataCodec
@@ -65,7 +62,7 @@ func (*Definition) ID() string { return "github" }
 
 // BaseURL reports the GitHub web URL used for host matching.
 func (d *Definition) BaseURL() string {
-	return cmp.Or(d.Options.URL, DefaultURL)
+	return d.Options.deployment().WebURL()
 }
 
 // CLIPlugin returns the CLI plugin for the GitHub Forge.
@@ -116,31 +113,12 @@ func (f *Forge) logger() *silog.Logger {
 // URL returns the base URL configured for the GitHub Forge
 // or the default URL if none is set.
 func (f *Forge) URL() string {
-	return cmp.Or(f.Options.URL, DefaultURL)
+	return f.Options.deployment().WebURL()
 }
 
 // BaseURL reports the GitHub web URL used for host matching and links.
 func (f *Forge) BaseURL() string {
 	return f.baseURL
-}
-
-// APIURL returns the base API URL configured for the GitHub Forge
-// or the default URL if none is set.
-func (f *Forge) APIURL() string {
-	if f.Options.APIURL != "" {
-		return f.Options.APIURL
-	}
-
-	// If the API URL is not set, and base URL is NOT github.com,
-	// assume API URL is $baseURL/api.
-	if f.Options.URL != "" && f.Options.URL != DefaultURL {
-		apiURL, err := url.JoinPath(f.Options.URL, "/api")
-		if err == nil {
-			return apiURL
-		}
-	}
-
-	return DefaultAPIURL
 }
 
 // ID reports a unique key for this forge.
@@ -171,7 +149,11 @@ func (f *Forge) OpenRepository(ctx context.Context, tok forge.AuthenticationToke
 	}
 
 	gatewayTokens := newGatewayTokenSource(tokenSource)
-	gatewayClient, err := github.NewGateway(f.APIURL(), f.HTTPClient, gatewayTokens)
+	gatewayClient, err := github.NewGateway(github.Config{
+		Deployment: f.Options.deployment(),
+		Tokens:     gatewayTokens,
+		HTTPClient: f.HTTPClient,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create GitHub gateway: %w", err)
 	}

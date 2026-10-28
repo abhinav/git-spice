@@ -60,11 +60,10 @@ func newRecorder(
 
 func newGateway(t *testing.T, httpClient *http.Client) *githubgateway.Gateway {
 	t.Helper()
-	client, err := githubgateway.NewGateway(
-		github.DefaultAPIURL,
-		&http.Client{Transport: httpClient.Transport},
-		testTokenSource("token"),
-	)
+	client, err := githubgateway.NewGateway(githubgateway.Config{
+		HTTPClient: &http.Client{Transport: httpClient.Transport},
+		Tokens:     testTokenSource("token"),
+	})
 	require.NoError(t, err)
 	return client
 }
