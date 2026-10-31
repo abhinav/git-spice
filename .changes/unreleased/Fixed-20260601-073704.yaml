@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'repo sync: detect locally-merged branches on supported forges when commits land on trunk via direct push, cleaning up the stack without restack conflicts.'
+time: 2026-06-01T07:37:04.600167-04:00
