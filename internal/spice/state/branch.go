@@ -249,13 +249,14 @@ func (tx *BranchTx) LookupBranches(ctx context.Context, names []string) ([]*Look
 	if len(names) == 0 {
 		return nil, nil
 	}
-	if err := tx.loadStates(ctx, names); err != nil {
+	states, err := tx.getStates(ctx, names)
+	if err != nil {
 		return nil, err
 	}
 	responses := make([]*LookupResponse, len(names))
 	var missing storage.MissingKeysError
 	for i, name := range names {
-		state := tx.states[name]
+		state := states[i]
 		if state == nil {
 			missing.Indexes = append(missing.Indexes, i)
 			missing.Keys = append(missing.Keys, branchKey(name))
@@ -356,7 +357,9 @@ func (tx *BranchTx) UpsertMany(ctx context.Context, reqs []UpsertRequest) error 
 			names = append(names, req.Base)
 		}
 	}
-	if err := tx.loadStates(ctx, names); err != nil {
+	// Later requests must see creations and edits made by earlier requests,
+	// so this batch prepares reads; application uses the evolving view.
+	if _, err := tx.getStates(ctx, names); err != nil {
 		return err
 	}
 	// Apply against an isolated write set so operational failures cannot leak
@@ -567,19 +570,24 @@ func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 }
 
 func (tx *BranchTx) state(ctx context.Context, branch string) (*branchState, error) {
-	if err := tx.loadStates(ctx, []string{branch}); err != nil {
-		return nil, err
+	state, cached := tx.states[branch]
+	if !cached {
+		states, err := tx.getStates(ctx, []string{branch})
+		if err != nil {
+			return nil, err
+		}
+		state = states[0]
 	}
-	state := tx.states[branch]
 	if state == nil {
 		return nil, ErrNotExist
 	}
 	return state, nil
 }
 
-// loadStates fills the cache for names not already loaded, changed, or deleted.
-// Missing persisted branches are cached as nil so a later upsert can create them.
-func (tx *BranchTx) loadStates(ctx context.Context, names []string) error {
+// getStates returns transaction-owned states in request order, with nil entries
+// for absent names. Duplicate names share state. Later mutations may replace
+// entries, so callers must not treat these pointers as stable name handles.
+func (tx *BranchTx) getStates(ctx context.Context, names []string) ([]*branchState, error) {
 	var pending []string
 	seen := make(map[string]struct{}, len(names))
 	for _, name := range names {
@@ -595,18 +603,20 @@ func (tx *BranchTx) loadStates(ctx context.Context, names []string) error {
 		seen[name] = struct{}{}
 		pending = append(pending, name)
 	}
-	if len(pending) == 0 {
-		return nil
+	if len(pending) > 0 {
+		states, err := tx.store.lookupBranchStates(ctx, pending)
+		if states == nil {
+			return nil, err
+		}
+		for i, name := range pending {
+			tx.states[name] = states[i]
+		}
 	}
-
-	states, err := tx.store.lookupBranchStates(ctx, pending)
-	if states == nil {
-		return err
+	states := make([]*branchState, len(names))
+	for i, name := range names {
+		states[i] = tx.states[name]
 	}
-	for i, name := range pending {
-		tx.states[name] = states[i]
-	}
-	return nil
+	return states, nil
 }
 
 func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
@@ -669,15 +679,16 @@ func (tx *BranchTx) aboves(ctx context.Context, branch string) iter.Seq2[string,
 			yield("", err)
 			return
 		}
-		if err := tx.loadStates(ctx, names); err != nil {
+		states, err := tx.getStates(ctx, names)
+		if err != nil {
 			yield("", err)
 			return
 		}
 
-		for _, branchName := range names {
-			state, err := tx.state(ctx, branchName)
-			if err != nil {
-				yield("", fmt.Errorf("load branch %q: %w", branchName, err))
+		for i, branchName := range names {
+			state := states[i]
+			if state == nil {
+				yield("", fmt.Errorf("load branch %q: %w", branchName, ErrNotExist))
 				return
 			}
 
