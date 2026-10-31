@@ -248,17 +248,57 @@ func TestBranchTx_UpsertMany_orderedChanges(t *testing.T) {
 	assert.Equal(t, "base", child.Base)
 
 	tx = store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "child", BaseHash: "prior"}))
 	err = tx.UpsertMany(ctx, []state.UpsertRequest{
 		{Name: "child", BaseHash: "retained"},
+		{Name: "created-before-failure", Base: "main"},
 		{Name: "base", Base: "child"},
-		{Name: "never-created", Base: "main"},
+		{Name: "after-failure", Base: "main"},
+		{Name: "untracked", Base: "missing"},
+		{Name: "dependent", Base: "untracked"},
+		{Name: "without-base"},
 	})
 	require.ErrorContains(t, err, "would create a cycle")
-	require.NoError(t, tx.Commit(ctx, "keep valid prefix"))
+	failed, ok := errors.AsType[*state.UpsertManyError](err)
+	require.True(t, ok)
+	assert.Equal(t, []int{2, 4, 5, 6}, failed.Indexes)
+	require.Len(t, failed.Errors, 4)
+	assert.ErrorContains(t, failed.Errors[0], "would create a cycle")
+	assert.ErrorContains(t, failed.Errors[1], "branch missing is not tracked")
+	assert.ErrorContains(t, failed.Errors[2], "branch untracked is not tracked")
+	assert.ErrorContains(t, failed.Errors[3], "new branch must have a base")
+	require.NoError(t, tx.Commit(ctx, "keep accepted requests"))
 	child, err = store.LookupBranch(ctx, "child")
 	require.NoError(t, err)
 	assert.Equal(t, "retained", child.BaseHash.String())
-	_, err = store.LookupBranch(ctx, "never-created")
+	_, err = store.LookupBranch(ctx, "created-before-failure")
+	assert.NoError(t, err)
+	_, err = store.LookupBranch(ctx, "after-failure")
+	assert.NoError(t, err)
+}
+
+func TestBranchTx_UpsertMany_operationalFailure(t *testing.T) {
+	ctx := t.Context()
+	mem := make(storage.MapBackend)
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: storage.NewDB(mem), Trunk: "main"})
+	require.NoError(t, err)
+	mem["branches/base"] = []byte(`{"base":{"name":"main","hash":"initial"}}`)
+	mem["branches/tip"] = []byte(`{"base":{"name":"corrupt"}}`)
+	mem["branches/corrupt"] = []byte(`{`)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "base", BaseHash: "prior"}))
+	err = tx.UpsertMany(ctx, []state.UpsertRequest{
+		{Name: "base", BaseHash: "discarded"},
+		{Name: "new", Base: "tip"},
+	})
+	require.Error(t, err)
+	_, partial := errors.AsType[*state.UpsertManyError](err)
+	assert.False(t, partial)
+	require.NoError(t, tx.Commit(ctx, "keep earlier invocation"))
+	base, err := store.LookupBranch(ctx, "base")
+	require.NoError(t, err)
+	assert.Equal(t, "prior", base.BaseHash.String())
+	_, err = store.LookupBranch(ctx, "new")
 	assert.ErrorIs(t, err, state.ErrNotExist)
 }
 
