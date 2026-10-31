@@ -220,6 +220,48 @@ func testStorageBackend(t *testing.T, backend Backend) {
 		assert.Equal(t, "qux", got2)
 	})
 
+	t.Run("SnapshotGetMany", func(t *testing.T) {
+		defer func() { assert.NoError(t, db.Clear(ctx, "clear")) }()
+		empty, err := db.Snapshot(ctx)
+		require.NoError(t, err)
+		require.NoError(t, empty.GetMany(ctx, nil))
+		untouched := "unchanged"
+		err = empty.GetMany(ctx, []GetRequest{{Key: "absent", Value: &untouched}})
+		missing, ok := errors.AsType[*MissingKeysError](err)
+		require.True(t, ok)
+		assert.Equal(t, []int{0}, missing.Indexes)
+		assert.Equal(t, "unchanged", untouched)
+
+		require.NoError(t, db.Update(ctx, UpdateRequest{
+			Sets: []SetRequest{
+				{Key: "first", Value: "old first"},
+				{Key: "second", Value: "old second"},
+			}, Message: "seed snapshot",
+		}))
+		snapshot, err := db.Snapshot(ctx)
+		require.NoError(t, err)
+		require.NoError(t, db.Update(ctx, UpdateRequest{
+			Sets:    []SetRequest{{Key: "first", Value: "new first"}, {Key: "absent", Value: "now present"}},
+			Deletes: []string{"second"}, Message: "change live data",
+		}))
+		var first, second, repeated string
+		err = snapshot.GetMany(ctx, []GetRequest{
+			{Key: "absent", Value: &untouched},
+			{Key: "second", Value: &second},
+			{Key: "first", Value: &first},
+			{Key: "absent", Value: &untouched},
+			{Key: "first", Value: &repeated},
+		})
+		missing, ok = errors.AsType[*MissingKeysError](err)
+		require.True(t, ok)
+		assert.Equal(t, []int{0, 3}, missing.Indexes)
+		assert.Equal(t, []string{"absent", "absent"}, missing.Keys)
+		assert.Equal(t, "old first", first)
+		assert.Equal(t, "old second", second)
+		assert.Equal(t, first, repeated)
+		assert.Equal(t, "unchanged", untouched)
+	})
+
 	t.Run("SetNested", func(t *testing.T) {
 		defer func() {
 			assert.NoError(t, db.Clear(ctx, "clear"))

@@ -178,6 +178,10 @@ func (s *mapSnapshot) Get(
 	return getFromMap(s.data, key, dst)
 }
 
+func (s *mapSnapshot) GetMany(ctx context.Context, reqs []GetRequest) error {
+	return s.data.GetMany(ctx, reqs)
+}
+
 func (s *mapSnapshot) Keys(
 	_ context.Context,
 	dir string,

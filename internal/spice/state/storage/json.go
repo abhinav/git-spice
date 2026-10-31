@@ -42,16 +42,24 @@ func MutateJSON[T any](
 		if err != nil {
 			return zero, fmt.Errorf("snapshot store: %w", err)
 		}
-		for _, required := range req.Requires {
-			var value jsontext.Value
-			if err := snapshot.Get(ctx, required, &value); err != nil {
-				return zero, fmt.Errorf("require %q: %w", required, err)
-			}
-		}
 		var document jsontext.Value
-		if err := snapshot.Get(ctx, req.Key, &document); err != nil {
-			if !errors.Is(err, ErrNotExist) {
-				return zero, fmt.Errorf("read %q: %w", req.Key, err)
+		values := make([]jsontext.Value, len(req.Requires))
+		reads := make([]GetRequest, len(req.Requires)+1)
+		for i, key := range req.Requires {
+			reads[i] = GetRequest{Key: key, Value: &values[i]}
+		}
+		reads[len(req.Requires)] = GetRequest{Key: req.Key, Value: &document}
+		if err := snapshot.GetMany(ctx, reads); err != nil {
+			missing, ok := errors.AsType[*MissingKeysError](err)
+			if !ok {
+				return zero, fmt.Errorf("read mutation state for %q: %w", req.Key, err)
+			}
+			// A missing target may use its default, but every requirement must
+			// exist in this same revision, including after a CAS retry.
+			for _, index := range missing.Indexes {
+				if index < len(req.Requires) {
+					return zero, fmt.Errorf("require %q: %w", req.Requires[index], ErrNotExist)
+				}
 			}
 			if len(req.IfMissing) == 0 {
 				return zero, ErrNotExist

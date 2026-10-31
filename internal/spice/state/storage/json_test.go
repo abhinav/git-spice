@@ -121,6 +121,19 @@ func TestMutateJSON_missingWithoutDefault(t *testing.T) {
 	assert.ErrorIs(t, backend.Get(t.Context(), "missing", &document), ErrNotExist)
 }
 
+func TestMutateJSON_missingRequirementPreservesDocument(t *testing.T) {
+	backend := MapBackend{
+		"present":  []byte(`{}`),
+		"document": []byte(`{"value":"old"}`),
+	}
+	err := UpdateJSON(t.Context(), backend, JSONMutationRequest{
+		Key: "document", Requires: []string{"present", "missing"},
+		IfMissing: jsontext.Value(`{}`), Message: "update value",
+	}, jsonmut.Set("/value", jsontext.Value(`"new"`)))
+	assert.ErrorIs(t, err, ErrNotExist)
+	assert.JSONEq(t, `{"value":"old"}`, string(backend["document"]))
+}
+
 type conflictOnceBackend struct {
 	Backend
 	BeforeConflict func(context.Context, Backend) error

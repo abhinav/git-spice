@@ -53,6 +53,10 @@ type Snapshot interface {
 	// If the key does not exist, Get returns [ErrNotExist].
 	Get(ctx context.Context, key string, dst any) error
 
+	// GetMany decodes values from this revision in request order.
+	// It has the same partial-result and missing-key contract as [Backend.GetMany].
+	GetMany(ctx context.Context, reqs []GetRequest) error
+
 	// Keys lists the keys in dir with the directory prefix removed.
 	// An empty dir lists every key.
 	Keys(ctx context.Context, dir string) ([]string, error)
