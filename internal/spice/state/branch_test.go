@@ -131,6 +131,28 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	})
 }
 
+func TestBranchTx_Upsert_retryAfterReadError(t *testing.T) {
+	ctx := t.Context()
+	mem := make(storage.MapBackend)
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: storage.NewDB(mem), Trunk: "main"})
+	require.NoError(t, err)
+	mem["branches/feature"] = []byte(`{`)
+
+	tx := store.BeginBranchTx()
+	err = tx.Upsert(ctx, state.UpsertRequest{Name: "feature", BaseHash: "updated"})
+	require.Error(t, err)
+
+	mem["branches/feature"] = []byte(`{"base":{"name":"main","hash":"initial"},"change":{"shamhub":{"number":42}}}`)
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "feature", BaseHash: "updated"}))
+	require.NoError(t, tx.Commit(ctx, "update repaired branch"))
+	branch, err := store.LookupBranch(ctx, "feature")
+	require.NoError(t, err)
+	assert.Equal(t, "main", branch.Base)
+	assert.Equal(t, "updated", branch.BaseHash.String())
+	assert.Equal(t, "shamhub", branch.ChangeForge)
+	assert.JSONEq(t, `{"number":42}`, branch.ChangeMetadata.String())
+}
+
 func TestBranchTxDelete(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
@@ -201,6 +223,32 @@ func TestBranchTxDelete(t *testing.T) {
 		_, err := store.LookupBranch(ctx, "baz")
 		require.ErrorIs(t, err, state.ErrNotExist)
 	})
+}
+
+func TestBranchTx_Delete_pendingGraph(t *testing.T) {
+	ctx := t.Context()
+	store := statetest.NewMemoryStore(t, "main", "", nil)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{Name: "foo", Base: "main"},
+			{Name: "bar", Base: "foo"},
+			{Name: "baz", Base: "main"},
+		},
+		Message: "seed graph",
+	}))
+
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Rename(ctx, "baz", "renamed"))
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "bar", Base: "renamed"}))
+	require.NoError(t, tx.Delete(ctx, "foo"))
+	assert.ErrorContains(t, tx.Delete(ctx, "renamed"), "needed by bar")
+	require.NoError(t, tx.Delete(ctx, "bar"))
+	require.NoError(t, tx.Delete(ctx, "renamed"))
+	require.NoError(t, tx.Commit(ctx, "remove graph"))
+
+	names, err := sliceutil.CollectErr(store.ListBranches(ctx))
+	require.NoError(t, err)
+	assert.Empty(t, names)
 }
 
 func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
@@ -318,6 +366,7 @@ func TestStore_LookupBranches(t *testing.T) {
 		Message: "add branches",
 	}))
 
+	db.getManyCalls = 0
 	branches, err := store.LookupBranches(ctx, []string{"foo", "bar"})
 	require.NoError(t, err)
 

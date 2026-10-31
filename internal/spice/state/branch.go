@@ -131,39 +131,18 @@ func (s *Store) LookupBranches(
 	ctx context.Context,
 	names []string,
 ) ([]*LookupResponse, error) {
-	if len(names) == 0 {
-		return nil, nil
-	}
-
-	states := make([]branchState, len(names))
-	reqs := make([]storage.GetRequest, len(names))
-	for i, name := range names {
-		reqs[i] = storage.GetRequest{
-			Key:   branchKey(name),
-			Value: &states[i],
-		}
-	}
-
-	err := s.db.GetMany(ctx, reqs)
-	var missing []int
-	if missingErr, ok := errors.AsType[*storage.MissingKeysError](err); ok {
-		missing = missingErr.Indexes
-	} else if err != nil {
-		return nil, fmt.Errorf("load branches: %w", err)
+	states, err := s.lookupBranchStates(ctx, names)
+	if states == nil {
+		return nil, err
 	}
 
 	responses := make([]*LookupResponse, len(states))
-	for i := range states {
-		if len(missing) > 0 && missing[0] == i {
-			missing = missing[1:]
-			continue
+	for i, state := range states {
+		if state != nil {
+			responses[i] = branchStateLookupResponse(state)
 		}
-		responses[i] = branchStateLookupResponse(&states[i])
 	}
-	if err != nil {
-		return responses, fmt.Errorf("load branches: %w", err)
-	}
-	return responses, nil
+	return responses, err
 }
 
 func branchStateLookupResponse(state *branchState) *LookupResponse {
@@ -185,15 +164,32 @@ func branchStateLookupResponse(state *branchState) *LookupResponse {
 	return res
 }
 
-// lookupBranchState loads the state of the given branch from the store.
-// Returns [ErrNotExist] if the branch does not exist in the store.
-// Trunk branch never exists in the store.
-func (s *Store) lookupBranchState(ctx context.Context, branch string) (*branchState, error) {
-	var state branchState
-	if err := s.db.Get(ctx, branchKey(branch), &state); err != nil {
-		return nil, fmt.Errorf("load branch %q: %w", branch, err)
+// lookupBranchStates returns raw persisted states in request order.
+// Missing entries are nil with a [storage.MissingKeysError]; other errors return
+// no states, so callers never cache incomplete reads.
+func (s *Store) lookupBranchStates(ctx context.Context, names []string) ([]*branchState, error) {
+	if len(names) == 0 {
+		return nil, nil
 	}
-	return &state, nil
+	values := make([]branchState, len(names))
+	states := make([]*branchState, len(names))
+	reqs := make([]storage.GetRequest, len(names))
+	for i, name := range names {
+		states[i] = &values[i]
+		reqs[i] = storage.GetRequest{Key: branchKey(name), Value: states[i]}
+	}
+	err := s.db.GetMany(ctx, reqs)
+	if err == nil {
+		return states, nil
+	}
+	missing, ok := errors.AsType[*storage.MissingKeysError](err)
+	if !ok {
+		return nil, fmt.Errorf("load branches: %w", err)
+	}
+	for _, index := range missing.Indexes {
+		states[index] = nil
+	}
+	return states, fmt.Errorf("load branches: %w", err)
 }
 
 // ListBranches reports the names of all tracked branches.
@@ -227,7 +223,7 @@ func (s *Store) listBranches(ctx context.Context) iter.Seq2[string, error] {
 type BranchTx struct {
 	store *Store
 
-	states  map[string]*branchState // cached states with changes
+	states  map[string]*branchState // cached states and pending changes; nil means absent
 	sets    map[string]struct{}     // branches to set
 	dels    map[string]struct{}     // branches to delete
 	renames map[string]string       // old branch name to new branch name
@@ -472,21 +468,46 @@ func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 }
 
 func (tx *BranchTx) state(ctx context.Context, branch string) (*branchState, error) {
-	if _, ok := tx.dels[branch]; ok {
-		return nil, ErrNotExist
-	}
-
-	if state, ok := tx.states[branch]; ok {
-		return state, nil
-	}
-
-	state, err := tx.store.lookupBranchState(ctx, branch)
-	if err != nil {
+	if err := tx.loadStates(ctx, []string{branch}); err != nil {
 		return nil, err
 	}
-
-	tx.states[branch] = state
+	state := tx.states[branch]
+	if state == nil {
+		return nil, ErrNotExist
+	}
 	return state, nil
+}
+
+// loadStates fills the cache for names not already loaded, changed, or deleted.
+// Missing persisted branches are cached as nil so a later upsert can create them.
+func (tx *BranchTx) loadStates(ctx context.Context, names []string) error {
+	var pending []string
+	seen := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		if _, ok := tx.states[name]; ok {
+			continue
+		}
+		if _, deleted := tx.dels[name]; deleted {
+			continue
+		}
+		if _, duplicate := seen[name]; duplicate {
+			continue
+		}
+		seen[name] = struct{}{}
+		pending = append(pending, name)
+	}
+	if len(pending) == 0 {
+		return nil
+	}
+
+	states, err := tx.store.lookupBranchStates(ctx, pending)
+	if states == nil {
+		return err
+	}
+	for i, name := range pending {
+		tx.states[name] = states[i]
+	}
+	return nil
 }
 
 func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
@@ -544,12 +565,17 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 
 func (tx *BranchTx) aboves(ctx context.Context, branch string) iter.Seq2[string, error] {
 	return func(yield func(string, error) bool) {
-		for branchName, err := range tx.listBranches(ctx) {
-			if err != nil {
-				yield("", err)
-				return
-			}
+		names, err := sliceutil.CollectErr(tx.listBranches(ctx))
+		if err != nil {
+			yield("", err)
+			return
+		}
+		if err := tx.loadStates(ctx, names); err != nil {
+			yield("", err)
+			return
+		}
 
+		for _, branchName := range names {
 			state, err := tx.state(ctx, branchName)
 			if err != nil {
 				yield("", fmt.Errorf("load branch %q: %w", branchName, err))
