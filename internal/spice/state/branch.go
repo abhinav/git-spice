@@ -289,11 +289,31 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 	return tx.UpsertMany(ctx, []UpsertRequest{req})
 }
 
+// UpsertManyError identifies rejected requests from UpsertMany.
+// Indexes follow request order; Errors[i] describes request Indexes[i].
+// Requests not listed here were staged successfully, but are not persisted
+// until Commit. Use errors.As to distinguish this from an operational failure.
+type UpsertManyError struct {
+	Indexes []int
+	Errors  []error
+}
+
+func (e *UpsertManyError) Error() string {
+	return fmt.Sprintf("%d branch updates rejected: %v", len(e.Indexes), errors.Join(e.Errors...))
+}
+
+// Unwrap exposes rejection causes to errors.Is and errors.As.
+func (e *UpsertManyError) Unwrap() []error { return e.Errors }
+
 // UpsertMany applies requests in order after loading their uncached branches
 // and direct bases together. A request may use a branch created earlier in reqs.
-// It stops at the first invalid request; preceding changes remain in the
-// transaction, but nothing is persisted until Commit.
+// Rejected requests are reported by UpsertManyError; other requests are staged.
+// Other errors leave none of this call's changes staged.
+// Changes from earlier calls remain intact. Nothing is persisted until Commit.
 func (tx *BranchTx) UpsertMany(ctx context.Context, reqs []UpsertRequest) error {
+	if len(reqs) == 0 {
+		return nil
+	}
 	names := make([]string, 0, 2*len(reqs))
 	for _, req := range reqs {
 		switch req.Name {
@@ -311,13 +331,32 @@ func (tx *BranchTx) UpsertMany(ctx context.Context, reqs []UpsertRequest) error 
 	if err := tx.loadStates(ctx, names); err != nil {
 		return err
 	}
-	for _, req := range reqs {
-		if err := tx.upsert(ctx, req); err != nil {
-			return fmt.Errorf("update branch %q: %w", req.Name, err)
+	// Apply against an isolated write set so operational failures cannot leak
+	// changes. Each edited state is copied by upsert before it is changed.
+	staged := *tx
+	staged.states = maps.Clone(tx.states)
+	staged.sets = maps.Clone(tx.sets)
+	staged.dels = maps.Clone(tx.dels)
+	var rejected UpsertManyError
+	for i, req := range reqs {
+		if err := staged.upsert(ctx, req); err != nil {
+			_, cycle := errors.AsType[*branchCycleError](err)
+			_, untracked := errors.AsType[*branchUntrackedError](err)
+			if !cycle && !untracked && !errors.Is(err, errBranchBaseRequired) {
+				return fmt.Errorf("update branch %q: %w", req.Name, err)
+			}
+			rejected.Indexes = append(rejected.Indexes, i)
+			rejected.Errors = append(rejected.Errors, fmt.Errorf("update branch %q: %w", req.Name, err))
 		}
+	}
+	tx.states, tx.sets, tx.dels = staged.states, staged.sets, staged.dels
+	if len(rejected.Indexes) > 0 {
+		return &rejected
 	}
 	return nil
 }
+
+var errBranchBaseRequired = errors.New("new branch must have a base")
 
 func (tx *BranchTx) upsert(ctx context.Context, req UpsertRequest) error {
 	must.NotBeBlankf(req.Name, "branch name is required")
@@ -330,13 +369,16 @@ func (tx *BranchTx) upsert(ctx context.Context, req UpsertRequest) error {
 		}
 
 		if req.Base == "" {
-			return errors.New("new branch must have a base")
+			return errBranchBaseRequired
 		}
 
 		state = &branchState{Base: branchStateBase{Name: req.Base}}
 		// Note:
 		// Don't persist the state here until the rest
 		// of the request is validated.
+	} else {
+		updated := *state
+		state = &updated
 	}
 
 	if req.Base != "" {
