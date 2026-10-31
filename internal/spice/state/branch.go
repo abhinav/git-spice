@@ -475,41 +475,91 @@ func (tx *BranchTx) upsert(ctx context.Context, req UpsertRequest) error {
 // The branch must not be a base for any other branch,
 // or an error will be returned.
 func (tx *BranchTx) Delete(ctx context.Context, name string) error {
-	if name == "" {
-		return errors.New("branch name is required")
-	}
-	if name == tx.store.trunk {
-		return ErrTrunk
-	}
+	return tx.DeleteMany(ctx, []string{name})
+}
 
-	if _, err := tx.state(ctx, name); err != nil {
+// DeleteManyError reports rejected deletions in request order.
+// Errors[i] describes the request at the original index Indexes[i].
+// Other deletions were staged successfully and will persist on Commit.
+type DeleteManyError struct {
+	Indexes []int
+	Errors  []error
+}
+
+func (e *DeleteManyError) Error() string {
+	return fmt.Sprintf("%d branch deletions rejected: %v", len(e.Indexes), errors.Join(e.Errors...))
+}
+
+// Unwrap exposes rejection causes to errors.Is and errors.As.
+func (e *DeleteManyError) Unwrap() []error { return e.Errors }
+
+// DeleteMany processes names in order. A branch with remaining dependents
+// cannot be deleted, but earlier successful deletions can remove that obstacle.
+// DeleteManyError identifies rejected requests; other errors stage no deletions.
+// Nothing is persisted until Commit.
+func (tx *BranchTx) DeleteMany(ctx context.Context, names []string) error {
+	var targets []string
+	for _, name := range names {
+		if name != "" && name != tx.store.trunk {
+			targets = append(targets, name)
+		}
+	}
+	states, err := tx.getStates(ctx, targets)
+	if err != nil {
 		return err
 	}
 
-	names, err := sliceutil.CollectErr(tx.listBranches(ctx))
-	if err != nil {
-		return fmt.Errorf("list branches above %v: %w", name, err)
-	}
-	states, err := tx.getStates(ctx, names)
-	if err != nil {
-		return fmt.Errorf("load branches: %w", err)
-	}
-	var aboves []string
-	for i, state := range states {
-		if state == nil {
-			return fmt.Errorf("load branch %q: %w", names[i], ErrNotExist)
+	// Complete graph reads before staging deletions. The local index evolves
+	// with this call's deletions and need not be maintained by other mutations.
+	var dependents map[string]map[string]struct{}
+	if slices.ContainsFunc(states, func(s *branchState) bool { return s != nil }) {
+		visible, err := sliceutil.CollectErr(tx.listBranches(ctx))
+		if err != nil {
+			return fmt.Errorf("list branches: %w", err)
 		}
-		if state.Base.Name == name {
-			aboves = append(aboves, names[i])
+		states, err := tx.getStates(ctx, visible)
+		if err != nil {
+			return fmt.Errorf("load branches: %w", err)
 		}
-	}
-	if len(aboves) > 0 {
-		return fmt.Errorf("branch %v is needed by %v", name, strings.Join(aboves, ", "))
+		dependents = make(map[string]map[string]struct{})
+		for i, state := range states {
+			if state == nil {
+				return fmt.Errorf("load branch %q: %w", visible[i], ErrNotExist)
+			}
+			if dependents[state.Base.Name] == nil {
+				dependents[state.Base.Name] = make(map[string]struct{})
+			}
+			dependents[state.Base.Name][visible[i]] = struct{}{}
+		}
 	}
 
-	tx.dels[name] = struct{}{}
-	delete(tx.sets, name)
-	tx.states[name] = nil
+	var rejected DeleteManyError
+	for i, name := range names {
+		var err error
+		state := tx.states[name]
+		switch {
+		case name == "":
+			err = errors.New("branch name is required")
+		case name == tx.store.trunk:
+			err = ErrTrunk
+		case state == nil:
+			err = ErrNotExist
+		case len(dependents[name]) > 0:
+			aboves := slices.Sorted(maps.Keys(dependents[name]))
+			err = fmt.Errorf("branch %v is needed by %v", name, strings.Join(aboves, ", "))
+		default:
+			delete(dependents[state.Base.Name], name)
+			tx.dels[name] = struct{}{}
+			delete(tx.sets, name)
+			tx.states[name] = nil
+			continue
+		}
+		rejected.Indexes = append(rejected.Indexes, i)
+		rejected.Errors = append(rejected.Errors, fmt.Errorf("delete branch %q: %w", name, err))
+	}
+	if len(rejected.Indexes) > 0 {
+		return &rejected
+	}
 	return nil
 }
 
