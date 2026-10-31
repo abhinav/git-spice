@@ -734,7 +734,36 @@ func (h *Handler) findForgeFinishedBranches(
 
 	finishedBranches := make(map[string]finishedBranch) // name -> branch
 	mergedDownstacks := make(map[string][]jsontext.Value)
+
+	// Trunk reachability proves inclusion independently of change-request state.
+	// Classify these branches before applying forge-dependent deletion policy.
+	for _, b := range h.locallyMergedBranches(ctx, knownBranches, trunkHash) {
+		upstreamBranch := b.UpstreamBranch
+		if upstreamBranch == "" {
+			upstreamBranch = b.Name
+		}
+
+		var changeID forge.ChangeID
+		if b.Change != nil {
+			changeID = b.Change.ChangeID()
+		}
+
+		finishedBranches[b.Name] = finishedBranch{
+			Name:           b.Name,
+			Base:           b.Base,
+			UpstreamBranch: upstreamBranch,
+			ChangeID:       changeID,
+			Merged:         true,
+		}
+		mergedDownstacks[b.Name] = b.MergedDownstack
+	}
+
 	for _, branch := range submittedBranches {
+		if _, merged := finishedBranches[branch.Name]; merged {
+			h.Log.Infof("%v: %v was merged", branch.Name, branch.Change)
+			continue
+		}
+
 		switch branch.State {
 		case forge.ChangeOpen:
 			continue // not merged yet
@@ -789,6 +818,19 @@ func (h *Handler) findForgeFinishedBranches(
 	}
 
 	for _, branch := range trackedBranches {
+		if finished, merged := finishedBranches[branch.Name]; merged {
+			// Preserve a safely matched forge change for manually submitted PRs.
+			// Branch-name reuse alone does not establish a history association.
+			if branch.Merged && h.reportMergedChange(ctx, branch.Name, branch.Change,
+				branch.LocalHeadSHA, branch.RemoteHeadSHA) {
+				finished.ChangeID = branch.Change
+				finishedBranches[branch.Name] = finished
+			} else {
+				h.Log.Infof("%v: merged into trunk locally", branch.Name)
+			}
+			continue
+		}
+
 		if !branch.Merged {
 			continue
 		}
@@ -806,41 +848,6 @@ func (h *Handler) findForgeFinishedBranches(
 			branch.Name, branch.Change,
 			branch.LocalHeadSHA, branch.RemoteHeadSHA) {
 			finishedBranches[branch.Name] = finished
-		}
-	}
-
-	// Fallback: a branch whose head is already reachable from trunk
-	// has been merged locally, regardless of forge state.
-	// This catches direct pushes to trunk that bypassed the CR flow,
-	// and unsubmitted branches whose commits landed on trunk
-	// via some other path.
-	if locallyMerged := h.locallyMergedBranches(ctx, knownBranches, trunkHash); len(locallyMerged) > 0 {
-		for _, b := range locallyMerged {
-			if _, ok := finishedBranches[b.Name]; ok {
-				continue
-			}
-
-			upstreamBranch := b.UpstreamBranch
-			if upstreamBranch == "" {
-				upstreamBranch = b.Name
-			}
-
-			var changeID forge.ChangeID
-			if b.Change != nil {
-				changeID = b.Change.ChangeID()
-				h.Log.Infof("%v: %v was merged", b.Name, changeID)
-			} else {
-				h.Log.Infof("%v: merged into trunk locally", b.Name)
-			}
-
-			finishedBranches[b.Name] = finishedBranch{
-				Name:           b.Name,
-				Base:           b.Base,
-				UpstreamBranch: upstreamBranch,
-				ChangeID:       changeID,
-				Merged:         true,
-			}
-			mergedDownstacks[b.Name] = b.MergedDownstack
 		}
 	}
 
@@ -949,6 +956,43 @@ func (h *Handler) shouldDeleteMergedChange(
 	changeID forge.ChangeID,
 	localHead, remoteHead git.Hash,
 ) bool {
+	if h.reportMergedChange(ctx, branchName, changeID, localHead, remoteHead) {
+		return true
+	}
+
+	mismatchMsg := fmt.Sprintf("%v was merged but local SHA (%v) does not match remote SHA (%v)",
+		changeID, localHead.Short(), remoteHead.Short())
+
+	// If the remote head SHA doesn't contain the local head SHA,
+	// there may be local commits that haven't been pushed yet.
+	// Prompt for deletion if we have the option of prompting.
+	if !ui.Interactive(h.View) {
+		h.Log.Warnf("%v: %v. Skipping...", branchName, mismatchMsg)
+		return false
+	}
+
+	var shouldDelete bool
+	prompt := ui.NewConfirm().
+		WithTitle(fmt.Sprintf("Delete %v?", branchName)).
+		WithDescription(h.mergedChangeHeadMismatchDescription(
+			ctx, branchName, changeID, localHead, remoteHead)).
+		WithValue(&shouldDelete)
+	if err := ui.Run(h.View, prompt); err != nil {
+		h.Log.Warn("Skipping branch", "branch", branchName, "error", err)
+		return false
+	}
+
+	return shouldDelete
+}
+
+// reportMergedChange reports a forge merge if its head includes the local head.
+// A false result leaves deletion policy to the caller without prompting.
+func (h *Handler) reportMergedChange(
+	ctx context.Context,
+	branchName string,
+	changeID forge.ChangeID,
+	localHead, remoteHead git.Hash,
+) bool {
 	switch mergedChangeHeadCheck(ctx, h.Repository, localHead, remoteHead) {
 	case mergedChangeHeadExact:
 		h.Log.Infof("%v: %v was merged", branchName, changeID)
@@ -960,29 +1004,7 @@ func (h *Handler) shouldDeleteMergedChange(
 		return true
 
 	case mergedChangeHeadMismatch:
-		mismatchMsg := fmt.Sprintf("%v was merged but local SHA (%v) does not match remote SHA (%v)",
-			changeID, localHead.Short(), remoteHead.Short())
-
-		// If the remote head SHA doesn't contain the local head SHA,
-		// there may be local commits that haven't been pushed yet.
-		// Prompt for deletion if we have the option of prompting.
-		if !ui.Interactive(h.View) {
-			h.Log.Warnf("%v: %v. Skipping...", branchName, mismatchMsg)
-			return false
-		}
-
-		var shouldDelete bool
-		prompt := ui.NewConfirm().
-			WithTitle(fmt.Sprintf("Delete %v?", branchName)).
-			WithDescription(h.mergedChangeHeadMismatchDescription(
-				ctx, branchName, changeID, localHead, remoteHead)).
-			WithValue(&shouldDelete)
-		if err := ui.Run(h.View, prompt); err != nil {
-			h.Log.Warn("Skipping branch", "branch", branchName, "error", err)
-			return false
-		}
-
-		return shouldDelete
+		return false
 
 	default:
 		must.Bef(false, "unknown merged change head status")
