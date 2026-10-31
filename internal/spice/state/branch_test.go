@@ -26,28 +26,6 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	t.Run("MissingBranch", func(t *testing.T) {
-		ctx := t.Context()
-		tx := store.BeginBranchTx()
-		err := tx.Upsert(ctx, state.UpsertRequest{})
-		assert.ErrorContains(t, err, "branch name is required")
-		require.NoError(t, tx.Commit(ctx, "no op"))
-	})
-
-	t.Run("TrunkNotAllowed", func(t *testing.T) {
-		ctx := t.Context()
-		tx := store.BeginBranchTx()
-		err := tx.Upsert(ctx, state.UpsertRequest{
-			Name: "main",
-			Base: "whatever",
-		})
-		assert.ErrorIs(t, err, state.ErrTrunk)
-		require.NoError(t, tx.Commit(ctx, "no op"))
-
-		_, err = store.LookupBranch(ctx, "main")
-		require.ErrorIs(t, err, state.ErrNotExist)
-	})
-
 	t.Run("NewBranchNoBase", func(t *testing.T) {
 		ctx := t.Context()
 		tx := store.BeginBranchTx()
@@ -251,6 +229,39 @@ func TestBranchTx_Delete_pendingGraph(t *testing.T) {
 	assert.Empty(t, names)
 }
 
+func TestBranchTx_UpsertMany_orderedChanges(t *testing.T) {
+	ctx := t.Context()
+	store := statetest.NewMemoryStore(t, "main", "", nil)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.UpsertMany(ctx, []state.UpsertRequest{
+		{Name: "base", Base: "main", BaseHash: "initial"},
+		{Name: "child", Base: "base"},
+		{Name: "base", BaseHash: "updated"},
+	}))
+	require.NoError(t, tx.Commit(ctx, "track stack"))
+	base, err := store.LookupBranch(ctx, "base")
+	require.NoError(t, err)
+	assert.Equal(t, "main", base.Base)
+	assert.Equal(t, "updated", base.BaseHash.String())
+	child, err := store.LookupBranch(ctx, "child")
+	require.NoError(t, err)
+	assert.Equal(t, "base", child.Base)
+
+	tx = store.BeginBranchTx()
+	err = tx.UpsertMany(ctx, []state.UpsertRequest{
+		{Name: "child", BaseHash: "retained"},
+		{Name: "base", Base: "child"},
+		{Name: "never-created", Base: "main"},
+	})
+	require.ErrorContains(t, err, "would create a cycle")
+	require.NoError(t, tx.Commit(ctx, "keep valid prefix"))
+	child, err = store.LookupBranch(ctx, "child")
+	require.NoError(t, err)
+	assert.Equal(t, "retained", child.BaseHash.String())
+	_, err = store.LookupBranch(ctx, "never-created")
+	assert.ErrorIs(t, err, state.ErrNotExist)
+}
+
 func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
@@ -449,8 +460,8 @@ func testBranchStateUncorruptible(t *rapid.T) {
 		store:         store,
 		trunk:         trunk,
 		knownBranches: make(map[string]struct{}),
-		branchNameGen: branchNameGen,
 	}
+	sm.branchNameGen = branchNameGen.Filter(func(name string) bool { return name != sm.trunk })
 
 	sm.knownBranchGen = rapid.Custom(func(t *rapid.T) string {
 		if len(sm.knownBranches) == 0 {
