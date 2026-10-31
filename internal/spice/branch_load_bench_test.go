@@ -53,3 +53,42 @@ func BenchmarkLoadBranchesCleanup(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkLoadBranchesDeleted(b *testing.B) {
+	for _, size := range []int{1, 100} {
+		b.Run(fmt.Sprintf("Branches%d", size), func(b *testing.B) {
+			ctx := b.Context()
+			log := silogtest.New(b)
+			repo, wt, err := git.Init(ctx, b.TempDir(), git.InitOptions{Log: log})
+			require.NoError(b, err)
+			db := storage.NewDB(storage.NewGitBackend(storage.GitConfig{
+				Repo: repo, Ref: "refs/spice/data", Log: log,
+				AuthorName: "Benchmark", AuthorEmail: "benchmark@example.com",
+			}))
+			store, err := state.InitStore(ctx, state.InitStoreRequest{DB: db, Trunk: "main", Log: log})
+			require.NoError(b, err)
+			head, err := repo.PeelToCommit(ctx, "refs/spice/data")
+			require.NoError(b, err)
+			require.NoError(b, repo.CreateBranch(ctx, git.CreateBranchRequest{Name: "main", Head: head.String()}))
+			sets := make([]storage.SetRequest, size)
+			for i := range sets {
+				sets[i] = storage.SetRequest{Key: fmt.Sprintf("branches/deleted-%03d", i), Value: map[string]any{
+					"base": map[string]string{"name": "main", "hash": head.String()},
+				}}
+			}
+			service := NewService(repo, wt, store, nil, log)
+			for b.Loop() {
+				b.StopTimer()
+				require.NoError(b, db.Update(ctx, storage.UpdateRequest{Sets: sets, Message: "restore deleted branches"}))
+				b.StartTimer()
+				items, err := service.LoadBranches(ctx)
+				if err != nil {
+					b.Fatal(err)
+				}
+				if len(items) != 0 {
+					b.Fatalf("loaded %d deleted branches", len(items))
+				}
+			}
+		})
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json/jsontext"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -159,9 +160,14 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 	// At this point, the deleted branches should not have any branches above them,
 	// except those that we failed to update above.
 	// Delete what we can, log the rest.
-	for name := range deletedBranches {
-		if err := tx.Delete(ctx, name); err != nil {
-			s.log.Warn("Unable to delete branch", "branch", name, "error", err)
+	deletedNames := slices.Collect(maps.Keys(deletedBranches))
+	if err := tx.DeleteMany(ctx, deletedNames); err != nil {
+		if rejected, ok := errors.AsType[*state.DeleteManyError](err); ok {
+			for i, index := range rejected.Indexes {
+				s.log.Warn("Unable to delete branch", "branch", deletedNames[index], "error", rejected.Errors[i])
+			}
+		} else {
+			s.log.Warn("Unable to delete branches", "error", err)
 		}
 	}
 
