@@ -249,13 +249,14 @@ func (tx *BranchTx) LookupBranches(ctx context.Context, names []string) ([]*Look
 	if len(names) == 0 {
 		return nil, nil
 	}
-	if err := tx.loadStates(ctx, names); err != nil {
+	states, err := tx.getStates(ctx, names)
+	if err != nil {
 		return nil, err
 	}
 	responses := make([]*LookupResponse, len(names))
 	var missing storage.MissingKeysError
 	for i, name := range names {
-		state := tx.states[name]
+		state := states[i]
 		if state == nil {
 			missing.Indexes = append(missing.Indexes, i)
 			missing.Keys = append(missing.Keys, branchKey(name))
@@ -356,7 +357,9 @@ func (tx *BranchTx) UpsertMany(ctx context.Context, reqs []UpsertRequest) error 
 			names = append(names, req.Base)
 		}
 	}
-	if err := tx.loadStates(ctx, names); err != nil {
+	// Later requests must see creations and edits made by earlier requests,
+	// so this batch prepares reads; application uses the evolving view.
+	if _, err := tx.getStates(ctx, names); err != nil {
 		return err
 	}
 	// Apply against an isolated write set so operational failures cannot leak
@@ -483,9 +486,22 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 		return err
 	}
 
-	aboves, err := sliceutil.CollectErr(tx.aboves(ctx, name))
+	names, err := sliceutil.CollectErr(tx.listBranches(ctx))
 	if err != nil {
 		return fmt.Errorf("list branches above %v: %w", name, err)
+	}
+	states, err := tx.getStates(ctx, names)
+	if err != nil {
+		return fmt.Errorf("load branches: %w", err)
+	}
+	var aboves []string
+	for i, state := range states {
+		if state == nil {
+			return fmt.Errorf("load branch %q: %w", names[i], ErrNotExist)
+		}
+		if state.Base.Name == name {
+			aboves = append(aboves, names[i])
+		}
 	}
 	if len(aboves) > 0 {
 		return fmt.Errorf("branch %v is needed by %v", name, strings.Join(aboves, ", "))
@@ -493,7 +509,7 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 
 	tx.dels[name] = struct{}{}
 	delete(tx.sets, name)
-	delete(tx.states, name)
+	tx.states[name] = nil
 	return nil
 }
 
@@ -522,7 +538,7 @@ func (tx *BranchTx) Rename(
 
 	newState := *oldState
 	tx.states[newName] = &newState
-	delete(tx.states, oldName)
+	tx.states[oldName] = nil
 	tx.dels[oldName] = struct{}{}
 
 	if _, modified := tx.sets[oldName]; modified {
@@ -567,26 +583,28 @@ func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 }
 
 func (tx *BranchTx) state(ctx context.Context, branch string) (*branchState, error) {
-	if err := tx.loadStates(ctx, []string{branch}); err != nil {
-		return nil, err
+	state, cached := tx.states[branch]
+	if !cached {
+		states, err := tx.getStates(ctx, []string{branch})
+		if err != nil {
+			return nil, err
+		}
+		state = states[0]
 	}
-	state := tx.states[branch]
 	if state == nil {
 		return nil, ErrNotExist
 	}
 	return state, nil
 }
 
-// loadStates fills the cache for names not already loaded, changed, or deleted.
-// Missing persisted branches are cached as nil so a later upsert can create them.
-func (tx *BranchTx) loadStates(ctx context.Context, names []string) error {
+// getStates returns transaction-owned states in request order, with nil entries
+// for absent names. Duplicate names share state. Later mutations may replace
+// entries, so callers must not treat these pointers as stable name handles.
+func (tx *BranchTx) getStates(ctx context.Context, names []string) ([]*branchState, error) {
 	var pending []string
 	seen := make(map[string]struct{}, len(names))
 	for _, name := range names {
 		if _, ok := tx.states[name]; ok {
-			continue
-		}
-		if _, deleted := tx.dels[name]; deleted {
 			continue
 		}
 		if _, duplicate := seen[name]; duplicate {
@@ -595,18 +613,20 @@ func (tx *BranchTx) loadStates(ctx context.Context, names []string) error {
 		seen[name] = struct{}{}
 		pending = append(pending, name)
 	}
-	if len(pending) == 0 {
-		return nil
+	if len(pending) > 0 {
+		states, err := tx.store.lookupBranchStates(ctx, pending)
+		if states == nil {
+			return nil, err
+		}
+		for i, name := range pending {
+			tx.states[name] = states[i]
+		}
 	}
-
-	states, err := tx.store.lookupBranchStates(ctx, pending)
-	if states == nil {
-		return err
+	states := make([]*branchState, len(names))
+	for i, name := range names {
+		states[i] = tx.states[name]
 	}
-	for i, name := range pending {
-		tx.states[name] = states[i]
-	}
-	return nil
+	return states, nil
 }
 
 func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
@@ -614,31 +634,21 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 		// seen prevents underlying branches from being listed twice.
 		seen := make(map[string]struct{})
 
-		// A renamed branch is visible under its destination name even when
-		// its persisted state can move without being rewritten.
-		for _, branch := range tx.renames {
-			if _, deleted := tx.dels[branch]; deleted {
+		// The read view includes renamed destinations and staged creations.
+		// Only staged deletions hide persisted names: a listed record with
+		// missing state must still be reported by the caller as an error.
+		for branch, state := range tx.states {
+			if state == nil {
+				if _, deleted := tx.dels[branch]; deleted {
+					seen[branch] = struct{}{}
+				}
 				continue
-			}
-			if !yield(branch, nil) {
-				return
 			}
 			seen[branch] = struct{}{}
-		}
-
-		// Entries in tx.sets take precedence unless they are deleted.
-		for branch := range tx.sets {
-			if _, ok := tx.dels[branch]; ok {
-				continue
-			}
-			if _, ok := seen[branch]; ok {
-				continue
-			}
 
 			if !yield(branch, nil) {
 				return
 			}
-			seen[branch] = struct{}{}
 		}
 
 		// List underlying branches.
@@ -648,9 +658,7 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 				return
 			}
 
-			_, overridden := seen[branch]
-			_, deleted := tx.dels[branch]
-			if overridden || deleted {
+			if _, overridden := seen[branch]; overridden {
 				continue
 			}
 
@@ -658,34 +666,6 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 				return
 			}
 			seen[branch] = struct{}{}
-		}
-	}
-}
-
-func (tx *BranchTx) aboves(ctx context.Context, branch string) iter.Seq2[string, error] {
-	return func(yield func(string, error) bool) {
-		names, err := sliceutil.CollectErr(tx.listBranches(ctx))
-		if err != nil {
-			yield("", err)
-			return
-		}
-		if err := tx.loadStates(ctx, names); err != nil {
-			yield("", err)
-			return
-		}
-
-		for _, branchName := range names {
-			state, err := tx.state(ctx, branchName)
-			if err != nil {
-				yield("", fmt.Errorf("load branch %q: %w", branchName, err))
-				return
-			}
-
-			if state.Base.Name == branch {
-				if !yield(branchName, nil) {
-					return
-				}
-			}
 		}
 	}
 }
