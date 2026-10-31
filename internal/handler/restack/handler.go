@@ -23,6 +23,7 @@ import (
 type GitWorktree interface {
 	CurrentBranch(ctx context.Context) (string, error)
 	CheckoutBranch(ctx context.Context, branch string) error
+	RebaseAbort(ctx context.Context) error
 	RootDir() string
 }
 
@@ -89,6 +90,13 @@ type Request struct {
 	// due to a conflict.
 	ContinueCommand []string // required
 
+	// SkipConflicts indicates that branches which cannot be rebased
+	// cleanly due to a conflict should be skipped and logged
+	// instead of interrupting the operation for conflict resolution.
+	//
+	// Descendants of a skipped branch are also skipped.
+	SkipConflicts bool
+
 	// Scope specifies which branches are affected by the restack operation.
 	//
 	// Defaults to ScopeBranch.
@@ -98,7 +106,10 @@ type Request struct {
 // Options are optional parameters shared by the high-level restack
 // entry points ([Handler.RestackBranch], [Handler.RestackStack],
 // [Handler.RestackDownstack]).
-type Options struct{}
+type Options struct {
+	// SkipConflicts indicates that conflicting branches should be skipped.
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
+}
 
 // Restack restacks one or more branches according to the request.
 func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
@@ -198,13 +209,40 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 	branchesToRestack = branchesToActuallyRestack
 
 	var restackCount int
+	var skipConflictCount int
 loop:
 	for _, branch := range branchesToRestack {
+		if req.SkipConflicts {
+			if info, ok := branchGraph.Lookup(branch); ok {
+				if _, baseSkipped := skipped[info.Base]; baseSkipped {
+					h.Log.Warnf(
+						"%v: base branch %v was not restacked, skipping",
+						branch,
+						info.Base,
+					)
+					skipped[branch] = struct{}{}
+					continue loop
+				}
+			}
+		}
+
 		res, err := h.Service.Restack(ctx, branch)
 		if err != nil {
 			var rebaseErr *git.RebaseInterruptError
 			switch {
 			case errors.As(err, &rebaseErr):
+				if req.SkipConflicts &&
+					rebaseErr.Kind == git.RebaseInterruptConflict {
+					if err := h.Worktree.RebaseAbort(ctx); err != nil {
+						return 0, fmt.Errorf("abort rebase: %w", err)
+					}
+
+					skipped[branch] = struct{}{}
+					skipConflictCount++
+					h.Log.Warnf("%v: conflict, skipping", branch)
+					continue loop
+				}
+
 				// If the rebase is interrupted by a conflict,
 				// we'll resume by re-running this command.
 				return 0, h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
@@ -231,9 +269,18 @@ loop:
 		restackCount++
 	}
 
+	if req.SkipConflicts && skipConflictCount > 0 {
+		h.Log.Warnf("Skipped %d branch(es) due to conflicts", skipConflictCount)
+	}
+
 	if requestBranchWT != "" && requestBranchWT != currentWT {
 		h.Log.Warnf("%v: checked out in another worktree (%v), not checking out here", req.Branch, requestBranchWT)
-	} else if restackCount > 0 {
+	} else if restackCount > 0 || skipConflictCount > 0 {
+		// Restacking checks out each branch as it goes,
+		// and aborting a conflicted rebase leaves us on the branch
+		// that was being restacked.
+		// In both cases, return to the starting branch
+		// so the user is never stranded on an intermediate branch.
 		if err := h.Worktree.CheckoutBranch(ctx, req.Branch); err != nil {
 			return 0, fmt.Errorf("checkout branch %v: %w", req.Branch, err)
 		}
