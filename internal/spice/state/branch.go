@@ -486,9 +486,22 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 		return err
 	}
 
-	aboves, err := sliceutil.CollectErr(tx.aboves(ctx, name))
+	names, err := sliceutil.CollectErr(tx.listBranches(ctx))
 	if err != nil {
 		return fmt.Errorf("list branches above %v: %w", name, err)
+	}
+	states, err := tx.getStates(ctx, names)
+	if err != nil {
+		return fmt.Errorf("load branches: %w", err)
+	}
+	var aboves []string
+	for i, state := range states {
+		if state == nil {
+			return fmt.Errorf("load branch %q: %w", names[i], ErrNotExist)
+		}
+		if state.Base.Name == name {
+			aboves = append(aboves, names[i])
+		}
 	}
 	if len(aboves) > 0 {
 		return fmt.Errorf("branch %v is needed by %v", name, strings.Join(aboves, ", "))
@@ -653,35 +666,6 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 				return
 			}
 			seen[branch] = struct{}{}
-		}
-	}
-}
-
-func (tx *BranchTx) aboves(ctx context.Context, branch string) iter.Seq2[string, error] {
-	return func(yield func(string, error) bool) {
-		names, err := sliceutil.CollectErr(tx.listBranches(ctx))
-		if err != nil {
-			yield("", err)
-			return
-		}
-		states, err := tx.getStates(ctx, names)
-		if err != nil {
-			yield("", err)
-			return
-		}
-
-		for i, branchName := range names {
-			state := states[i]
-			if state == nil {
-				yield("", fmt.Errorf("load branch %q: %w", branchName, ErrNotExist))
-				return
-			}
-
-			if state.Base.Name == branch {
-				if !yield(branchName, nil) {
-					return
-				}
-			}
 		}
 	}
 }
