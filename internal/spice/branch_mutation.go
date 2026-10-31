@@ -35,6 +35,7 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 	if err != nil {
 		return fmt.Errorf("lookup branches: %w", err)
 	}
+	var updates []state.UpsertRequest
 	for i, candidate := range names {
 
 		if candidate == name {
@@ -47,18 +48,20 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 			continue
 		}
 
-		if err := branchTx.Upsert(ctx, state.UpsertRequest{
+		updates = append(updates, state.UpsertRequest{
 			Name:     candidate,
 			Base:     branch.Base,
 			BaseHash: branch.BaseHash,
-		}); err != nil {
-			return fmt.Errorf("change base of %v to %v: %w", candidate, branch.Base, err)
-		}
+		})
+	}
+	if err := branchTx.UpsertMany(ctx, updates); err != nil {
+		return fmt.Errorf("reparent branches onto %q: %w", branch.Base, err)
+	}
+	for _, update := range updates {
 		s.log.Debug("Updating upstack branch to new base",
-			"branch", candidate,
+			"branch", update.Name,
 			"newBase", branch.Base,
 		)
-
 	}
 
 	if err := branchTx.Delete(ctx, name); err != nil {
