@@ -286,13 +286,42 @@ type UpsertRequest struct {
 // If the branch is not known, it will be added.
 // For new branches, a base MUST be provided.
 func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
-	if req.Name == "" {
-		return errors.New("branch name is required")
-	}
+	return tx.UpsertMany(ctx, []UpsertRequest{req})
+}
 
-	if req.Name == tx.store.trunk {
-		return ErrTrunk
+// UpsertMany applies requests in order after loading their uncached branches
+// and direct bases together. A request may use a branch created earlier in reqs.
+// It stops at the first invalid request; preceding changes remain in the
+// transaction, but nothing is persisted until Commit.
+func (tx *BranchTx) UpsertMany(ctx context.Context, reqs []UpsertRequest) error {
+	names := make([]string, 0, 2*len(reqs))
+	for _, req := range reqs {
+		switch req.Name {
+		case "", tx.store.trunk:
+		default:
+			names = append(names, req.Name)
+		}
+
+		switch req.Base {
+		case "", tx.store.trunk:
+		default:
+			names = append(names, req.Base)
+		}
 	}
+	if err := tx.loadStates(ctx, names); err != nil {
+		return err
+	}
+	for _, req := range reqs {
+		if err := tx.upsert(ctx, req); err != nil {
+			return fmt.Errorf("update branch %q: %w", req.Name, err)
+		}
+	}
+	return nil
+}
+
+func (tx *BranchTx) upsert(ctx context.Context, req UpsertRequest) error {
+	must.NotBeBlankf(req.Name, "branch name is required")
+	must.NotBeEqualf(req.Name, tx.store.trunk, "branch name cannot be trunk")
 
 	state, err := tx.state(ctx, req.Name)
 	if err != nil {

@@ -72,16 +72,19 @@ func (h *Handler) TrackDownstack(ctx context.Context, req *DownstackRequest) err
 	// (trunk -> ... -> req.Branch),
 	slices.Reverse(branchesToTrack)
 
-	tx := store.BeginBranchTx()
-	for _, branch := range branchesToTrack {
-		if err := tx.Upsert(ctx, state.UpsertRequest{
+	upserts := make([]state.UpsertRequest, len(branchesToTrack))
+	for i, branch := range branchesToTrack {
+		upserts[i] = state.UpsertRequest{
 			Name:     branch.name,
 			Base:     branch.base,
 			BaseHash: branch.baseHash,
-		}); err != nil {
-			return fmt.Errorf("track %v with base %v: %w", branch.name, branch.base, err)
 		}
-
+	}
+	tx := store.BeginBranchTx()
+	if err := tx.UpsertMany(ctx, upserts); err != nil {
+		return fmt.Errorf("track downstack: %w", err)
+	}
+	for _, branch := range branchesToTrack {
 		log.Infof("%v: tracking with base %v", branch.name, branch.base)
 	}
 
