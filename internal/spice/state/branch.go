@@ -496,7 +496,7 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 
 	tx.dels[name] = struct{}{}
 	delete(tx.sets, name)
-	delete(tx.states, name)
+	tx.states[name] = nil
 	return nil
 }
 
@@ -525,7 +525,7 @@ func (tx *BranchTx) Rename(
 
 	newState := *oldState
 	tx.states[newName] = &newState
-	delete(tx.states, oldName)
+	tx.states[oldName] = nil
 	tx.dels[oldName] = struct{}{}
 
 	if _, modified := tx.sets[oldName]; modified {
@@ -594,9 +594,6 @@ func (tx *BranchTx) getStates(ctx context.Context, names []string) ([]*branchSta
 		if _, ok := tx.states[name]; ok {
 			continue
 		}
-		if _, deleted := tx.dels[name]; deleted {
-			continue
-		}
 		if _, duplicate := seen[name]; duplicate {
 			continue
 		}
@@ -624,31 +621,21 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 		// seen prevents underlying branches from being listed twice.
 		seen := make(map[string]struct{})
 
-		// A renamed branch is visible under its destination name even when
-		// its persisted state can move without being rewritten.
-		for _, branch := range tx.renames {
-			if _, deleted := tx.dels[branch]; deleted {
+		// The read view includes renamed destinations and staged creations.
+		// Only staged deletions hide persisted names: a listed record with
+		// missing state must still be reported by the caller as an error.
+		for branch, state := range tx.states {
+			if state == nil {
+				if _, deleted := tx.dels[branch]; deleted {
+					seen[branch] = struct{}{}
+				}
 				continue
-			}
-			if !yield(branch, nil) {
-				return
 			}
 			seen[branch] = struct{}{}
-		}
-
-		// Entries in tx.sets take precedence unless they are deleted.
-		for branch := range tx.sets {
-			if _, ok := tx.dels[branch]; ok {
-				continue
-			}
-			if _, ok := seen[branch]; ok {
-				continue
-			}
 
 			if !yield(branch, nil) {
 				return
 			}
-			seen[branch] = struct{}{}
 		}
 
 		// List underlying branches.
@@ -658,9 +645,7 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 				return
 			}
 
-			_, overridden := seen[branch]
-			_, deleted := tx.dels[branch]
-			if overridden || deleted {
+			if _, overridden := seen[branch]; overridden {
 				continue
 			}
 
