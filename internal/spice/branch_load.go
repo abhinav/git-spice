@@ -114,6 +114,8 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 	//
 	// This will also update the LoadBranchItem instances
 	// to reflect these changes so we're not re-reading the state.
+	var updates []state.UpsertRequest
+	var updateIndexes []int
 	for i, item := range items {
 		origBase := item.Base
 		base, baseHash := item.Base, item.BaseHash
@@ -125,23 +127,33 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 		}
 
 		if base != origBase {
-			if err := tx.Upsert(ctx, state.UpsertRequest{
+			updates = append(updates, state.UpsertRequest{
 				Name:     item.Name,
 				Base:     base,
 				BaseHash: baseHash,
-			}); err != nil {
-				s.log.Warn("Could not update base of branch upstack from deleted branch",
-					"branch", item.Name,
-					"newBase", item.Base,
-					"error", err,
-				)
-				continue
-			}
-
-			item.Base = base
-			item.BaseHash = baseHash
-			items[i] = item
+			})
+			updateIndexes = append(updateIndexes, i)
 		}
+	}
+	batchErr := tx.UpsertMany(ctx, updates)
+	rejected, _ := errors.AsType[*state.UpsertManyError](batchErr)
+	var failure int
+	for i, update := range updates {
+		updateErr := batchErr
+		if rejected != nil {
+			updateErr = nil
+			if failure < len(rejected.Indexes) && rejected.Indexes[failure] == i {
+				updateErr = rejected.Errors[failure]
+				failure++
+			}
+		}
+		if updateErr != nil {
+			s.log.Warn("Could not update base of branch upstack from deleted branch",
+				"branch", update.Name, "newBase", update.Base, "error", updateErr)
+			continue
+		}
+		item := &items[updateIndexes[i]]
+		item.Base, item.BaseHash = update.Base, update.BaseHash
 	}
 
 	// At this point, the deleted branches should not have any branches above them,
