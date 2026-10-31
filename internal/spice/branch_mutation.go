@@ -101,13 +101,17 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 	}
 
 	// Point the branches above the old branch to the new branch.
-	for _, above := range aboves {
-		if err := tx.Upsert(ctx, state.UpsertRequest{
+	updates := make([]state.UpsertRequest, len(aboves))
+	for i, above := range aboves {
+		updates[i] = state.UpsertRequest{
 			Name: above,
 			Base: newName,
-		}); err != nil {
-			return fmt.Errorf("update branch %v to point to %v: %w", above, newName, err)
 		}
+	}
+	if err := tx.UpsertMany(ctx, updates); err != nil {
+		return fmt.Errorf("reparent branches onto %q: %w", newName, err)
+	}
+	for _, above := range aboves {
 		s.log.Debug("Updating upstack branch to new name", "upstack", above)
 	}
 
