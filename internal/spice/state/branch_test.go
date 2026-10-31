@@ -131,6 +131,36 @@ func TestBranchTx_Upsert_retryAfterReadError(t *testing.T) {
 	assert.JSONEq(t, `{"number":42}`, branch.ChangeMetadata.String())
 }
 
+func TestBranchTx_LookupBranches_pendingView(t *testing.T) {
+	ctx := t.Context()
+	store := statetest.NewMemoryStore(t, "main", "", nil)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{Name: "base", Base: "main"},
+			{Name: "child", Base: "base"},
+			{Name: "deleted", Base: "main"},
+		}, Message: "seed graph",
+	}))
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Rename(ctx, "base", "renamed"))
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "child", Base: "renamed"}))
+	require.NoError(t, tx.Delete(ctx, "deleted"))
+	results, err := tx.LookupBranches(ctx, []string{"renamed", "child", "absent", "renamed", "base", "deleted"})
+	missing, ok := errors.AsType[*storage.MissingKeysError](err)
+	require.True(t, ok)
+	assert.Equal(t, []int{2, 4, 5}, missing.Indexes)
+	assert.Equal(t, []string{"branches/absent", "branches/base", "branches/deleted"}, missing.Keys)
+	assert.Equal(t, "main", results[0].Base)
+	assert.Equal(t, "renamed", results[1].Base)
+	assert.Equal(t, results[0], results[3])
+	assert.Nil(t, results[2])
+	assert.Nil(t, results[4])
+	assert.Nil(t, results[5])
+	persisted, err := store.LookupBranch(ctx, "child")
+	require.NoError(t, err)
+	assert.Equal(t, "base", persisted.Base)
+}
+
 func TestBranchTxDelete(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))

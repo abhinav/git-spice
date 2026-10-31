@@ -241,6 +241,34 @@ func (s *Store) BeginBranchTx() *BranchTx {
 	}
 }
 
+// LookupBranches returns branch information from this transaction's view,
+// including pending upserts, renames, and deletions, without persisting changes.
+// Results follow names, with nil entries and [storage.MissingKeysError] indexes
+// for missing branches. Other errors return no results.
+func (tx *BranchTx) LookupBranches(ctx context.Context, names []string) ([]*LookupResponse, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+	if err := tx.loadStates(ctx, names); err != nil {
+		return nil, err
+	}
+	responses := make([]*LookupResponse, len(names))
+	var missing storage.MissingKeysError
+	for i, name := range names {
+		state := tx.states[name]
+		if state == nil {
+			missing.Indexes = append(missing.Indexes, i)
+			missing.Keys = append(missing.Keys, branchKey(name))
+			continue
+		}
+		responses[i] = branchStateLookupResponse(state)
+	}
+	if len(missing.Indexes) > 0 {
+		return responses, &missing
+	}
+	return responses, nil
+}
+
 // Null is a JSON null value.
 var Null = jsontext.Value("null")
 
