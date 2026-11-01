@@ -16,6 +16,8 @@ import (
 
 type stackRestackCmd struct {
 	Branch string `help:"Branch to restack the stack of" placeholder:"NAME" predictor:"trackedBranches"`
+
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
 }
 
 func (*stackRestackCmd) Help() string {
@@ -24,6 +26,8 @@ func (*stackRestackCmd) Help() string {
 		respective bases, ensuring a linear history.
 
 		Use --branch to rebase the stack of a different branch.
+
+		Use --skip-conflicts to skip branches that cannot be rebased cleanly.
 	`)
 }
 
@@ -91,5 +95,8 @@ func (cmd *stackRestackCmd) Run(
 
 	return handler.RestackStack(ctx, &restack.StackRequest{
 		Branch: cmd.Branch,
+		Options: &restack.Options{
+			SkipConflicts: cmd.SkipConflicts,
+		},
 	})
 }

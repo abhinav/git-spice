@@ -29,6 +29,7 @@ func (h *Handler) RestackUpstack(ctx context.Context, req *UpstackRequest) error
 		Branch:          req.Branch,
 		Scope:           ScopeUpstack,
 		ContinueCommand: []string{"upstack", "restack"},
+		SkipConflicts:   opts.SkipConflicts,
 	}
 	if opts.SkipStart {
 		restackReq.Scope = ScopeUpstackExclusive
