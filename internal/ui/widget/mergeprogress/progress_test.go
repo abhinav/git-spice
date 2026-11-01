@@ -129,22 +129,6 @@ func TestWidget_Render_failedAndSkipped(t *testing.T) {
 	assert.Equal(t, "■■■■○○○○◆◆◆◆××××□□□□", barLine(got))
 }
 
-func TestWidget_Render_ASCIIGlyphSet(t *testing.T) {
-	items := makeItems(5)
-	items[0].State = StateMerged
-	items[1].State = StateSkipped
-	items[2].State = StateActive
-	items[3].State = StateFailed
-
-	widget := New(items...).
-		WithTheme(ui.DefaultThemeDark()).
-		WithGlyphSet(ASCIIGlyphSet()).
-		WithAnimation(false)
-	mustUpdate(t, widget, tea.WindowSizeMsg{Width: 20})
-
-	assert.Equal(t, "####oooo====xxxx----", barLine(renderPlain(widget)))
-}
-
 func TestWidget_UpdatePreservesItemOrder(t *testing.T) {
 	widget := New(
 		Item{ID: "root"},

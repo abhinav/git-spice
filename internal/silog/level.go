@@ -61,21 +61,3 @@ type ByLevel[T any] struct {
 	Error T
 	Fatal T
 }
-
-// Get returns the value associated with the given log level.
-func (b *ByLevel[T]) Get(lvl Level) T {
-	switch lvl {
-	case LevelDebug:
-		return b.Debug
-	case LevelInfo:
-		return b.Info
-	case LevelWarn:
-		return b.Warn
-	case LevelError:
-		return b.Error
-	case LevelFatal:
-		return b.Fatal
-	default:
-		panic("invalid log level: " + lvl.String())
-	}
-}

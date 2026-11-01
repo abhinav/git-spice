@@ -6,8 +6,6 @@ import (
 	"net/http"
 
 	"go.abhg.dev/gs/internal/forge"
-	bitbucketapi "go.abhg.dev/gs/internal/gateway/bitbucket/cloud"
-	"go.abhg.dev/gs/internal/git"
 )
 
 func baseRepository(repo forge.Repository) *Repository {
@@ -53,44 +51,6 @@ func MergeChange(
 	}
 	base.log.Debug("Merged pull request", "pr", id.Number)
 	return nil
-}
-
-// SetChangeChecksState sets a synthetic build status for integration tests.
-func SetChangeChecksState(
-	ctx context.Context,
-	repo forge.Repository,
-	headHash git.Hash,
-	state forge.ChangeCheckState,
-) error {
-	gw := cloudGW(repo)
-	_, _, err := gw.client.CommitStatusCreate(
-		ctx,
-		gw.workspace,
-		gw.repo,
-		headHash.String(),
-		&bitbucketapi.CommitStatusCreateRequest{
-			Key:         "git-spice-integration",
-			State:       bitbucketStatusState(state),
-			Description: "Synthetic status for git-spice integration tests",
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("set commit status: %w", err)
-	}
-	return nil
-}
-
-func bitbucketStatusState(state forge.ChangeCheckState) string {
-	switch state {
-	case forge.ChangeCheckPending:
-		return bitbucketapi.CommitStatusInProgress
-	case forge.ChangeCheckPassed:
-		return bitbucketapi.CommitStatusSuccessful
-	case forge.ChangeCheckFailed:
-		return bitbucketapi.CommitStatusFailed
-	default:
-		return bitbucketapi.CommitStatusFailed
-	}
 }
 
 func approvePR(

@@ -45,37 +45,3 @@ func TestLevel_Dec(t *testing.T) {
 		})
 	}
 }
-
-func TestByLevel_Get(t *testing.T) {
-	byLevel := silog.ByLevel[string]{
-		Debug: "debug",
-		Info:  "info",
-		Warn:  "warn",
-		Error: "error",
-		Fatal: "fatal",
-	}
-
-	tests := []struct {
-		level silog.Level
-		want  string
-	}{
-		{silog.LevelDebug, "debug"},
-		{silog.LevelInfo, "info"},
-		{silog.LevelWarn, "warn"},
-		{silog.LevelError, "error"},
-		{silog.LevelFatal, "fatal"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.want, func(t *testing.T) {
-			got := byLevel.Get(tt.level)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-
-	t.Run("unknown", func(t *testing.T) {
-		assert.Panics(t, func() {
-			byLevel.Get(silog.Level(100))
-		})
-	})
-}

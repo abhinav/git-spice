@@ -9,6 +9,11 @@ import (
 	giteagw "go.abhg.dev/gs/internal/gateway/gitea"
 )
 
+// SetListChangeCommentsPageSize overrides the page size for testing.
+func SetListChangeCommentsPageSize(n int) {
+	_listChangeCommentsPageSize = n
+}
+
 // CloseChange closes a pull request without merging it.
 // Used by integration tests.
 func CloseChange(ctx context.Context, repo *Repository, id forge.ChangeID) error {
