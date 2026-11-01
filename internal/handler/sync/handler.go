@@ -920,21 +920,28 @@ func (h *Handler) findForgeFinishedBranches(
 	// mergedDownstacks now contains the final merged downstack list
 	// for each of the upstack branches. Commit this information.
 	branchTx := h.Store.BeginBranchTx()
+	updates := make([]state.UpsertRequest, 0, len(mergedDownstacks))
 	for branch, history := range mergedDownstacks {
 		// Note: Even branches that are getting merged
 		// (and will be deleted) are getting their history updated.
 		// This way, if [feat1 -> feat2] are both merged,
 		// but feat2 fails to be deleted because of any reason,
 		// it still remembers feat1.
-		err := branchTx.Upsert(ctx, state.UpsertRequest{
+		updates = append(updates, state.UpsertRequest{
 			Name:            branch,
 			MergedDownstack: &history,
 		})
-		if err != nil {
-			h.Log.Warnf("%v: unable to update merged downstacks: %v", branch, err)
-		}
-		delete(mergedDownstacks, branch)
 	}
+	if err := branchTx.UpsertMany(ctx, updates); err != nil {
+		if rejected, ok := errors.AsType[*state.UpsertManyError](err); ok {
+			for i, index := range rejected.Indexes {
+				h.Log.Warnf("%v: unable to update merged downstacks: %v", updates[index].Name, rejected.Errors[i])
+			}
+		} else {
+			h.Log.Warn("Unable to update merged downstacks", "error", err)
+		}
+	}
+	clear(mergedDownstacks)
 	if err := branchTx.Commit(ctx, "sync: propagate merged branches"); err != nil {
 		h.Log.Warn("Unable to propagated merged downstacks", "error", err)
 	}
