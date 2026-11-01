@@ -259,6 +259,52 @@ func TestBranchTx_Delete_pendingGraph(t *testing.T) {
 	assert.Empty(t, names)
 }
 
+func TestBranchTx_DeleteMany(t *testing.T) {
+	ctx := t.Context()
+	store := statetest.NewMemoryStore(t, "main", "", nil)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.UpsertMany(ctx, []state.UpsertRequest{
+		{Name: "base", Base: "main"},
+		{Name: "child", Base: "base"},
+		{Name: "leaf", Base: "child"},
+		{Name: "isolated", Base: "main"},
+	}))
+	require.NoError(t, tx.Rename(ctx, "isolated", "renamed"))
+	err := tx.DeleteMany(ctx, []string{"base", "leaf", "child", "base", "renamed", "missing", "base", "main", ""})
+	rejected, ok := errors.AsType[*state.DeleteManyError](err)
+	require.True(t, ok)
+	assert.Equal(t, []int{0, 5, 6, 7, 8}, rejected.Indexes)
+	require.Len(t, rejected.Errors, 5)
+	assert.ErrorContains(t, rejected.Errors[0], "needed by child")
+	assert.ErrorIs(t, rejected.Errors[1], state.ErrNotExist)
+	assert.ErrorIs(t, rejected.Errors[2], state.ErrNotExist)
+	assert.ErrorIs(t, rejected.Errors[3], state.ErrTrunk)
+	assert.ErrorContains(t, rejected.Errors[4], "branch name is required")
+	require.NoError(t, tx.Commit(ctx, "delete accepted requests"))
+	names, err := sliceutil.CollectErr(store.ListBranches(ctx))
+	require.NoError(t, err)
+	assert.Empty(t, names)
+}
+
+func TestBranchTx_DeleteMany_operationalFailure(t *testing.T) {
+	ctx := t.Context()
+	mem := make(storage.MapBackend)
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: storage.NewDB(mem), Trunk: "main"})
+	require.NoError(t, err)
+	mem["branches/leaf"] = []byte(`{"base":{"name":"main","hash":"initial"}}`)
+	mem["branches/corrupt"] = []byte(`{`)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "leaf", BaseHash: "prior"}))
+	err = tx.DeleteMany(ctx, []string{"leaf"})
+	require.Error(t, err)
+	_, partial := errors.AsType[*state.DeleteManyError](err)
+	assert.False(t, partial)
+	require.NoError(t, tx.Commit(ctx, "keep earlier update"))
+	leaf, err := store.LookupBranch(ctx, "leaf")
+	require.NoError(t, err)
+	assert.Equal(t, "prior", leaf.BaseHash.String())
+}
+
 func TestBranchTx_UpsertMany_orderedChanges(t *testing.T) {
 	ctx := t.Context()
 	store := statetest.NewMemoryStore(t, "main", "", nil)
