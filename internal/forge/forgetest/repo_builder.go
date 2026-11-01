@@ -180,15 +180,3 @@ func (r *RepositoryBuilder) DeleteRemoteBranchFrom(remote, name string) {
 		r.t.Logf("Warning: failed to delete remote branch %s/%s: %v", remote, name, err)
 	}
 }
-
-// Repository returns the repository for the builder's temporary clone.
-// The value remains valid until the test completes.
-func (r *RepositoryBuilder) Repository() *git.Repository {
-	return r.repo
-}
-
-// Worktree returns the worktree for the builder's temporary clone.
-// The value remains valid until the test completes.
-func (r *RepositoryBuilder) Worktree() *git.Worktree {
-	return r.work
-}

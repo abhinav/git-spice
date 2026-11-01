@@ -117,24 +117,6 @@ func SymbolsGlyphSet() GlyphSet {
 	}
 }
 
-// ASCIIGlyphSet returns the glyph set for basic terminal compatibility.
-func ASCIIGlyphSet() GlyphSet {
-	return GlyphSet{
-		Merged:  "#",
-		Active:  "=",
-		Pending: "-",
-		Failed:  "x",
-		Skipped: "o",
-		Animation: AnimationGlyphSet{
-			LeftEdge:  "-",
-			RightEdge: "-",
-			Slow:      "-",
-			Medium:    "-",
-			Fast:      "-",
-		},
-	}
-}
-
 // Style defines the visual style of [Widget].
 type Style struct {
 	Merged  ui.Style // requires value

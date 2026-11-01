@@ -475,7 +475,8 @@ func formatFlag(haveShort bool, flag *kong.Flag) (flagName, flagHelp string) {
 	fmt.Fprintf(&sb, "%s--%s", short, name)
 
 	if !isBool && !isCounter {
-		sb.WriteString("=" + flag.FormatPlaceHolder())
+		sb.WriteString("=")
+		sb.WriteString(flag.FormatPlaceHolder())
 	}
 	flagName = sb.String()
 

@@ -129,8 +129,3 @@ func (r *Repository) ListChangeComments(
 		}
 	}
 }
-
-// SetListChangeCommentsPageSize overrides the page size for testing.
-func SetListChangeCommentsPageSize(n int) {
-	_listChangeCommentsPageSize = n
-}
