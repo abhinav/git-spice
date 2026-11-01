@@ -16,6 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/sliceutil"
 )
 
 // GitRepository is the subset of the git.Repository API used by the state package.
@@ -27,6 +28,7 @@ type GitRepository interface {
 	ReadObject(ctx context.Context, typ git.Type, hash git.Hash, dst io.Writer) error
 	ReadObjects(ctx context.Context, hashes []git.Hash) (*git.ObjectBatchReader, error)
 	WriteObject(ctx context.Context, typ git.Type, src io.Reader) (git.Hash, error)
+	WriteBlobs(ctx context.Context, blobs iter.Seq2[[]byte, error]) iter.Seq2[git.Hash, error]
 
 	ListTree(ctx context.Context, tree git.Hash, opts git.ListTreeOptions) iter.Seq2[git.TreeEntry, error]
 	CommitTree(ctx context.Context, req git.CommitTreeRequest) (git.Hash, error)
@@ -471,26 +473,39 @@ func (g *GitBackend) writeSets(
 	ctx context.Context,
 	sets []SetRequest,
 ) ([]git.Hash, error) {
-	blobs := make([]git.Hash, len(sets))
-	for i, set := range sets {
-		must.NotBeBlankf(set.Key, "key must not be blank")
-
-		var buf bytes.Buffer
-		enc := jsontext.NewEncoder(
-			&buf,
-			jsontext.WithIndent("  "),
-		)
-		if err := json.MarshalEncode(enc, set.Value); err != nil {
-			return nil, fmt.Errorf("encode JSON: %w", err)
-		}
-
-		blob, err := g.repo.WriteObject(ctx, git.BlobType, &buf)
-		if err != nil {
-			return nil, fmt.Errorf("write object: %w", err)
-		}
-		blobs[i] = blob
+	if len(sets) == 0 {
+		return nil, nil
 	}
-	return blobs, nil
+	blobs := func(yield func([]byte, error) bool) {
+		var buf bytes.Buffer
+		for _, set := range sets {
+			must.NotBeBlankf(set.Key, "key must not be blank")
+			buf.Reset()
+			enc := jsontext.NewEncoder(&buf, jsontext.WithIndent("  "))
+			if err := json.MarshalEncode(enc, set.Value); err != nil {
+				yield(nil, fmt.Errorf("encode JSON for %q: %w", set.Key, err))
+				return
+			}
+			// WriteBlobs consumes the bytes before advancing this producer.
+			if !yield(buf.Bytes(), nil) {
+				return
+			}
+		}
+	}
+	// A single value needs no pipeline or temporary files.
+	if len(sets) == 1 {
+		for body, err := range blobs {
+			if err != nil {
+				return nil, err
+			}
+			hash, err := g.repo.WriteObject(ctx, git.BlobType, bytes.NewReader(body))
+			if err != nil {
+				return nil, fmt.Errorf("write object: %w", err)
+			}
+			return []git.Hash{hash}, nil
+		}
+	}
+	return sliceutil.CollectErr(g.repo.WriteBlobs(ctx, blobs))
 }
 
 type gitSnapshot struct {
