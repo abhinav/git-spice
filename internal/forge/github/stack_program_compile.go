@@ -47,13 +47,20 @@ func (c *githubStackCompiler) try(body func()) {
 // Compatible native prefixes remain; every other resource is dissolved first.
 // Queued or auto-merge members prevent replacement and produce a warning.
 func (c *githubStackCompiler) group(group githubStackGroup) {
+	selected := make(map[int]struct{})
+	for _, path := range group.paths {
+		for _, change := range path {
+			selected[change.number] = struct{}{}
+		}
+	}
+
 	// Compile each path independently, but buffer its writes until all shared
 	// releases are ready. An unchanged path emits nothing and still retains
 	// its resource, which must not be dissolved by the group's release pass.
 	var pathPrograms githubStackProgram
 	retained := make(map[int]struct{})
 	for _, path := range group.paths {
-		program, stack := compileGitHubStackPath(path)
+		program, stack := compileGitHubStackPath(path, selected)
 		pathPrograms = append(pathPrograms, program...)
 		if stack != nil {
 			retained[stack.Number] = struct{}{}
@@ -115,11 +122,13 @@ func (c *githubStackCompiler) group(group githubStackGroup) {
 // compileGitHubStackPath builds one path's failure scope and identifies
 // the native resource it can retain, if any.
 // Changes must be a nonempty, eligible path ordered bottom-to-top.
+// selected contains PR numbers from every selected path in the group.
 // The program assumes the group's incompatible resources have been released.
 // A base-update failure skips the membership write.
 // A path needing no writes returns a nil program but may still retain a resource.
 func compileGitHubStackPath(
 	changes []githubStackChange,
+	selected map[int]struct{},
 ) (githubStackProgram, *github.PullRequestStack) {
 	// A retained resource must begin at this path's bottom PR.
 	// Each PR belongs to at most one native stack, so the bottom's observed
@@ -151,9 +160,19 @@ func compileGitHubStackPath(
 			if member.State == github.PullRequestStateMerged {
 				continue
 			}
-			if member.State != github.PullRequestStateOpen || matched == len(changes) {
+			if member.State != github.PullRequestStateOpen {
 				compatible = false
 				break
+			}
+			if matched == len(changes) {
+				// An unchanged submitted prefix preserves its remote suffix.
+				// A suffix member selected in another path instead requests a
+				// split, which requires releasing this resource first.
+				if _, included := selected[member.Number]; included {
+					compatible = false
+					break
+				}
+				continue
 			}
 			change := changes[matched]
 			if change.number != member.Number ||

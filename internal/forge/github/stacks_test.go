@@ -681,6 +681,26 @@ func TestRepository_UpdateStackReconnectsAboveMergedChange(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestRepository_PlanStackUpdate_preservesUnsubmittedAbove(t *testing.T) {
+	model := &stackResourceModel{
+		pullRequests: map[int]*stackResourceModelPR{
+			1: {head: "a", base: "main", state: github.PullRequestStateOpen, headInRepository: true},
+			2: {head: "b", base: "a", state: github.PullRequestStateOpen, headInRepository: true},
+		},
+		stacks: map[int][]int{41: {1, 2}}, nextStack: 41,
+		branches: map[string]struct{}{"main": {}, "a": {}, "b": {}},
+	}
+
+	require.NoError(t, executeStackUpdate(t.Context(), newStackRepository(t, model), []forge.StackChange{
+		{Change: &PR{Number: 1}, BaseBranch: "main"},
+	}))
+
+	assert.Empty(t, model.trace, "submitting A alone must preserve unchanged native membership")
+	assert.Equal(t, map[int][]int{41: {1, 2}}, model.stacks)
+	assert.Equal(t, "main", model.pullRequests[1].base)
+	assert.Equal(t, "a", model.pullRequests[2].base)
+}
+
 func TestRepository_PlanStackUpdate_preservesDownstackBase(t *testing.T) {
 	// Base-to-above relationships when only C is submitted:
 	//
