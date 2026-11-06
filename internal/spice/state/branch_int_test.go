@@ -1,7 +1,8 @@
 package state
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ func TestBranchChangeStateUnmarshal(t *testing.T) {
 			give: `{"github": {"number": 123}}`,
 			want: &branchChangeState{
 				Forge:  "github",
-				Change: json.RawMessage(`{"number": 123}`),
+				Change: jsontext.Value(`{"number": 123}`),
 			},
 		},
 		{
@@ -80,7 +81,7 @@ func TestBranchStateUnmarshal(t *testing.T) {
 				},
 				Change: &branchChangeState{
 					Forge:  "github",
-					Change: json.RawMessage(`{"number": 123}`),
+					Change: jsontext.Value(`{"number": 123}`),
 				},
 			},
 		},

@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	tea "charm.land/bubbletea/v2"
+	"go.abhg.dev/gs/internal/graph"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget/mergeprogress"
@@ -47,11 +49,9 @@ const (
 	mergeProgressMergeabilityFailed                                   // merge readiness blocked or timed out
 	mergeProgressMerging                                              // forge merge request started
 	mergeProgressMergeFailed                                          // forge merge request failed
-	mergeProgressMergeRequested                                       // merge requested without waiting
 	mergeProgressWaitingForMerge                                      // waiting for merged state
 	mergeProgressMergeIncomplete                                      // merged state did not appear
 	mergeProgressMerged                                               // merged state observed
-	mergeProgressSyncFailed                                           // trunk sync failed
 	mergeProgressFailed                                               // branch failed by scheduler policy
 	mergeProgressSkipped                                              // branch skipped by scheduler policy
 )
@@ -60,6 +60,7 @@ const (
 type logMergeProgress struct {
 	log *silog.Logger
 
+	mu   sync.Mutex
 	last map[string]mergeProgressEvent
 }
 
@@ -72,6 +73,10 @@ func newLogMergeProgress(log *silog.Logger) *logMergeProgress {
 
 func (p *logMergeProgress) Event(event mergeProgressEvent) {
 	item := event.Item
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if p.last[item.branch] == event {
 		return
 	}
@@ -90,8 +95,21 @@ func (p *logMergeProgress) Event(event mergeProgressEvent) {
 			event.Item.branch, event.Item.changeID, event.URL)
 	case mergeProgressWaitingForMerge:
 		p.log.Debugf("%s: waiting for merge", event.Item.branch)
+	case mergeProgressFailed:
+		// The returned item error becomes the fatal command error.
+		// Logging this scheduler state would duplicate the failure
+		// without adding the operation that failed.
 	case mergeProgressSkipped:
-		p.log.Infof("%s: skipped", event.Item.branch)
+		p.log.Warnf("%s: skipped", event.Item.branch)
+	}
+}
+
+// mergeProgressGroup reports each event to multiple progress renderers.
+type mergeProgressGroup []mergeProgress
+
+func (g mergeProgressGroup) Event(event mergeProgressEvent) {
+	for _, progress := range g {
+		progress.Event(event)
 	}
 }
 
@@ -133,16 +151,8 @@ func (p *widgetMergeProgress) Start(
 	p.events = make(chan tea.Msg, 1)
 	p.stopped = make(chan struct{})
 
-	progressItems := make([]mergeprogress.Item, len(items))
-	for idx, item := range items {
-		progressItems[idx] = mergeprogress.Item{
-			ID:    item.branch,
-			State: mergeprogress.StatePending,
-		}
-	}
-
 	model := &mergeProgressModel{
-		Widget: mergeprogress.New(progressItems...).
+		Widget: mergeprogress.New(mergeProgressItems(items)...).
 			WithTheme(p.theme),
 		events: p.events,
 	}
@@ -154,6 +164,33 @@ func (p *widgetMergeProgress) Start(
 		close(p.stopped)
 	}()
 	return ctx
+}
+
+func mergeProgressItems(items []*mergeItem) []mergeprogress.Item {
+	indexByBranch := make(map[string]int, len(items))
+	branches := make([]string, len(items))
+	for idx, item := range items {
+		branches[idx] = item.branch
+		indexByBranch[item.branch] = idx
+	}
+
+	branches = graph.BreadthFirstSort(branches,
+		func(idx int, _ string) int {
+			parentIdx, ok := indexByBranch[items[idx].base]
+			if !ok {
+				return -1
+			}
+			return parentIdx
+		})
+
+	progressItems := make([]mergeprogress.Item, len(branches))
+	for idx, branch := range branches {
+		progressItems[idx] = mergeprogress.Item{
+			ID:    branch,
+			State: mergeprogress.StatePending,
+		}
+	}
+	return progressItems
 }
 
 func (p *widgetMergeProgress) Event(event mergeProgressEvent) {
@@ -222,101 +259,73 @@ func widgetProgressEvent(event mergeProgressEvent) mergeprogress.Event {
 	switch event.Kind {
 	case mergeProgressPreparing:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: fmt.Sprintf("%s: preparing %v", item.branch, item.changeID),
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressPrepareFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": prepare failed",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressRetargeting:
 		return mergeprogress.Event{
 			ItemID: item.branch,
 			State:  mergeprogress.StateActive,
-			Message: fmt.Sprintf("%s: retargeting %v onto %s",
-				item.branch, item.changeID, event.Base),
 		}
 	case mergeProgressRetargetFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": retarget failed",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressWaitingForForgeHead:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: item.branch + ": waiting for HEAD to update",
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressForgeHeadFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": HEAD did not update",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressWaitingForMergeability:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: item.branch + ": waiting for merge readiness",
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressMergeabilityReady:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: item.branch + ": ready to merge",
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressMergeabilityFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": merge readiness failed",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressMerging:
 		return mergeprogress.Event{
 			ItemID: item.branch,
 			State:  mergeprogress.StateActive,
-			Message: fmt.Sprintf("%s: merging %v: %s",
-				item.branch, item.changeID, event.URL),
 		}
 	case mergeProgressMergeFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": merge failed",
-		}
-	case mergeProgressMergeRequested:
-		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateMerged,
-			Message: item.branch + ": merge requested",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressWaitingForMerge:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: item.branch + ": waiting for merge",
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressMergeIncomplete:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": merge did not complete",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressMerged:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateMerged,
-			Message: item.branch + ": merged",
-		}
-	case mergeProgressSyncFailed:
-		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": sync failed",
+			ItemID: item.branch,
+			State:  mergeprogress.StateMerged,
 		}
 	case mergeProgressFailed:
 		return mergeprogress.Event{
@@ -325,9 +334,8 @@ func widgetProgressEvent(event mergeProgressEvent) mergeprogress.Event {
 		}
 	case mergeProgressSkipped:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateSkipped,
-			Message: item.branch + ": skipped",
+			ItemID: item.branch,
+			State:  mergeprogress.StateSkipped,
 		}
 	default:
 		panic(fmt.Sprintf("unknown merge progress event kind: %d",

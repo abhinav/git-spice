@@ -283,6 +283,8 @@ If a PPA upload must be retried for the same upstream version,
 rerun the release workflow with a higher `ppa_revision` value.
 For example,
 `ppa_revision=2` publishes `X.Y.Z-1~ppa2`.
+If Launchpad already has the upstream orig tarball,
+set `ppa_omit_orig=true` to omit it from every selected series.
 
 ## Backporting changes
 

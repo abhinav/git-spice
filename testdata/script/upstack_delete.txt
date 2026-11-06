@@ -75,10 +75,10 @@ Feature 5
 Unmerged change
 
 -- golden/ls-after-interactive.txt --
-┏━■ feature1 ◀
+┏━━■ feature1 ◀
 main
 -- golden/ls-final.txt --
-  ┏━■ feature3 ◀
+  ┏━━■ feature3 ◀
 ┏━┻□ feature1
 main
 -- robot.golden --

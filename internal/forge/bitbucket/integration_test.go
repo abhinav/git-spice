@@ -86,7 +86,7 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t,
 				bitbucket.MergeChange(
 					t.Context(),
-					repo.(*bitbucket.Repository),
+					repo,
 					change.(*bitbucket.PR),
 				))
 		},
@@ -98,7 +98,7 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t,
 				bitbucket.CloseChange(
 					t.Context(),
-					repo.(*bitbucket.Repository),
+					repo,
 					change.(*bitbucket.PR),
 				))
 		},
@@ -126,14 +126,17 @@ func TestIntegration(t *testing.T) {
 		// because no working test account is available.
 		SetCommentsPageSize: bitbucket.SetListChangeCommentsPageSize,
 		Reviewers:           []string{cfg.Reviewer},
-		Assignees:           []string{},
+		// ReviewThreads:       true,
+		Assignees: []string{},
 		// Bitbucket limitations:
 		SkipLabels:            true, // no PR labels
 		SkipAssignees:         true, // no PR assignees
-		SkipTemplates:         true, // limited template support
+		SkipTemplates:         true, // no recorded Bitbucket template fixtures
 		ShortHeadHash:         true, // API returns 12-char hashes
 		SkipMergeability:      true, // no working account for recording
 		SkipMerge:             true, // requires branch permissions
 		SkipCommentPagination: true, // 403 with small pages
+		// TODO: Enable the combined metadata test when Bitbucket assignees are supported.
+		SkipCombinedMetadata: true,
 	})
 }

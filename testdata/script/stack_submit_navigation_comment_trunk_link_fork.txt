@@ -1,0 +1,68 @@
+# Test trunk comparison links after switching a submitted stack to fork mode.
+# The comparison head must identify the fork repository.
+
+as 'Test <test@example.com>'
+at '2026-07-21T22:30:00Z'
+
+# Alice creates and submits a two-branch stack to the upstream repository.
+mkdir -p alice/store
+cd alice/store
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub-setup
+shamhub register alice
+shamhub register bob
+shamhub new upstream alice/store
+git push upstream main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+gs repo init --remote=upstream
+git config --local spice.submit.navigationComment.trunkComparison top
+
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+gs stack submit --fill
+
+# Bob forks the repository and the existing stack switches to fork mode.
+shamhub fork alice/store bob
+git remote add origin $SHAMHUB_URL/bob/store
+gs repo init --trunk=main --remote=origin --upstream=upstream
+git push --set-upstream origin feature1 feature2
+env SHAMHUB_USERNAME=bob
+gs auth login --refresh
+
+gs stack submit
+shamhub dump comments
+cmpenv stdout $WORK/golden/comments.txt
+
+-- alice/store/feature1.txt --
+feature 1
+
+-- alice/store/feature2.txt --
+feature 2
+
+-- golden/comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+
+    [Compare against trunk]($SHAMHUB_URL/alice/store/compare/main...bob/store:feature2)
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

@@ -70,8 +70,7 @@ func (h *Handler) TrackBranch(ctx context.Context, req *BranchRequest) error {
 	log.Infof("%v: tracking with base %v", req.Branch, req.Base)
 
 	if err := h.Service.VerifyRestacked(ctx, req.Branch); err != nil {
-		var restackErr *spice.BranchNeedsRestackError
-		if errors.As(err, &restackErr) {
+		if _, ok := errors.AsType[*spice.BranchNeedsRestackError](err); ok {
 			log.Infof("%v: branch is behind its base and needs to be restacked.", req.Branch)
 			log.Infof("%v: run '%s branch restack --branch=%v' to restack it", req.Branch, cli.Name(), req.Branch)
 		} else {

@@ -12,7 +12,7 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-shamhub init
+shamhub-setup
 shamhub new origin alice/example.git
 shamhub register alice
 git push origin main
@@ -51,13 +51,13 @@ Contents of feature 1
 New contents of feature 1
 
 -- golden/open.txt --
-┏━■ feat1 (#1) ◀
-┃   fabf34f feat1 (now)
+┏━━■ feat1 (#1) ◀
+┃    fabf34f feat1 (now)
 main
 -- golden/resubmit.txt --
-┏━■ feat1 (#2) ◀
-┃   03fced6 Update feature 1 (now)
-┃   fabf34f feat1 (now)
+┏━━■ feat1 (#2) ◀
+┃    03fced6 Update feature 1 (now)
+┃    fabf34f feat1 (now)
 main
 -- golden/changes.json --
 [

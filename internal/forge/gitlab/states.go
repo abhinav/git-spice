@@ -29,11 +29,9 @@ func (r *Repository) ChangeStatuses(ctx context.Context, ids []forge.ChangeID) (
 		page := int64(0)
 		for {
 			opts := &gitlab.ListProjectMergeRequestsOptions{
-				ListOptions: gitlab.ListOptions{
-					PerPage: maxMergeRequestsPerPage,
-					Page:    page,
-				},
-				IIDs: &batch,
+				PerPage: maxMergeRequestsPerPage,
+				Page:    page,
+				IIDs:    &batch,
 			}
 			mergeRequests, resp, err := r.client.MergeRequestList(ctx, r.repoID, opts)
 			if err != nil {

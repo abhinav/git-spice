@@ -19,7 +19,7 @@ type changeMergeabilityRequest struct {
 
 type changeMergeabilityResponse struct {
 	State  string `json:"state"`
-	Reason string `json:"reason,omitempty"`
+	Reason string `json:"reason,omitzero"`
 }
 
 var _ = shamhubRESTHandler(
@@ -83,7 +83,7 @@ type setMergeabilityRequest struct {
 	Number int    `path:"number" json:"-"`
 
 	State  string `json:"state"`
-	Reason string `json:"reason,omitempty"`
+	Reason string `json:"reason,omitzero"`
 }
 
 type setMergeabilityResponse struct{}

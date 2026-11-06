@@ -43,18 +43,18 @@ Feature 2
 -- repo/feature3.txt --
 Feature 3
 -- golden/ll-after-onto.txt --
-  ┏━□ feature3 (needs restack)
-  ┃   cda485e feature3 (now)
+  ┏━━□ feature3 (needs restack)
+  ┃    cda485e feature3 (now)
 ┏━┻□ feature1
 ┃    33bdea5 feature1 (now)
-┣━■ feature2 ◀
-┃   879767a feature2 (now)
+┣━━■ feature2 ◀
+┃    879767a feature2 (now)
 main
 -- golden/ll-after-restack.txt --
-  ┏━■ feature3 ◀
-  ┃   4723867 feature3 (now)
+  ┏━━■ feature3 ◀
+  ┃    4723867 feature3 (now)
 ┏━┻□ feature1
 ┃    33bdea5 feature1 (now)
-┣━□ feature2
-┃   879767a feature2 (now)
+┣━━□ feature2
+┃    879767a feature2 (now)
 main

@@ -1,7 +1,7 @@
 package gitlab
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,7 +27,7 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 			r.URL.EscapedPath() == "/api/v4/projects/200/merge_requests":
 			created = true
 			var body map[string]any
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.NoError(t, json.UnmarshalRead(r.Body, &body))
 			assert.Equal(t, "Stabilize nacelles", body["title"])
 			assert.Equal(t, "fork-branch", body["source_branch"])
 			assert.Equal(t, "main", body["target_branch"])
@@ -35,10 +35,8 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 			assert.NotContains(t, body, "source_project_id")
 
 			writeGitLabJSON(t, w, http.StatusCreated, gatewaygitlab.MergeRequest{
-				BasicMergeRequest: gatewaygitlab.BasicMergeRequest{
-					IID:    55,
-					WebURL: "https://gitlab.example.com/test-owner/test-repo/-/merge_requests/55",
-				},
+				IID:    55,
+				WebURL: "https://gitlab.example.com/test-owner/test-repo/-/merge_requests/55",
 			})
 
 		default:
@@ -85,5 +83,5 @@ func writeGitLabJSON(t *testing.T, w http.ResponseWriter, code int, v any) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	require.NoError(t, json.NewEncoder(w).Encode(v))
+	require.NoError(t, json.MarshalWrite(w, v))
 }

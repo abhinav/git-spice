@@ -14,10 +14,8 @@ type editChangeRequest struct {
 	Repo   string `path:"repo" json:"-"`
 	Number int    `path:"number" json:"-"`
 
-	Base      *string  `json:"base,omitempty"`
-	Draft     *bool    `json:"draft,omitempty"`
-	Subject   string   `json:"subject,omitempty"`
-	Body      *string  `json:"body,omitempty"`
+	Base      *string  `json:"base,omitzero"`
+	Draft     *bool    `json:"draft,omitzero"`
 	Labels    []string `json:"labels,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
 	Assignees []string `json:"assignees,omitempty"`
@@ -48,12 +46,6 @@ func (sh *ShamHub) handleEditChange(_ context.Context, req *editChangeRequest) (
 	}
 	if d := req.Draft; d != nil {
 		sh.changes[changeIdx].Draft = *d
-	}
-	if req.Subject != "" {
-		sh.changes[changeIdx].Subject = req.Subject
-	}
-	if req.Body != nil {
-		sh.changes[changeIdx].Body = *req.Body
 	}
 	if len(req.Labels) > 0 {
 		labels := sh.changes[changeIdx].Labels
@@ -123,8 +115,6 @@ func (r *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, op
 	if opts.Draft != nil {
 		req.Draft = opts.Draft
 	}
-	req.Subject = opts.Subject
-	req.Body = opts.Body
 	req.Labels = opts.AddLabels
 	req.Reviewers = opts.AddReviewers
 	req.Assignees = opts.AddAssignees

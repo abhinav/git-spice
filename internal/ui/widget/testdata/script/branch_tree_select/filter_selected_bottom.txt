@@ -27,7 +27,7 @@ feed <Enter>
 -- selected --
 lambda
 -- want --
-lambda
+alpha
 -- prompt --
 Select a branch:
 ▲▲▲
@@ -38,9 +38,9 @@ hotel
 lambda ◀
 -- filter --
 Select a branch:
-▲▲▲
+alpha ◀
 bravo
 charlie
 delta
 gamma
-lambda ◀
+▼▼▼

@@ -63,24 +63,24 @@ Move 2
 -- repo/above2.txt --
 Above 2
 -- golden/config-ll.txt --
-  ┏━□ above1
-  ┃   35e266d above1 (now)
+  ┏━━□ above1
+  ┃    35e266d above1 (now)
 ┏━┻□ base1
 ┃    18643f6 base1 (now)
-┣━■ move1 ◀
-┃   5ee462d move1 (now)
+┣━━■ move1 ◀
+┃    5ee462d move1 (now)
 main
 -- golden/override-ll.txt --
-  ┏━□ above1
-  ┃   35e266d above1 (now)
+  ┏━━□ above1
+  ┃    35e266d above1 (now)
 ┏━┻□ base1
 ┃    18643f6 base1 (now)
-┃ ┏━□ above2 (needs restack)
-┃ ┃   89eb1d3 above2 (now)
+┃ ┏━━□ above2 (needs restack)
+┃ ┃    89eb1d3 above2 (now)
 ┣━┻□ base2
 ┃    239cefd base2 (now)
-┣━□ move1
-┃   5ee462d move1 (now)
-┣━■ move2 ◀
-┃   122e24b move2 (now)
+┣━━□ move1
+┃    5ee462d move1 (now)
+┣━━■ move2 ◀
+┃    122e24b move2 (now)
 main

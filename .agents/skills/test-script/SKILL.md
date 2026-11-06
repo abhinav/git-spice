@@ -19,7 +19,7 @@ Test scripts verify end-to-end behavior and are stored in `testdata/script/`.
 | Create branch | `gs branch create <name> -m <msg>` |
 | Make commit | `gs commit create -m <msg>` |
 | Compare stdout | `cmp stdout $WORK/golden/file.txt` |
-| Partial match | `stdout 'expected substring'` |
+| Partial match | `stdout 'expected substring'` for non-JSON text only |
 | Check file exists | `exists filename` |
 | Compare with env vars | `cmpenv stdout $WORK/golden/file.txt` |
 | Test interactive | `env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual` |
@@ -40,6 +40,10 @@ Avoid these errors when writing test scripts:
 
 - ❌ **Empty golden files with `(empty)`**: Just leave content blank after `-- path --`.
 
+- ❌ **String matching JSON output**: Use `cmpenvJSON`
+  for ShamHub JSON dumps and other JSON outputs.
+  Do not use `stdout` or `stderr` substring assertions on JSON.
+
 ## Writing a test script
 
 Test scripts are plain text files with a series of commands.
@@ -59,7 +63,7 @@ git commit --allow-empty -m 'Initial commit'
 gs repo init
 
 # (Optional) ShamHub setup for forge interactions
-shamhub init
+shamhub-setup
 shamhub register alice
 shamhub new origin alice/example.git
 git push origin main
@@ -115,10 +119,11 @@ Notes:
 
     For tests involving forge interactions,
     we use a simulation server called ShamHub.
-    To set it up, use the `shamhub` commands:
+    To set it up, use `shamhub-setup`,
+    then use `shamhub` commands to create users and repositories:
 
     ```
-    shamhub init
+    shamhub-setup
     shamhub register alice
     shamhub new origin alice/example.git
     git push origin main
@@ -400,12 +405,12 @@ used for testing git-spice's forge interactions.
 
 Outside of using git-spice (`gs`) commands,
 ShamHub interactions are available through the `shamhub` command
-defined at internal/forge/shamhub/cli.go.
+defined at internal/forge/shamhub/cli_main.go.
 
 Common `shamhub` commands:
 
-- `shamhub init`:
-  Initialize ShamHub server, set environment variables.
+- `shamhub-setup`:
+  Initialize the ShamHub server and set environment variables.
 - `shamhub register <username>`:
   Register users on ShamHub.
 - `shamhub new <remote> <owner/repo>`:
@@ -423,7 +428,8 @@ Common `shamhub` commands:
   Reject a ShamHub Change Request and close it.
 - `shamhub dump changes/comments`:
   Dump ShamHub state to stdout for verification.
-  (Use `cmp`, `cmpenv`, and `cmpenvJSON` to verify output.)
+  Use `cmpenvJSON` with a golden file.
+  Do not verify JSON with `stdout` substring assertions.
 
 ## Reference
 

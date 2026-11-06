@@ -13,6 +13,7 @@ import (
 	reflect "reflect"
 
 	git "go.abhg.dev/gs/internal/git"
+	restack "go.abhg.dev/gs/internal/handler/restack"
 	submit "go.abhg.dev/gs/internal/handler/submit"
 	sync "go.abhg.dev/gs/internal/handler/sync"
 	spice "go.abhg.dev/gs/internal/spice"
@@ -207,17 +208,17 @@ func (m *MockRestackHandler) EXPECT() *MockRestackHandlerMockRecorder {
 }
 
 // RestackBranch mocks base method.
-func (m *MockRestackHandler) RestackBranch(arg0 context.Context, arg1 string) error {
+func (m *MockRestackHandler) RestackBranch(ctx context.Context, req *restack.BranchRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestackBranch", arg0, arg1)
+	ret := m.ctrl.Call(m, "RestackBranch", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RestackBranch indicates an expected call of RestackBranch.
-func (mr *MockRestackHandlerMockRecorder) RestackBranch(arg0, arg1 any) *MockRestackHandlerRestackBranchCall {
+func (mr *MockRestackHandlerMockRecorder) RestackBranch(ctx, req any) *MockRestackHandlerRestackBranchCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackBranch", reflect.TypeOf((*MockRestackHandler)(nil).RestackBranch), arg0, arg1)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackBranch", reflect.TypeOf((*MockRestackHandler)(nil).RestackBranch), ctx, req)
 	return &MockRestackHandlerRestackBranchCall{Call: call}
 }
 
@@ -233,13 +234,13 @@ func (c *MockRestackHandlerRestackBranchCall) Return(arg0 error) *MockRestackHan
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockRestackHandlerRestackBranchCall) Do(f func(context.Context, string) error) *MockRestackHandlerRestackBranchCall {
+func (c *MockRestackHandlerRestackBranchCall) Do(f func(context.Context, *restack.BranchRequest) error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRestackHandlerRestackBranchCall) DoAndReturn(f func(context.Context, string) error) *MockRestackHandlerRestackBranchCall {
+func (c *MockRestackHandlerRestackBranchCall) DoAndReturn(f func(context.Context, *restack.BranchRequest) error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

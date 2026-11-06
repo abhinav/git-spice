@@ -30,7 +30,10 @@ type animationState struct {
 	tickScheduled bool
 }
 
-func (a animationState) marker(width int) (position int, glyph string, ok bool) {
+func (a animationState) marker(
+	width int,
+	glyphs AnimationGlyphSet,
+) (position int, glyph string, ok bool) {
 	if !a.enabled || width <= 0 {
 		return 0, "", false
 	}
@@ -45,20 +48,20 @@ func (a animationState) marker(width int) (position int, glyph string, ok bool) 
 	position = int(math.Round(eased * float64(width-1)))
 
 	if phase < 0.05 || phase >= 0.95 {
-		return position, "╺", true
+		return position, glyphs.LeftEdge, true
 	}
 	if phase > 0.45 && phase < 0.55 {
-		return position, "╸", true
+		return position, glyphs.RightEdge, true
 	}
 
 	speed := math.Abs(math.Sin(2 * math.Pi * phase))
 	switch {
 	case speed > 0.85:
-		return position, "—", true
+		return position, glyphs.Fast, true
 	case speed > 0.45:
-		return position, "–", true
+		return position, glyphs.Medium, true
 	default:
-		return position, "-", true
+		return position, glyphs.Slow, true
 	}
 }
 

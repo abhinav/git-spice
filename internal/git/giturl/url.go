@@ -18,6 +18,10 @@ type URL struct {
 	// Raw is the original remote URL before normalization.
 	Raw string
 
+	// Scheme is the parsed remote URL scheme after normalization.
+	// SCP-style SSH shorthand normalizes to "ssh".
+	Scheme string
+
 	// Path is the repository path,
 	// including the leading slash and any ".git" suffix.
 	// For example,
@@ -53,6 +57,7 @@ func Parse(raw string) (*URL, error) {
 
 	return &URL{
 		Raw:      raw,
+		Scheme:   u.Scheme,
 		Path:     u.Path,
 		Hostname: u.Hostname(),
 		Port:     u.Port(),

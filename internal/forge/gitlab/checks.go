@@ -26,7 +26,7 @@ func (r *Repository) ChangeChecks(
 
 	var checks []forge.ChangeCheck
 	opt := &gitlab.ListCommitStatusesOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
+		PerPage: 100,
 	}
 	if mr.SourceBranch != "" {
 		opt.Ref = &mr.SourceBranch

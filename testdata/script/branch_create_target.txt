@@ -53,19 +53,19 @@ feature 4
 feature 5
 
 -- golden/add-feature3.txt --
-  ┏━□ feature2
-  ┣━■ feature3 ◀
+  ┏━━□ feature2
+  ┣━━■ feature3 ◀
 ┏━┻□ feature1
 main
 -- golden/add-feature4.txt --
-    ┏━□ feature2
-    ┣━□ feature3
+    ┏━━□ feature2
+    ┣━━□ feature3
   ┏━┻■ feature4 ◀
 ┏━┻□ feature1
 main
 -- golden/add-feature5.txt --
-      ┏━□ feature2
-      ┣━□ feature3
+      ┏━━□ feature2
+      ┣━━□ feature3
     ┏━┻□ feature4
   ┏━┻□ feature1
 ┏━┻■ feature5 ◀

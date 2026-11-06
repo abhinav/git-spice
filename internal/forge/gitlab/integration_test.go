@@ -101,10 +101,13 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL:     remoteURL,
-		PushRemoteURL: pushRemoteURL,
-		Forge:         &gitlabForge,
-		Sanitizers:    sanitizers,
+		RemoteURL:              remoteURL,
+		PushRemoteURL:          pushRemoteURL,
+		Forge:                  &gitlabForge,
+		Sanitizers:             sanitizers,
+		ReviewThreads:          true,
+		FileReviewThreads:      true,
+		ReviewThreadCommitHash: true,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			ghc := newGitLabClient(t, httpClient)
 			newRepo, err := gitlabforge.NewRepository(
@@ -167,6 +170,8 @@ func TestIntegration(t *testing.T) {
 		SkipMerge:             true, // Merge requires MR approval settings to be disabled
 		Reviewers:             []string{cfg.Reviewer},
 		Assignees:             []string{cfg.Assignee},
+		// TODO: Enable the combined metadata test after recording its fixtures.
+		SkipCombinedMetadata: true,
 	})
 }
 

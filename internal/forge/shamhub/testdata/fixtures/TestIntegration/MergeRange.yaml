@@ -1,0 +1,211 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 149
+        host: 127.0.0.1:53776
+        body: '{"subject":"Merge range bottom merge-range-bottom-qg2cEloe","body":"Merge range integration test","base":"main","head":"merge-range-bottom-qg2cEloe"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 79
+        body: |-
+            {
+              "number": 7,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/7"
+            }
+        headers:
+            Content-Length:
+                - "79"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 26.028833ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 163
+        host: 127.0.0.1:53776
+        body: '{"subject":"Merge range top merge-range-top-TRDXfGr0","body":"Merge range integration test","base":"merge-range-bottom-qg2cEloe","head":"merge-range-top-TRDXfGr0"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 79
+        body: |-
+            {
+              "number": 8,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/8"
+            }
+        headers:
+            Content-Length:
+                - "79"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 28.130916ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 113
+        host: 127.0.0.1:53776
+        body: '{"changes":[{"number":7,"base_branch":"main"},{"number":8,"base":7,"base_branch":"merge-range-bottom-qg2cEloe"}]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/stack/update
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 2
+        body: '{}'
+        headers:
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 792.041µs
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 48
+        host: 127.0.0.1:53776
+        body: '{"changes":[{"number":7},{"number":8,"base":7}]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/stack/merge-ranges/plan
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 50
+        body: |-
+            {
+              "ranges": [
+                [
+                  7,
+                  8
+                ]
+              ]
+            }
+        headers:
+            Content-Length:
+                - "50"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 1.502667ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 13
+        host: 127.0.0.1:53776
+        body: '{"ids":[7,8]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/states
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 216
+        body: |-
+            {
+              "statuses": [
+                {
+                  "state": "open",
+                  "headHash": "f5a21c8a15aef69b71f581fb946b7dbc3dd7894b"
+                },
+                {
+                  "state": "open",
+                  "headHash": "b4dc28345f99905219b590ecd4f4c61cf16b7107"
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "216"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 20.794667ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 147
+        host: 127.0.0.1:53776
+        body: '{"changes":[{"number":7,"headHash":"f5a21c8a15aef69b71f581fb946b7dbc3dd7894b"},{"number":8,"headHash":"b4dc28345f99905219b590ecd4f4c61cf16b7107"}]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/merge-range
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 2
+        body: '{}'
+        headers:
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 100.496375ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 13
+        host: 127.0.0.1:53776
+        body: '{"ids":[7,8]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/states
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 220
+        body: |-
+            {
+              "statuses": [
+                {
+                  "state": "merged",
+                  "headHash": "f5a21c8a15aef69b71f581fb946b7dbc3dd7894b"
+                },
+                {
+                  "state": "merged",
+                  "headHash": "b4dc28345f99905219b590ecd4f4c61cf16b7107"
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "220"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 4.379167ms

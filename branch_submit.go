@@ -47,9 +47,10 @@ only if there are multiple CRs in the stack.
 type branchSubmitCmd struct {
 	submitOptions
 
-	Title  string `help:"Title of the change request" placeholder:"TITLE"`
-	Body   string `help:"Body of the change request" placeholder:"BODY"`
-	Branch string `placeholder:"NAME" help:"Branch to submit" predictor:"trackedBranches"`
+	Title       string             `xor:"title-source" help:"Title of the change request" placeholder:"TITLE"`
+	Body        string             `xor:"body-source" help:"Body of the change request" placeholder:"BODY"`
+	MessageFile submit.MessageFile `name:"message-file" placeholder:"PATH" xor:"title-source,body-source" help:"Read a new CR's message from PATH. First line is the title; remaining text is the body."`
+	Branch      string             `placeholder:"NAME" help:"Branch to submit" predictor:"trackedBranches"`
 }
 
 func (*branchSubmitCmd) Help() string {
@@ -60,7 +61,8 @@ func (*branchSubmitCmd) Help() string {
 
 		For new Change Requests, a prompt will allow filling metadata.
 		Use the --title and --body flags to skip the prompt,
-		or the --fill flag to use the commit message to fill them in.
+		or --message-file PATH to read both from a text file.
+		Use --fill to fill them from commit messages.
 		The --[no-]draft flag marks the CR as draft or not.
 		Use the 'spice.submit.draft' configuration option
 		to mark new CRs as drafts (or not) by default,
@@ -106,9 +108,10 @@ func (cmd *branchSubmitCmd) Run(
 	}
 
 	return submitHandler.Submit(ctx, &submit.Request{
-		Branch:  cmd.Branch,
-		Title:   cmd.Title,
-		Body:    cmd.Body,
-		Options: &cmd.Options,
+		Branch:      cmd.Branch,
+		Title:       cmd.Title,
+		Body:        cmd.Body,
+		MessageFile: cmd.MessageFile,
+		Options:     &cmd.Options,
 	})
 }

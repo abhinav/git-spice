@@ -1,7 +1,7 @@
 package widget
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"fmt"
 	"slices"
 

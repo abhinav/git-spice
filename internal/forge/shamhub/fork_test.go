@@ -2,7 +2,7 @@ package shamhub
 
 import (
 	"bytes"
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"os"
 	"os/exec"
@@ -123,7 +123,7 @@ func TestForkWorkflow(t *testing.T) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		var changeResp submitChangeResponse
-		require.NoError(t, json.NewDecoder(resp.Body).Decode(&changeResp))
+		require.NoError(t, json.UnmarshalRead(resp.Body, &changeResp))
 		return changeResp.Number
 	}()
 
@@ -180,6 +180,6 @@ func loginAndGetToken(t *testing.T, sh *ShamHub, username string) string {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var loginResp loginResponse
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&loginResp))
+	require.NoError(t, json.UnmarshalRead(resp.Body, &loginResp))
 	return loginResp.Token
 }

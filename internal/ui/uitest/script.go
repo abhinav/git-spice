@@ -64,7 +64,7 @@ func RunScripts(
 	}
 
 	for _, file := range files {
-		info, err := os.Stat(files[0])
+		info, err := os.Stat(file)
 		require.NoError(t, err)
 		if !info.IsDir() {
 			params.Files = append(params.Files, file)
@@ -174,7 +174,7 @@ func RunScripts(
 //		Print a copy of the screen to the script's stdout.
 //	feed [-r N] txt
 //		Post the given text to the command's stdin.
-//		If -count is given, the input is repeated N times.
+//		If -r is given, the input is repeated N times.
 func SetupScript(params *testscript.Params) (setEmulator func(*testscript.TestScript, Emulator)) {
 	type stateKey struct{}
 	type stateValue struct{ V *scriptState }
@@ -282,7 +282,7 @@ type Emulator interface {
 
 var _ Emulator = (*EmulatorView)(nil)
 
-// ScriptOptions are options for running a script against
+// ScriptOptions are options for running a script against a terminal emulator.
 type ScriptOptions struct {
 	// Logf is a function that logs messages.
 	//

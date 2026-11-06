@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -12,51 +14,49 @@ import (
 )
 
 type stackMergeCmd struct {
-	merge.StackMergeOptions
+	merge.Options
 
-	Branch string `placeholder:"NAME" help:"Branch whose stack to merge" predictor:"trackedBranches"`
+	Branches []string `name:"branch" placeholder:"NAME" help:"Branches whose stacks to merge. May be repeated." predictor:"trackedBranches"`
 }
 
 func (*stackMergeCmd) Help() string {
-	return text.Dedent(`
-		Merges the CRs for the current branch's stack into trunk.
+	return text.Dedent(fmt.Sprintf(`
+		Merges CRs for the current branch's full stack into trunk.
 		Use --branch to merge a different branch's stack.
-
-		The stack includes the selected branch,
+		Use --branch multiple times to merge independent stacks.
+		A stack includes the selected branch,
 		its downstack branches down to trunk,
 		and every upstack branch.
 
-		Already-merged branches are skipped automatically.
-		Branches must have an open Change Request to be merged.
+		For example, for the following stack:
 
-		Before merging, the stack is checked for branches
-		whose base PR was already merged on the forge.
-		Use --no-branch-check to skip this validation.
+                         ┌── E
+                       ┌─┴ D
+                       │ ┌── C
+                       ├─┴ B
+                     ┌─┴ A
+                    trunk
 
-		Before each merge, waits for merge readiness:
-		the forge must observe the pushed head
-		and report that the CR is ready to merge.
-		Use --ready-timeout to configure the maximum wait
-		before failing if merge readiness is not reached.
+		The following commands have the following effects:
 
-		By default, a branch failure skips that branch's upstack descendants,
-		but independent sibling branches continue.
-		Use --fail-fast to stop the queue after the first branch failure.
-	`)
+		    %[1]s stack merge --branch A # merge A, B, C, D, E
+		    %[1]s stack merge --branch B # merge A, B, C
+		    %[1]s stack merge --branch D # merge A, D, E
+	`, cli.Name())) + _mergeHelpCommon
 }
 
 func (cmd *stackMergeCmd) AfterApply(
 	ctx context.Context,
 	wt *git.Worktree,
 ) error {
-	if cmd.Branch != "" {
+	if len(cmd.Branches) > 0 {
 		return nil
 	}
 	branch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
-	cmd.Branch = branch
+	cmd.Branches = []string{branch}
 	return nil
 }
 
@@ -65,12 +65,12 @@ func (cmd *stackMergeCmd) Run(
 	store *state.Store,
 	mergeHandler MergeHandler,
 ) error {
-	if cmd.Branch == store.Trunk() {
+	if slices.Contains(cmd.Branches, store.Trunk()) {
 		return errors.New("cannot merge trunk")
 	}
 
 	return mergeHandler.MergeStack(ctx, &merge.StackMergeRequest{
-		Branch:  cmd.Branch,
-		Options: &cmd.StackMergeOptions,
+		Branches: cmd.Branches,
+		Options:  &cmd.Options,
 	})
 }

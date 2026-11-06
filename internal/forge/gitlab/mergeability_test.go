@@ -64,10 +64,8 @@ func TestRepository_ChangeMergeability(t *testing.T) {
 					assert.Empty(t, r.URL.RawQuery)
 
 					writeJSON(t, w, gitlab.MergeRequest{
-						BasicMergeRequest: gitlab.BasicMergeRequest{
-							DetailedMergeStatus: tt.status,
-							HasConflicts:        tt.hasConflicts,
-						},
+						DetailedMergeStatus: tt.status,
+						HasConflicts:        tt.hasConflicts,
 					})
 				},
 			))

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/ui"
 	"go.uber.org/mock/gomock"
@@ -22,8 +23,8 @@ func TestResolveForge_explicitForgeWins(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	got, err := resolveForge(
 		t.Context(),
@@ -31,11 +32,44 @@ func TestResolveForge_explicitForgeWins(t *testing.T) {
 		silogtest.New(t),
 		ui.NewFileView(io.Discard),
 		"gitlab",
-		"github",
+		"github", nil,
 	)
 	require.NoError(t, err)
 
 	assert.Same(t, gitlab, got)
+}
+
+func TestResolveForge_explicitForgeWithoutRepositoryRemote(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	ctrl := gomock.NewController(t)
+
+	github := forgetest.NewMockForge(ctrl)
+	github.EXPECT().ID().Return("github").AnyTimes()
+
+	var gotRemoteURL *giturl.URL
+	var forges forge.Registry
+	forges.Register(testDefinition{
+		id: "github",
+		new: func(remoteURL *giturl.URL) (forge.Forge, error) {
+			gotRemoteURL = remoteURL
+			return github, nil
+		},
+	})
+
+	got, err := resolveForge(
+		t.Context(),
+		&forges,
+		silogtest.New(t),
+		ui.NewFileView(io.Discard),
+		"github",
+		"", nil,
+	)
+	require.NoError(t, err)
+
+	assert.Same(t, github, got)
+	require.NotNil(t, gotRemoteURL)
+	assert.Equal(t, "https://example.com", gotRemoteURL.Raw)
 }
 
 func TestResolveForge_configuredKind(t *testing.T) {
@@ -47,8 +81,8 @@ func TestResolveForge_configuredKind(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	got, err := resolveForge(
 		t.Context(),
@@ -56,36 +90,26 @@ func TestResolveForge_configuredKind(t *testing.T) {
 		silogtest.New(t),
 		ui.NewFileView(io.Discard),
 		"",
-		"github",
+		"github", nil,
 	)
 	require.NoError(t, err)
 
 	assert.Same(t, github, got)
 }
 
-func TestResolveForge_noForgeSignalPreservesNoninteractiveError(t *testing.T) {
+func TestResolveForge_requiresGitRemote(t *testing.T) {
 	t.Chdir(t.TempDir())
 
-	ctrl := gomock.NewController(t)
-
-	github := forgetest.NewMockForge(ctrl)
-	github.EXPECT().ID().Return("github").AnyTimes()
-	gitlab := forgetest.NewMockForge(ctrl)
-	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
-
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
-
 	_, err := resolveForge(
 		t.Context(),
 		&forges,
 		silogtest.New(t),
 		ui.NewFileView(io.Discard),
 		"",
-		"",
+		"", nil,
 	)
 	require.Error(t, err)
 
-	assert.ErrorIs(t, err, errNoPrompt)
+	assert.ErrorContains(t, err, "not in a Git repository")
 }

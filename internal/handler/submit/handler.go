@@ -5,7 +5,6 @@ package submit
 import (
 	"cmp"
 	"context"
-	"encoding"
 	"errors"
 	"fmt"
 	"os"
@@ -14,16 +13,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/iterutil"
-	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/must"
-	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -68,7 +63,6 @@ var _ Store = (*state.Store)(nil)
 // Service provides access to the Spice service.
 type Service interface {
 	BranchGraph(context.Context, *spice.BranchGraphOptions) (*spice.BranchGraph, error)
-	LoadBranches(context.Context) ([]spice.LoadBranchItem, error)
 	VerifyRestacked(ctx context.Context, name string) error
 	UnusedBranchName(ctx context.Context, remote string, branch string) (string, error)
 	ListChangeTemplates(context.Context, string, forge.Repository) ([]*forge.ChangeTemplate, error)
@@ -87,9 +81,6 @@ type Handler struct {
 	Store      Store            // required
 	Service    Service          // required
 	Browser    browser.Launcher // required
-	Config     *spice.Config    // optional
-	RepoRoot   string           // optional; repo root dir
-	Args       []string         // optional; invoking process args
 
 	// TODO: these should not be a func reference
 	// this whole memoize thing is a bit of a hack
@@ -199,277 +190,13 @@ func (v *memoizedValue[T]) Get(get func() (T, error)) (T, error) {
 	return v.value, v.err
 }
 
-// Options defines options for the submit operations.
-//
-// Options translate into user-facing command line flags or configuration options,
-// so care must be taken when adding things here.
-type Options struct {
-	DryRun bool `short:"n" help:"Don't actually submit the stack"`
-	Fill   bool `short:"c" negatable:"" config:"message.autoFill" help:"Fill in the title and body of new change requests via the configured message generator. Defaults to spice.message.autoFill. Use --regenerate-message to also update existing change requests."`
-	// TODO: Default to Fill if --no-prompt?
-
-	RegenerateMessage bool    `name:"regenerate-message" help:"Regenerate the title and body of existing change requests via the configured message generator. Unlike --fill, this is never implied by configuration: overwriting an existing description is always explicit."`
-	Draft             *bool   `negatable:"" help:"Whether to mark change requests as drafts"`
-	Publish           bool    `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
-	Web               OpenWeb `short:"w" config:"submit.web" help:"Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'."`
-
-	NavComment          NavCommentWhen      `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
-	NavCommentSync      NavCommentSync      `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
-	NavCommentDownstack NavCommentDownstack `name:"nav-comment-downstack" config:"submit.navigationComment.downstack" enum:"all,open" default:"all" hidden:"" help:"Which downstack CRs to include in navigation comments. Must be one of: all, open."`
-	NavCommentMarker    string              `name:"nav-comment-marker" config:"submit.navigationCommentStyle.marker" hidden:"" help:"Marker to use for the current change in navigation comments. Defaults to '◀'."`
-
-	SkipRestackCheck SkipRestackCheck `config:"submit.skipRestackCheck" hidden:"" help:"When to skip the restack check. Must be one of: never, trunk, always." default:"never"`
-
-	Force      bool  `help:"Force push, bypassing safety checks"`
-	NoVerify   bool  `help:"Bypass pre-push hooks when pushing to the remote." released:"v0.15.0"`
-	UpdateOnly *bool `short:"u" negatable:"" help:"Only update existing change requests, do not create new ones"`
-
-	// DraftDefault is used to set the default draft value
-	// when creating new Change Requests.
-	//
-	// --draft/--no-draft will override this value.
-	DraftDefault bool `config:"submit.draft" help:"Default value for --draft when creating change requests." hidden:"" default:"false"`
-
-	// TODO: Other creation options e.g.:
-	// - milestone
-	// - reviewers
-
-	Labels           []string      `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
-	ConfiguredLabels []string      `name:"configured-labels" help:"Default labels to add to change requests." hidden:"" config:"submit.labels" configDeprecated:"submit.label"`
-	LabelsAddWhen    LabelsAddWhen `name:"labels-add-when" help:"When to add configured labels." hidden:"" config:"submit.labels.addWhen" configDeprecated:"submit.label.addWhen" default:"always"`
-
-	Reviewers           []string         `short:"r" name:"reviewer" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"v0.21.0"`
-	ConfiguredReviewers []string         `name:"configured-reviewers" help:"Default reviewers to add to change requests." hidden:"" config:"submit.reviewers" released:"v0.21.0"`
-	ReviewersAddWhen    ReviewersAddWhen `name:"reviewers-add-when" help:"When to add configured reviewers." hidden:"" config:"submit.reviewers.addWhen" default:"always" released:"v0.23.0"`
-
-	Assignees           []string `short:"a" name:"assign" placeholder:"ASSIGNEE" help:"Assign the change request to these users. Pass multiple times or separate with commas." released:"v0.21.0"`
-	ConfiguredAssignees []string `name:"configured-assignees" help:"Default assignees to add to change requests." hidden:"" config:"submit.assignees" released:"v0.21.0"` // merged with Assignees
-
-	// ListTemplatesTimeout controls the timeout for listing CR templates.
-	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
-
-	// Template specifies the template to use when multiple templates are available.
-	// If set, this template will be automatically selected instead of prompting the user.
-	// The value should match the filename of one of the available templates.
-	Template string `hidden:"" config:"submit.template" help:"Default template to use when multiple templates are available"`
-}
-
-func mergeConfiguredValues(values []string, configured []string) []string {
-	return slices.Collect(iterutil.Uniq(values, configured))
-}
-
-func mergeConfiguredOptions(opts *Options) {
-	// Note: Labels are merged conditionally by effectiveLabels
-	// based on LabelsAddWhen setting.
-	// Note: Reviewers are merged conditionally by effectiveReviewers
-	// based on draft status and ReviewersAddWhen setting.
-	opts.Assignees = mergeConfiguredValues(opts.Assignees, opts.ConfiguredAssignees)
-}
-
-// effectiveLabels returns the labels to add to a change request.
-// Flag-specified labels are always included.
-// Configured labels are included based on the LabelsAddWhen setting
-// and whether the change request is being created or updated.
-func effectiveLabels(opts *Options, isCreate bool) []string {
-	// If addWhen is "create" and the CR already exists,
-	// skip configured labels.
-	if opts.LabelsAddWhen == LabelsAddWhenCreate && !isCreate {
-		return opts.Labels
-	}
-	return mergeConfiguredValues(opts.Labels, opts.ConfiguredLabels)
-}
-
-// effectiveReviewers returns the reviewers to add to a change request.
-// Flag-specified reviewers are always included.
-// Configured reviewers are included based on the ReviewersAddWhen setting
-// and the draft status of the change request.
-func effectiveReviewers(opts *Options, isDraft bool) []string {
-	// If addWhen is "ready" and the CR is a draft,
-	// skip configured reviewers.
-	if opts.ReviewersAddWhen == ReviewersAddWhenReady && isDraft {
-		return opts.Reviewers
-	}
-	return mergeConfiguredValues(opts.Reviewers, opts.ConfiguredReviewers)
-}
-
-// NavCommentSync specifies the scope of navigation comment updates.
-type NavCommentSync int
-
-const (
-	// NavCommentSyncBranch updates navigation comments
-	// only for branches that are being submitted.
-	//
-	// This is the default.
-	NavCommentSyncBranch NavCommentSync = iota
-
-	// NavCommentSyncDownstack updates navigation comments
-	// for all submitted branches and their downstack branches.
-	NavCommentSyncDownstack
-)
-
-var _ encoding.TextUnmarshaler = (*NavCommentSync)(nil)
-
-// String returns the string representation of the NavCommentSync.
-func (s NavCommentSync) String() string {
-	switch s {
-	case NavCommentSyncBranch:
-		return "branch"
-	case NavCommentSyncDownstack:
-		return "downstack"
-	default:
-		return "unknown"
-	}
-}
-
-// UnmarshalText decodes a NavCommentSync from text.
-// It supports "branch" and "downstack" values.
-func (s *NavCommentSync) UnmarshalText(bs []byte) error {
-	switch string(bs) {
-	case "branch":
-		*s = NavCommentSyncBranch
-	case "downstack":
-		*s = NavCommentSyncDownstack
-	default:
-		return fmt.Errorf("invalid value %q: expected branch or downstack", bs)
-	}
-	return nil
-}
-
-// NavCommentDownstack specifies which downstack CRs
-// to include in navigation comments.
-type NavCommentDownstack int
-
-const (
-	// NavCommentDownstackAll includes all downstack CRs
-	// (both open and merged).
-	//
-	// This is the default.
-	NavCommentDownstackAll NavCommentDownstack = iota
-
-	// NavCommentDownstackOpen includes only open downstack CRs,
-	// excluding merged ones.
-	NavCommentDownstackOpen
-)
-
-var _ encoding.TextUnmarshaler = (*NavCommentDownstack)(nil)
-
-// String returns the string representation of the NavCommentDownstack.
-func (d NavCommentDownstack) String() string {
-	switch d {
-	case NavCommentDownstackAll:
-		return "all"
-	case NavCommentDownstackOpen:
-		return "open"
-	default:
-		return "unknown"
-	}
-}
-
-// UnmarshalText decodes NavCommentDownstack from text.
-func (d *NavCommentDownstack) UnmarshalText(bs []byte) error {
-	switch string(bs) {
-	case "all":
-		*d = NavCommentDownstackAll
-	case "open":
-		*d = NavCommentDownstackOpen
-	default:
-		return fmt.Errorf("invalid value %q: expected all or open", bs)
-	}
-	return nil
-}
-
-// ReviewersAddWhen specifies when configured reviewers
-// should be added to change requests.
-type ReviewersAddWhen int
-
-const (
-	// ReviewersAddWhenAlways adds configured reviewers
-	// to all change requests regardless of draft status.
-	//
-	// This is the default.
-	ReviewersAddWhenAlways ReviewersAddWhen = iota
-
-	// ReviewersAddWhenReady adds configured reviewers
-	// only when the change request is not a draft.
-	ReviewersAddWhenReady
-)
-
-var _ encoding.TextUnmarshaler = (*ReviewersAddWhen)(nil)
-
-// String returns the string representation of the ReviewersAddWhen.
-func (r ReviewersAddWhen) String() string {
-	switch r {
-	case ReviewersAddWhenAlways:
-		return "always"
-	case ReviewersAddWhenReady:
-		return "ready"
-	default:
-		return "unknown"
-	}
-}
-
-// UnmarshalText decodes ReviewersAddWhen from text.
-// It supports "always" and "ready" values.
-func (r *ReviewersAddWhen) UnmarshalText(bs []byte) error {
-	switch string(bs) {
-	case "always":
-		*r = ReviewersAddWhenAlways
-	case "ready":
-		*r = ReviewersAddWhenReady
-	default:
-		return fmt.Errorf("invalid value %q: expected always or ready", bs)
-	}
-	return nil
-}
-
-// LabelsAddWhen specifies when configured labels
-// should be added to change requests.
-type LabelsAddWhen int
-
-const (
-	// LabelsAddWhenAlways adds configured labels
-	// to all change requests on every submit.
-	//
-	// This is the default.
-	LabelsAddWhenAlways LabelsAddWhen = iota
-
-	// LabelsAddWhenCreate adds configured labels
-	// only when creating a new change request.
-	LabelsAddWhenCreate
-)
-
-var _ encoding.TextUnmarshaler = (*LabelsAddWhen)(nil)
-
-// String returns the string representation of the LabelsAddWhen.
-func (l LabelsAddWhen) String() string {
-	switch l {
-	case LabelsAddWhenAlways:
-		return "always"
-	case LabelsAddWhenCreate:
-		return "create"
-	default:
-		return "unknown"
-	}
-}
-
-// UnmarshalText decodes LabelsAddWhen from text.
-// It supports "always" and "create" values.
-func (l *LabelsAddWhen) UnmarshalText(bs []byte) error {
-	switch string(bs) {
-	case "always":
-		*l = LabelsAddWhenAlways
-	case "create":
-		*l = LabelsAddWhenCreate
-	default:
-		return fmt.Errorf("invalid value %q: expected always or create", bs)
-	}
-	return nil
-}
-
 // BatchOptions defines options
 // that are only available to batch submit operations.
 type BatchOptions struct {
 	UpdateOnlyDefault bool `config:"submit.updateOnly" help:"Default value for --update-only in batch submit operations." hidden:"" default:"false"`
+
+	// MessageFiles supplies per-branch messages for new change requests.
+	MessageFiles MessageFiles `name:"message-file" placeholder:"BRANCH:PATH" help:"Read a new CR's message from PATH for BRANCH. First line is the title; remaining text is the body. Repeat for each branch."`
 }
 
 // BatchRequest is a request to submit one or more change requests.
@@ -488,7 +215,10 @@ type BatchRequest struct {
 
 // SubmitBatch submits a batch of branches to a remote repository,
 // creating or updating change requests as needed.
-func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
+func (h *Handler) SubmitBatch(
+	ctx context.Context,
+	req *BatchRequest,
+) (retErr error) {
 	opts := cmp.Or(req.Options, &Options{})
 	mergeConfiguredOptions(opts)
 
@@ -511,38 +241,55 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		return err
 	}
 
-	var branchesToComment []string
+	resolvedUpstreams := make(map[string]string)
+	stackUpdates := submitStackUpdates{
+		requestedBranches: slices.Clone(req.Branches),
+	}
+	var results []submitResult
+	// A later branch failure must not strand earlier published changes without
+	// their stack representations. Synchronize every completed submission on
+	// every exit from the loop.
+	defer func() {
+		retErr = errors.Join(
+			retErr,
+			h.updateStackRepresentations(
+				ctx,
+				opts,
+				&stackUpdates,
+				results,
+			),
+		)
+	}()
+
 	for _, branch := range req.Branches {
+		branchInfo, ok := graph.Lookup(branch)
+		if !ok {
+			return fmt.Errorf("submit branch %s: lookup branch: %w", branch, state.ErrNotExist)
+		}
+
 		// Shallow copy the options because submitBranch may modify them.
 		opts := *opts
+		sopts := &submitOptions{
+			Options:      &opts,
+			upstreamBase: resolvedUpstreams[branchInfo.Base],
+			stackUpdates: &stackUpdates,
+			MessageFile:  batchOpts.MessageFiles[branch],
+		}
+
 		status, err := h.submitBranch(
 			ctx,
 			graph,
 			branch,
-			&submitOptions{Options: &opts},
+			sopts,
 		)
+		results = append(results, status)
 		if err != nil {
 			return fmt.Errorf("submit branch %s: %w", branch, err)
 		}
-		if status.Submitted {
-			branchesToComment = append(branchesToComment, branch)
-		}
+		resolvedUpstreams[branch] = status.upstreamBranch
 	}
 
-	if len(branchesToComment) == 0 || opts.DryRun {
-		return nil // nothing to do
-	}
-
-	return updateNavigationComments(
-		ctx,
-		h.Store, h.Service, h.Log,
-		opts.NavComment,
-		opts.NavCommentSync,
-		opts.NavCommentDownstack,
-		opts.NavCommentMarker,
-		branchesToComment,
-		h.upstreamRepository,
-	)
+	return nil
 }
 
 // Request is a request to submit a single branch to a remote repository.
@@ -552,6 +299,10 @@ type Request struct {
 
 	// Title and Body are the title and body of the change request.
 	Title, Body string // optional
+
+	// MessageFile supplies the complete message for a new change request.
+	// When set, Title and Body are not used.
+	MessageFile MessageFile // optional
 
 	// Options are the options for the submit operation.
 	Options *Options // optional
@@ -563,7 +314,7 @@ type Request struct {
 
 // Submit submits a single branch to a remote repository,
 // creating or updating a change request as needed.
-func (h *Handler) Submit(ctx context.Context, req *Request) error {
+func (h *Handler) Submit(ctx context.Context, req *Request) (retErr error) {
 	opts := cmp.Or(req.Options, &Options{})
 	mergeConfiguredOptions(opts)
 	graph := req.BranchGraph
@@ -578,50 +329,67 @@ func (h *Handler) Submit(ctx context.Context, req *Request) error {
 		return err
 	}
 
+	stackUpdates := submitStackUpdates{requestedBranches: []string{req.Branch}}
+	var results []submitResult
+	defer func() {
+		retErr = errors.Join(
+			retErr,
+			h.updateStackRepresentations(
+				ctx,
+				opts,
+				&stackUpdates,
+				results,
+			),
+		)
+	}()
+
 	status, err := h.submitBranch(
 		ctx,
 		graph,
 		req.Branch,
 		&submitOptions{
-			Options: opts,
-			Title:   req.Title,
-			Body:    req.Body,
+			Options:      opts,
+			Title:        req.Title,
+			Body:         req.Body,
+			MessageFile:  req.MessageFile,
+			stackUpdates: &stackUpdates,
 		},
 	)
+	results = append(results, status)
 	if err != nil {
 		return fmt.Errorf("submit branch %s: %w", req.Branch, err)
 	}
 
-	if !status.Submitted || opts.DryRun {
-		// Nothing was submitted, so nothing to do.
-		return nil
-	}
-
-	return updateNavigationComments(
-		ctx,
-		h.Store, h.Service, h.Log,
-		opts.NavComment,
-		opts.NavCommentSync,
-		opts.NavCommentDownstack,
-		opts.NavCommentMarker,
-		[]string{req.Branch},
-		h.upstreamRepository,
-	)
+	return nil
 }
 
-type submitStatus struct {
-	// Submitted indicates whether the branch was actually submitted
-	// to a Forge.
-	//
-	// If yes, comments will be added or updated
-	// based on the NavComment option.
-	Submitted bool
+// submitResult remains meaningful on failure.
+// An incomplete change still gets navigation updates,
+// but cannot seed native stack reconciliation.
+type submitResult struct {
+	branch         string
+	change         changeSubmission
+	upstreamBranch string
 }
+
+// changeSubmission describes eligibility for post-submit stack updates.
+// It does not claim that local bookkeeping succeeded:
+// those failures remain warnings, and stack updates reload the persisted graph.
+type changeSubmission int
+
+const (
+	changeNotSelected changeSubmission = iota // push-only, skipped, or not reached
+	changeIncomplete                          // selected for creation or update
+	changeComplete                            // selected branch returned without error
+)
 
 type submitOptions struct {
 	*Options
 
-	Title, Body string
+	Title, Body  string
+	MessageFile  MessageFile
+	upstreamBase string
+	stackUpdates *submitStackUpdates
 }
 
 func (h *Handler) submitBranch(
@@ -629,7 +397,13 @@ func (h *Handler) submitBranch(
 	graph *spice.BranchGraph,
 	branchToSubmit string,
 	opts *submitOptions,
-) (status submitStatus, err error) {
+) (status submitResult, err error) {
+	status.branch = branchToSubmit
+	defer func() {
+		if status.change == changeIncomplete && err == nil {
+			status.change = changeComplete
+		}
+	}()
 	if branchToSubmit == h.Store.Trunk() {
 		return status, errors.New("cannot submit trunk")
 	}
@@ -640,16 +414,6 @@ func (h *Handler) submitBranch(
 	branch, ok := graph.Lookup(branchToSubmit)
 	if !ok {
 		return status, fmt.Errorf("lookup branch: %w", state.ErrNotExist)
-	}
-
-	// Various code paths down below should call this
-	// if the branch is being published as a CR (new or existing)
-	// so it should get a nav comment.
-	var _needsNavCommentOnce sync.Once
-	needsNavComment := func() {
-		_needsNavCommentOnce.Do(func() {
-			status.Submitted = true
-		})
 	}
 
 	commitHash, err := h.Repository.PeelToCommit(ctx, branchToSubmit)
@@ -674,6 +438,9 @@ func (h *Handler) submitBranch(
 	if err != nil {
 		return status, fmt.Errorf("resolve upstream branch: %w", err)
 	}
+	defer func() {
+		status.upstreamBranch = upstreamBranch
+	}()
 
 	// Similarly, if the branch's base has a different name upstream,
 	// use that name instead.
@@ -683,7 +450,7 @@ func (h *Handler) submitBranch(
 		if !ok {
 			return status, fmt.Errorf("lookup base branch: %w", state.ErrNotExist)
 		}
-		upstreamBase = cmp.Or(baseBranch.UpstreamBranch, branch.Base)
+		upstreamBase = cmp.Or(opts.upstreamBase, baseBranch.UpstreamBranch, branch.Base)
 	}
 
 	var existingChange *forge.FindChangeItem
@@ -723,7 +490,7 @@ func (h *Handler) submitBranch(
 			// If not, pretend we didn't find a matching CR.
 			if upstreamBranch == "" {
 				change := changes[0]
-				if change.HeadHash != commitHash {
+				if !h.changeHeadMatchesCommit(ctx, change.HeadHash, commitHash) {
 					log.Infof("%v: Ignoring CR %v with the same branch name: remote HEAD (%v) does not match local HEAD (%v)",
 						branchToSubmit, change.ID, change.HeadHash, commitHash)
 					log.Infof("%v: If this is incorrect, cancel this operation, 'git pull' the branch, and retry.", branchToSubmit)
@@ -880,9 +647,10 @@ func (h *Handler) submitBranch(
 				branch.Base,
 				h.Store.Trunk(),
 			) {
-				log.Warnf("Branch %[1]s is not restacked."+
-					" Run '%[2]s branch restack --branch=%[1]s'"+
-					" to fix this.",
+				log.Warnf(
+					"Branch %[1]s is not restacked."+
+						" Run '%[2]s branch restack --branch=%[1]s'"+
+						" to fix this.",
 					branchToSubmit, cli.Name(),
 				)
 			} else {
@@ -950,7 +718,7 @@ func (h *Handler) submitBranch(
 
 		var prepared *preparedBranch
 		if opts.Publish {
-			needsNavComment()
+			status.change = changeIncomplete
 
 			remoteRepo, err := h.upstreamRepository(ctx)
 			if err != nil {
@@ -1033,14 +801,20 @@ func (h *Handler) submitBranch(
 		}
 
 		if prepared != nil {
-			changeID, changeURL, err := prepared.Publish(ctx)
+			created, err := prepared.Publish(ctx)
 			if err != nil {
 				return status, fmt.Errorf("publish change: %w", err)
 			}
-			openURL = changeURL
+			// Prepared information recovers user input after failed creation.
+			// Remote creation succeeded; local association is a separate step.
+			if err := h.Store.ClearPreparedBranch(ctx, branchToSubmit); err != nil {
+				log.Warn("Could not clear prepared branch", "error", err)
+			}
+			log.Infof("Created %v: %s", created.ID, created.URL)
+			openURL = created.URL
 
 			remoteRepo := prepared.remoteRepo
-			changeMeta, err := remoteRepo.NewChangeMetadata(ctx, changeID)
+			changeMeta, err := remoteRepo.NewChangeMetadata(ctx, created.ID)
 			if err != nil {
 				return status, fmt.Errorf("get change metadata: %w", err)
 			}
@@ -1057,7 +831,7 @@ func (h *Handler) submitBranch(
 			log.Infof("Pushed %s", branchToSubmit)
 		}
 	} else {
-		needsNavComment()
+		status.change = changeIncomplete
 		if upstreamBranch == "" {
 			log.Error("No upstream branch was found for branch %v with existing CR %v", branchToSubmit, existingChange.ID)
 			log.Error("We cannot update the CR without an upstream branch name.")
@@ -1075,7 +849,8 @@ func (h *Handler) submitBranch(
 		pull := existingChange
 		openURL = pull.URL
 		var updates []string
-		if pull.HeadHash != commitHash {
+		headMatches := h.changeHeadMatchesCommit(ctx, pull.HeadHash, commitHash)
+		if !headMatches {
 			updates = append(updates, "push branch")
 		}
 		if pull.BaseName != upstreamBase {
@@ -1154,48 +929,6 @@ func (h *Handler) submitBranch(
 			}
 		}
 
-		// If --regenerate-message and a message generator is
-		// configured, run it to regenerate the title and body.
-		//
-		// Unlike the create path, this is gated on the explicit
-		// --regenerate-message flag rather than --fill/autoFill:
-		// overwriting an existing CR's description should be a
-		// deliberate action, not a side effect of every submit.
-		var (
-			updatedSubject string
-			updatedBody    *string
-		)
-		if opts.RegenerateMessage && h.Config != nil {
-			if script := h.Config.MessageGenerator(); script != "" {
-				env := scriptrun.EnvFor(
-					scriptrun.OpBranchSubmit, branchToSubmit, branch.Base,
-				)
-				env = append(env,
-					"GS_MESSAGE_KIND=branch",
-					"GS_MESSAGE_UPDATE=true",
-					"GS_TITLE="+pull.Subject,
-					"GS_BODY="+pull.Body,
-				)
-				result, err := (&msggen.Runner{
-					Log:  log,
-					Args: h.Args,
-				}).Run(
-					ctx, script, h.RepoRoot, env,
-				)
-				if err != nil {
-					log.Warn(
-						"Message generator failed",
-						"error", err,
-					)
-				} else {
-					updatedSubject = result.Title
-					updatedBody = &result.Body
-					updates = append(updates,
-						"update title/body")
-				}
-			}
-		}
-
 		if len(updates) == 0 {
 			log.Infof("CR %v is up-to-date: %s", pull.ID, pull.URL)
 			return status, nil
@@ -1209,7 +942,7 @@ func (h *Handler) submitBranch(
 			return status, nil
 		}
 
-		if pull.HeadHash != commitHash {
+		if !headMatches {
 			pushOpts := git.PushOptions{
 				Remote: remote.Push,
 				Refspec: git.Refspec(
@@ -1235,19 +968,35 @@ func (h *Handler) submitBranch(
 
 		if len(updates) > 0 {
 			editOpts := forge.EditChangeOptions{
-				Base:         upstreamBase,
 				Draft:        opts.Draft,
-				Subject:      updatedSubject,
-				Body:         updatedBody,
 				AddLabels:    labels,
 				AddReviewers: reviewers,
 				AddAssignees: opts.Assignees,
 			}
-
 			// remoteRepo is guaranteed to be available at this point.
 			remoteRepo, err := h.upstreamRepository(ctx)
 			if err != nil {
 				return status, fmt.Errorf("edit CR %v: %w", pull.ID, err)
+			}
+
+			// Native stack providers may need to dissolve an existing stack before
+			// changing a pull request base. Defer that base mutation to their
+			// planned transaction; unsupported planning falls back to this same
+			// ordinary EditChange operation after the submit loop.
+			if pull.BaseName != upstreamBase {
+				if _, ok := remoteRepo.(forge.StackRepository); ok && opts.stackUpdates != nil {
+					opts.stackUpdates.deferredBases = append(
+						opts.stackUpdates.deferredBases,
+						deferredBaseUpdate{
+							branch:     branchToSubmit,
+							repository: remoteRepo,
+							change:     pull.ID,
+							base:       upstreamBase,
+						},
+					)
+				} else {
+					editOpts.Base = upstreamBase
+				}
 			}
 
 			if err := remoteRepo.EditChange(ctx, pull.ID, editOpts); err != nil {
@@ -1259,6 +1008,24 @@ func (h *Handler) submitBranch(
 	}
 
 	return status, nil
+}
+
+func (h *Handler) changeHeadMatchesCommit(
+	ctx context.Context,
+	changeHead git.Hash,
+	commit git.Hash,
+) bool {
+	// Exact hashes are the common case, so avoid invoking Git when both sides
+	// already agree.
+	if changeHead == commit {
+		return true
+	}
+
+	// Bitbucket Cloud reports abbreviated commit hashes. Resolve every
+	// non-exact head through Git instead of accepting a raw string prefix;
+	// Git rejects unknown or ambiguous abbreviations.
+	resolved, err := h.Repository.PeelToCommit(ctx, changeHead.String())
+	return err == nil && resolved == commit
 }
 
 // resolveUpstreamBranch determines the effective upstream branch name to use
@@ -1277,6 +1044,14 @@ func (h *Handler) resolveUpstreamBranch(
 	// Stored upstream branch state wins because it reflects the branch name
 	// previously used for submission, even if the local branch was renamed.
 	if storedUpstream != "" {
+		if storedUpstream == h.Store.Trunk() {
+			return "", fmt.Errorf(
+				"refusing to push branch %q to trunk %q; "+
+					"run '%s branch untrack %s' and track the branch again",
+				branch, storedUpstream, cli.Name(), branch,
+			)
+		}
+
 		return storedUpstream, nil
 	}
 
@@ -1292,6 +1067,14 @@ func (h *Handler) resolveUpstreamBranch(
 	}
 
 	if b, ok := strings.CutPrefix(upstream, remote+"/"); ok {
+		if b == h.Store.Trunk() {
+			return "", fmt.Errorf(
+				"refusing to push branch %q to trunk %q; "+
+					"run 'git branch --unset-upstream %s'",
+				branch, b, branch,
+			)
+		}
+
 		h.Log.Infof("%v: Using upstream name '%v'", branch, b)
 		h.Log.Infof("%v: If this is incorrect, cancel this operation and run 'git branch --unset-upstream %v'.", branch, branch)
 		return b, nil
@@ -1310,6 +1093,15 @@ func (h *Handler) prepareBranch(
 	pushRepository forge.RepositoryID,
 	opts *submitOptions,
 ) (*preparedBranch, error) {
+	if opts.MessageFile != "" {
+		title, body, err := opts.MessageFile.read()
+		if err != nil {
+			return nil, fmt.Errorf("read message file %q: %w", opts.MessageFile, err)
+		}
+		opts.Title = title
+		opts.Body = body
+	}
+
 	// Fetch the template while we're prompting the other fields.
 	changeTemplatesCh := make(chan []*forge.ChangeTemplate, 1)
 	go func() {
@@ -1344,7 +1136,8 @@ func (h *Handler) prepareBranch(
 				WithDescription(
 					fmt.Sprintf("Branch %s has no changes compared to its base (%s). "+
 						"Submitting it will create an empty change request. "+
-						"This is usually not what you want to do.", branchToSubmit, baseBranch)).
+						"This is usually not what you want to do.", branchToSubmit, baseBranch),
+				).
 				WithValue(&submitNoChanges)
 			if err := ui.Run(h.View, field); err != nil {
 				return nil, fmt.Errorf("run prompt: %w", err)
@@ -1388,37 +1181,6 @@ func (h *Handler) prepareBranch(
 		}
 	}
 
-	// If --fill and a message generator is configured,
-	// run it to produce the title and body.
-	if opts.Fill && opts.Title == "" && opts.Body == "" &&
-		h.Config != nil {
-		if script := h.Config.MessageGenerator(); script != "" {
-			env := scriptrun.EnvFor(
-				scriptrun.OpBranchSubmit, branchToSubmit, baseBranch,
-			)
-			env = append(env,
-				"GS_MESSAGE_KIND=branch",
-				"GS_MESSAGE_UPDATE=false",
-			)
-			result, err := (&msggen.Runner{
-				Log:  h.Log,
-				Args: h.Args,
-			}).Run(
-				ctx, script, h.RepoRoot, env,
-			)
-			if err != nil {
-				h.Log.Warn(
-					"Message generator failed,"+
-						" falling back to default",
-					"error", err,
-				)
-			} else {
-				opts.Title = result.Title
-				opts.Body = result.Body
-			}
-		}
-	}
-
 	var fields []ui.Field
 	form := newBranchSubmitForm(ctx, h.Service, h.Worktree, remoteRepo, h.Log, opts.Options)
 	if opts.Title == "" {
@@ -1426,7 +1188,7 @@ func (h *Handler) prepareBranch(
 		fields = append(fields, form.titleField(&opts.Title, msgs))
 	}
 
-	if opts.Body == "" {
+	if opts.Body == "" && opts.MessageFile == "" {
 		opts.Body = defaultBody.String()
 		if opts.Fill {
 			// If the user selected --fill,
@@ -1468,7 +1230,8 @@ func (h *Handler) prepareBranch(
 				WithTitle("Recover previously filled information?").
 				WithDescription(
 					"We found previously filled information for this branch.\n" +
-						"Would you like to recover and edit it?")
+						"Would you like to recover and edit it?",
+				)
 			if err := ui.Run(h.View, f); err != nil {
 				return nil, fmt.Errorf("prompt for recovery: %w", err)
 			}
@@ -1514,7 +1277,6 @@ func (h *Handler) prepareBranch(
 		base:           upstreamBase,
 		pushRepository: pushRepository,
 		remoteRepo:     remoteRepo,
-		store:          h.Store,
 		log:            h.Log,
 		labels:         effectiveLabels(opts.Options, true /* isCreate */),
 		reviewers:      effectiveReviewers(opts.Options, draft),
@@ -1563,11 +1325,13 @@ type preparedBranch struct {
 
 	pushRepository forge.RepositoryID
 	remoteRepo     forge.Repository
-	store          Store
 	log            *silog.Logger
 }
 
-func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, error) {
+// Publish creates the remote change.
+// The caller owns clearing saved input
+// and associating the created change with the local branch.
+func (b *preparedBranch) Publish(ctx context.Context) (forge.SubmitChangeResult, error) {
 	result, err := b.remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
 		Subject:        b.Subject,
 		Body:           b.Body,
@@ -1586,15 +1350,10 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, e
 			b.log.Errorf("%v: cannot be submitted because base branch %q does not exist in the remote.", b.Name, b.base)
 			b.log.Errorf("Try submitting the base branch first:")
 			b.log.Errorf("  %s branch submit --branch=%s", cli.Name(), b.base)
-			return nil, "", fmt.Errorf("create change: %w", err)
+			return forge.SubmitChangeResult{}, fmt.Errorf("create change: %w", err)
 		}
-		return nil, "", fmt.Errorf("create change: %w", err)
+		return forge.SubmitChangeResult{}, fmt.Errorf("create change: %w", err)
 	}
 
-	if err := b.store.ClearPreparedBranch(ctx, b.Name); err != nil {
-		b.log.Warn("Could not clear prepared branch", "error", err)
-	}
-
-	b.log.Infof("Created %v: %s", result.ID, result.URL)
-	return result.ID, result.URL, nil
+	return result, nil
 }

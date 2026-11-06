@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'Navigation commands will no longer print restack warnings with --dry-run.'
-time: 2026-06-20T07:44:38.439383-07:00

@@ -2,7 +2,7 @@ package github
 
 import (
 	"bytes"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"io"
 	"net/http"
@@ -66,6 +66,27 @@ func TestAuthenticationToken_tokenSource(t *testing.T) {
 		got, err := src.Token()
 		require.NoError(t, err)
 		assert.Equal(t, "test-token", got.AccessToken)
+	})
+}
+
+func TestNewGatewayTokenSource(t *testing.T) {
+	t.Run("AccessToken", func(t *testing.T) {
+		source := newGatewayTokenSource(
+			oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "token"}),
+		)
+
+		got, err := source.Token(t.Context())
+		require.NoError(t, err)
+		assert.Equal(t, "token", got)
+	})
+
+	t.Run("GitHubCLI", func(t *testing.T) {
+		cliSource := &CLITokenSource{}
+		source := newGatewayTokenSource(
+			cliSource,
+		)
+
+		assert.Equal(t, gatewayCLITokenSource{source: cliSource}, source)
 	})
 }
 
@@ -182,7 +203,7 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 
 		switch r.Header.Get("Accept") {
 		case "application/json":
-			_ = json.NewEncoder(w).Encode(result)
+			_ = json.MarshalWrite(w, result)
 		default:
 			q := make(url.Values)
 			for k, v := range result {
@@ -192,12 +213,13 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 		}
 	})
 
-	srv := httptest.NewServer(mux)
+	srv := httptest.NewTLSServer(mux)
 	defer srv.Close()
 
 	tok, err := (&DeviceFlowAuthenticator{
-		ClientID: "client-id",
-		Scopes:   []string{"scope"},
+		HTTPClient: srv.Client(),
+		ClientID:   "client-id",
+		Scopes:     []string{"scope"},
 		Endpoint: oauth2.Endpoint{
 			DeviceAuthURL: srv.URL + "/device/code",
 			TokenURL:      srv.URL + "/oauth/access_token",

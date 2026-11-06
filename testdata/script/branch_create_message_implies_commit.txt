@@ -31,8 +31,8 @@ cmp stdout $WORK/golden/graph.txt
 foo
 
 -- golden/ll-feat1.txt --
-┏━■ feat1 ◀
-┃   aadd769 Add foo (now)
+┏━━■ feat1 ◀
+┃    aadd769 Add foo (now)
 main
 -- golden/graph.txt --
 * aadd769 (HEAD -> feat1) Add foo

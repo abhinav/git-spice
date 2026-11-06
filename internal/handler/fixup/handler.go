@@ -23,7 +23,7 @@ import (
 
 // RestackHandler is a subset of the restack.Handler interface.
 type RestackHandler interface {
-	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
+	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
 }
 
 var _ RestackHandler = (*restack.Handler)(nil)
@@ -103,6 +103,8 @@ type Options struct {
 	// CommitVerbose is the verbosity level
 	// for the editor diff.
 	CommitVerbose bool `hidden:"" config:"@commit.verbose" default:"false"`
+
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"commitFixup.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
 
 	// TODO: -a/--all option to stage all changes?
 }
@@ -266,8 +268,15 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 		return fmt.Errorf("rebase onto new commit: %w", err)
 	}
 
-	return h.Restack.RestackUpstack(ctx, req.TargetBranch, &restack.UpstackOptions{
-		SkipStart: true,
+	if req.Options.Restack.None() {
+		return nil
+	}
+
+	return h.Restack.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: req.TargetBranch,
+		Options: &restack.UpstackOptions{
+			SkipStart: true,
+		},
 	})
 }
 

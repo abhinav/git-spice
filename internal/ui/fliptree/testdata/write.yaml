@@ -7,13 +7,6 @@
     b: [c]
     c: [d]
     d: [e]
-  want: |2
-            ┏━□ e
-          ┏━┻□ d
-        ┏━┻□ c
-      ┏━┻□ b
-    ┏━┻□ a
-    main
   wantOffsets:
     a: 4
     b: 3
@@ -21,21 +14,19 @@
     d: 1
     e: 0
     main: 5
+  want: |2
+            ┏━━□ e
+          ┏━┻□ d
+        ┏━┻□ c
+      ┏━┻□ b
+    ┏━┻□ a
+    main
 
 - name: multiple roots
   roots: [foo, bar]
   graph:
     foo: [a, b, c]
     bar: [d, e, f]
-  want: |
-    ┏━□ a
-    ┣━□ b
-    ┣━□ c
-    foo
-    ┏━□ d
-    ┣━□ e
-    ┣━□ f
-    bar
   wantOffsets:
     a: 0
     b: 1
@@ -45,6 +36,32 @@
     e: 5
     f: 6
     foo: 3
+  want: |
+    ┏━━□ a
+    ┣━━□ b
+    ┣━━□ c
+    foo
+    ┏━━□ d
+    ┣━━□ e
+    ┣━━□ f
+    bar
+
+- name: leaf and parent siblings
+  roots: [root]
+  graph:
+    root: [parent, leaf]
+    parent: [child]
+    leaf: []
+  wantOffsets:
+    parent: 0
+    leaf: 0
+    child: 2
+    root: 8
+  want: |2
+      ┏━━□ child
+    ┏━┻□ parent
+    ┣━━□ leaf
+    root
 
 - name: linear multline
   roots: [main]
@@ -59,9 +76,15 @@
     b: "b\n|\nmore stuff"
     c: "c\n\nboop"
     d: "d\nbeep"
+  wantOffsets:
+    a: 8
+    b: 5
+    c: 2
+    d: 0
+    main: 11
   want: |2
-          ┏━□ d
-          ┃   beep
+          ┏━━□ d
+          ┃    beep
         ┏━┻□ c
         ┃
         ┃    boop
@@ -73,12 +96,6 @@
     ┃    stuff
     main
     main stuff
-  wantOffsets:
-    a: 8
-    b: 5
-    c: 2
-    d: 0
-    main: 11
 
 - name: many lines
   roots: [main]
@@ -90,50 +107,50 @@
     d: "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\nq\nr\ns\nt\nu\nv\nw\nx"
   graph:
     main: [a, b, c, d]
-  want: |
-    ┏━□ x
-    ┃   y
-    ┃   z
-    ┣━□ b	1
-    ┃   	2
-    ┃   	3
-    ┣━□ i
-    ┃   ii
-    ┃   iii
-    ┃   iiii
-    ┃   iiiii
-    ┃   iiiiii
-    ┣━□ a
-    ┃   b
-    ┃   c
-    ┃   d
-    ┃   e
-    ┃   f
-    ┃   g
-    ┃   h
-    ┃   i
-    ┃   j
-    ┃   k
-    ┃   l
-    ┃   m
-    ┃   n
-    ┃   o
-    ┃   p
-    ┃   q
-    ┃   r
-    ┃   s
-    ┃   t
-    ┃   u
-    ┃   v
-    ┃   w
-    ┃   x
-    main
   wantOffsets:
     a: 0
     b: 3
     c: 6
     d: 12
     main: 36
+  want: |
+    ┏━━□ x
+    ┃    y
+    ┃    z
+    ┣━━□ b	1
+    ┃    	2
+    ┃    	3
+    ┣━━□ i
+    ┃    ii
+    ┃    iii
+    ┃    iiii
+    ┃    iiiii
+    ┃    iiiiii
+    ┣━━□ a
+    ┃    b
+    ┃    c
+    ┃    d
+    ┃    e
+    ┃    f
+    ┃    g
+    ┃    h
+    ┃    i
+    ┃    j
+    ┃    k
+    ┃    l
+    ┃    m
+    ┃    n
+    ┃    o
+    ┃    p
+    ┃    q
+    ┃    r
+    ┃    s
+    ┃    t
+    ┃    u
+    ┃    v
+    ┃    w
+    ┃    x
+    main
 
 - name: big graph
   roots: [main]
@@ -151,86 +168,6 @@
     j: [aq, ar, as, at, au, av, aw, ax, ay, az]
     k: [ba, bb, bc, bd, be, bf, bg, bh, bi, bj, bk, bl]
     l: [bm, bn, bo, bp, bq, br, bs, bt, bu, bv, bw, bx, by, bz]
-  want: |2
-        ┏━□ m
-        ┣━□ n
-        ┣━□ o
-      ┏━┻□ d
-      ┃ ┏━□ p
-      ┃ ┣━□ q
-      ┃ ┣━□ r
-      ┣━┻□ e
-      ┃ ┏━□ s
-      ┃ ┣━□ t
-      ┃ ┣━□ u
-      ┃ ┣━□ v
-      ┃ ┣━□ w
-      ┃ ┣━□ x
-      ┣━┻□ f
-    ┏━┻□ a
-    ┃   ┏━□ y
-    ┃   ┣━□ z
-    ┃   ┣━□ aa
-    ┃   ┣━□ ab
-    ┃ ┏━┻□ g
-    ┃ ┃ ┏━□ ac
-    ┃ ┃ ┣━□ ad
-    ┃ ┃ ┣━□ ae
-    ┃ ┃ ┣━□ af
-    ┃ ┃ ┣━□ ag
-    ┃ ┃ ┣━□ ah
-    ┃ ┣━┻□ h
-    ┣━┻□ b
-    ┃   ┏━□ ai
-    ┃   ┣━□ aj
-    ┃   ┣━□ ak
-    ┃   ┣━□ al
-    ┃   ┣━□ am
-    ┃   ┣━□ an
-    ┃   ┣━□ ao
-    ┃   ┣━□ ap
-    ┃ ┏━┻□ i
-    ┃ ┃ ┏━□ aq
-    ┃ ┃ ┣━□ ar
-    ┃ ┃ ┣━□ as
-    ┃ ┃ ┣━□ at
-    ┃ ┃ ┣━□ au
-    ┃ ┃ ┣━□ av
-    ┃ ┃ ┣━□ aw
-    ┃ ┃ ┣━□ ax
-    ┃ ┃ ┣━□ ay
-    ┃ ┃ ┣━□ az
-    ┃ ┣━┻□ j
-    ┃ ┃ ┏━□ ba
-    ┃ ┃ ┣━□ bb
-    ┃ ┃ ┣━□ bc
-    ┃ ┃ ┣━□ bd
-    ┃ ┃ ┣━□ be
-    ┃ ┃ ┣━□ bf
-    ┃ ┃ ┣━□ bg
-    ┃ ┃ ┣━□ bh
-    ┃ ┃ ┣━□ bi
-    ┃ ┃ ┣━□ bj
-    ┃ ┃ ┣━□ bk
-    ┃ ┃ ┣━□ bl
-    ┃ ┣━┻□ k
-    ┃ ┃ ┏━□ bm
-    ┃ ┃ ┣━□ bn
-    ┃ ┃ ┣━□ bo
-    ┃ ┃ ┣━□ bp
-    ┃ ┃ ┣━□ bq
-    ┃ ┃ ┣━□ br
-    ┃ ┃ ┣━□ bs
-    ┃ ┃ ┣━□ bt
-    ┃ ┃ ┣━□ bu
-    ┃ ┃ ┣━□ bv
-    ┃ ┃ ┣━□ bw
-    ┃ ┃ ┣━□ bx
-    ┃ ┃ ┣━□ by
-    ┃ ┃ ┣━□ bz
-    ┃ ┣━┻□ l
-    ┣━┻□ c
-    main
   wantOffsets:
     a: 15
     aa: 18
@@ -311,3 +248,83 @@
     x: 13
     "y": 16
     z: 17
+  want: |2
+        ┏━━□ m
+        ┣━━□ n
+        ┣━━□ o
+      ┏━┻□ d
+      ┃ ┏━━□ p
+      ┃ ┣━━□ q
+      ┃ ┣━━□ r
+      ┣━┻□ e
+      ┃ ┏━━□ s
+      ┃ ┣━━□ t
+      ┃ ┣━━□ u
+      ┃ ┣━━□ v
+      ┃ ┣━━□ w
+      ┃ ┣━━□ x
+      ┣━┻□ f
+    ┏━┻□ a
+    ┃   ┏━━□ y
+    ┃   ┣━━□ z
+    ┃   ┣━━□ aa
+    ┃   ┣━━□ ab
+    ┃ ┏━┻□ g
+    ┃ ┃ ┏━━□ ac
+    ┃ ┃ ┣━━□ ad
+    ┃ ┃ ┣━━□ ae
+    ┃ ┃ ┣━━□ af
+    ┃ ┃ ┣━━□ ag
+    ┃ ┃ ┣━━□ ah
+    ┃ ┣━┻□ h
+    ┣━┻□ b
+    ┃   ┏━━□ ai
+    ┃   ┣━━□ aj
+    ┃   ┣━━□ ak
+    ┃   ┣━━□ al
+    ┃   ┣━━□ am
+    ┃   ┣━━□ an
+    ┃   ┣━━□ ao
+    ┃   ┣━━□ ap
+    ┃ ┏━┻□ i
+    ┃ ┃ ┏━━□ aq
+    ┃ ┃ ┣━━□ ar
+    ┃ ┃ ┣━━□ as
+    ┃ ┃ ┣━━□ at
+    ┃ ┃ ┣━━□ au
+    ┃ ┃ ┣━━□ av
+    ┃ ┃ ┣━━□ aw
+    ┃ ┃ ┣━━□ ax
+    ┃ ┃ ┣━━□ ay
+    ┃ ┃ ┣━━□ az
+    ┃ ┣━┻□ j
+    ┃ ┃ ┏━━□ ba
+    ┃ ┃ ┣━━□ bb
+    ┃ ┃ ┣━━□ bc
+    ┃ ┃ ┣━━□ bd
+    ┃ ┃ ┣━━□ be
+    ┃ ┃ ┣━━□ bf
+    ┃ ┃ ┣━━□ bg
+    ┃ ┃ ┣━━□ bh
+    ┃ ┃ ┣━━□ bi
+    ┃ ┃ ┣━━□ bj
+    ┃ ┃ ┣━━□ bk
+    ┃ ┃ ┣━━□ bl
+    ┃ ┣━┻□ k
+    ┃ ┃ ┏━━□ bm
+    ┃ ┃ ┣━━□ bn
+    ┃ ┃ ┣━━□ bo
+    ┃ ┃ ┣━━□ bp
+    ┃ ┃ ┣━━□ bq
+    ┃ ┃ ┣━━□ br
+    ┃ ┃ ┣━━□ bs
+    ┃ ┃ ┣━━□ bt
+    ┃ ┃ ┣━━□ bu
+    ┃ ┃ ┣━━□ bv
+    ┃ ┃ ┣━━□ bw
+    ┃ ┃ ┣━━□ bx
+    ┃ ┃ ┣━━□ by
+    ┃ ┃ ┣━━□ bz
+    ┃ ┣━┻□ l
+    ┣━┻□ c
+    main

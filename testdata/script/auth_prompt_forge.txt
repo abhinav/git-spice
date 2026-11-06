@@ -3,9 +3,14 @@
 as 'Test <test@example.com>'
 at '2024-07-01T04:30:32Z'
 
-shamhub init
+shamhub-setup
 shamhub register alice
 env SHAMHUB_USERNAME=alice
+
+mkdir repo
+cd repo
+git init
+git remote add origin $SHAMHUB_URL/repo-only
 
 env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
 gs auth login
@@ -15,7 +20,10 @@ cmp $WORK/robot.actual $WORK/robot.golden
 ===
 > Select a Forge: 
 >
-> ▶ bitbucket
+> ▶ azuredevops
+>   bitbucket
+>   forgejo
+>   gitea
 >   github
 >   gitlab
 >   shamhub

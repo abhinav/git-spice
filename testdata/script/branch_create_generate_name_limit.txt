@@ -21,6 +21,6 @@ cmp stderr $WORK/golden/ll.txt
 -- repo/feature.txt --
 This is a feature file.
 -- golden/ll.txt --
-┏━■ add-a-very-long-and-descriptive-feature-name ◀
-┃   72d6161 Add a very long and descriptive feature name (now)
+┏━━■ add-a-very-long-and-descriptive-feature-name ◀
+┃    72d6161 Add a very long and descriptive feature name (now)
 main

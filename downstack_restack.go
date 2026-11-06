@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -44,5 +45,7 @@ func (cmd *downstackRestackCmd) Run(
 		return errors.New("nothing to restack below trunk")
 	}
 
-	return handler.RestackDownstack(ctx, cmd.Branch)
+	return handler.RestackDownstack(ctx, &restack.DownstackRequest{
+		Branch: cmd.Branch,
+	})
 }

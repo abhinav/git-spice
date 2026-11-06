@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -14,36 +16,51 @@ import (
 type branchMergeCmd struct {
 	merge.Options
 
-	Branch string `placeholder:"NAME" help:"Branch to merge" predictor:"trackedBranches"`
+	Branches []string `name:"branch" placeholder:"NAME" help:"Branches to merge. May be repeated." predictor:"trackedBranches"`
 }
 
 func (*branchMergeCmd) Help() string {
-	return text.Dedent(`
+	return text.Dedent(fmt.Sprintf(`
 		Merges the CR for the current branch into trunk.
 		Use --branch to merge a different branch.
+		Use --branch multiple times to merge multiple branches.
+		Only the selected branches are merged.
+		All selected branches must be stacked on trunk
+		or on a branch that is also selected.
 
-		The branch must be based directly on trunk.
-		To merge a stacked branch, use 'gs downstack merge'.
+		For example, for the following stack:
 
-		Before merging, waits for merge readiness:
-		the forge must observe the pushed head
-		and report that the CR is ready to merge.
-		Use --ready-timeout to configure the maximum wait.
-	`)
+		       ┌── B
+		     ┌─┴ A
+		    trunk
+
+		This command can merge A alone,
+		or A and B together.
+
+		    %[1]s branch merge --branch A
+		    %[1]s branch merge --branch A --branch B
+
+		It cannot merge B alone, because A is not selected:
+
+		    %[1]s branch merge --branch B // error
+
+		To merge multiple branches in a stack
+		prefer '%[1]s downstack merge' or '%[1]s stack merge'.
+	`, cli.Name())) + _mergeHelpCommon
 }
 
 func (cmd *branchMergeCmd) AfterApply(
 	ctx context.Context,
 	wt *git.Worktree,
 ) error {
-	if cmd.Branch != "" {
+	if len(cmd.Branches) > 0 {
 		return nil
 	}
 	branch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
-	cmd.Branch = branch
+	cmd.Branches = []string{branch}
 	return nil
 }
 
@@ -52,12 +69,12 @@ func (cmd *branchMergeCmd) Run(
 	store *state.Store,
 	mergeHandler MergeHandler,
 ) error {
-	if cmd.Branch == store.Trunk() {
+	if slices.Contains(cmd.Branches, store.Trunk()) {
 		return errors.New("cannot merge trunk")
 	}
 
 	return mergeHandler.MergeBranch(ctx, &merge.BranchMergeRequest{
-		Branch:  cmd.Branch,
-		Options: &cmd.Options,
+		Branches: cmd.Branches,
+		Options:  &cmd.Options,
 	})
 }

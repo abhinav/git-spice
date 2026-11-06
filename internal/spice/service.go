@@ -74,6 +74,11 @@ type Store interface {
 	// or [state.ErrNotExist] if the branch does not exist.
 	LookupBranch(ctx context.Context, name string) (*state.LookupResponse, error)
 
+	// LookupBranches returns branch state for the given branches,
+	// in the same order as the requested branch names.
+	// A MissingKeysError leaves missing entries nil and preserves the others.
+	LookupBranches(ctx context.Context, names []string) ([]*state.LookupResponse, error)
+
 	// BeginBranchTx begins a transaction to modify state
 	// for zero or more branches
 	BeginBranchTx() *state.BranchTx

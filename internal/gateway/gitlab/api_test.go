@@ -92,10 +92,8 @@ func TestClient_MergeRequestCreate(t *testing.T) {
 			"remove_source_branch":true
 		}`)
 		writeJSON(t, w, http.StatusCreated, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:    55,
-				WebURL: "https://gitlab.example.com/captain/warp-core/-/merge_requests/55",
-			},
+			IID:    55,
+			WebURL: "https://gitlab.example.com/captain/warp-core/-/merge_requests/55",
 		})
 	}))
 	defer srv.Close()
@@ -125,15 +123,13 @@ func TestClient_MergeRequestGet(t *testing.T) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55", r.URL.Path)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:                 55,
-				Title:               "Stabilize nacelles",
-				TargetBranch:        "main",
-				Labels:              []string{"engineering"},
-				DetailedMergeStatus: DetailedMergeStatusMergeable,
-				Reviewers: []*BasicUser{
-					{ID: 12, Username: "spock"},
-				},
+			IID:                 55,
+			Title:               "Stabilize nacelles",
+			TargetBranch:        "main",
+			Labels:              []string{"engineering"},
+			DetailedMergeStatus: DetailedMergeStatusMergeable,
+			Reviewers: []*BasicUser{
+				{ID: 12, Username: "spock"},
 			},
 		})
 	}))
@@ -161,11 +157,9 @@ func TestClient_MergeRequestUpdate(t *testing.T) {
 			"state_event":"close"
 		}`)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:          55,
-				Title:        "Draft: Stabilize nacelles",
-				TargetBranch: "release",
-			},
+			IID:          55,
+			Title:        "Draft: Stabilize nacelles",
+			TargetBranch: "release",
 		})
 	}))
 	defer srv.Close()
@@ -204,7 +198,7 @@ func TestClient_MergeRequestList(t *testing.T) {
 		t.Context(),
 		int64(42),
 		&ListProjectMergeRequestsOptions{
-			ListOptions:  ListOptions{PerPage: 20},
+			PerPage:      20,
 			IIDs:         &[]int64{55, 56},
 			OrderBy:      new("updated_at"),
 			State:        new("opened"),
@@ -245,7 +239,7 @@ func TestClient_MergeRequestList_paginated(t *testing.T) {
 
 	var all []*BasicMergeRequest
 	opts := &ListProjectMergeRequestsOptions{
-		ListOptions: ListOptions{PerPage: 2},
+		PerPage: 2,
 	}
 	for {
 		page, resp, err := client.MergeRequestList(t.Context(), int64(42), opts)
@@ -268,10 +262,8 @@ func TestClient_MergeRequestAccept(t *testing.T) {
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/merge", r.URL.Path)
 		assertJSONBody(t, r, `{"should_remove_source_branch":true}`)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:   55,
-				State: "merged",
-			},
+			IID:   55,
+			State: "merged",
 		})
 	}))
 	defer srv.Close()
@@ -295,10 +287,8 @@ func TestClient_MergeRequestAccept_withSHA(t *testing.T) {
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/merge", r.URL.Path)
 		assertJSONBody(t, r, `{"sha":"abc123"}`)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:   55,
-				State: "merged",
-			},
+			IID:   55,
+			State: "merged",
 		})
 	}))
 	defer srv.Close()
@@ -322,10 +312,8 @@ func TestClient_MergeRequestAccept_withSquash(t *testing.T) {
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/merge", r.URL.Path)
 		assertJSONBody(t, r, `{"squash":true}`)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:   55,
-				State: "merged",
-			},
+			IID:   55,
+			State: "merged",
 		})
 	}))
 	defer srv.Close()
@@ -423,11 +411,9 @@ func TestClient_CommitStatusList(t *testing.T) {
 		int64(42),
 		"abc123",
 		&ListCommitStatusesOptions{
-			Ref: &ref,
-			ListOptions: ListOptions{
-				PerPage: 100,
-				Page:    2,
-			},
+			Ref:     &ref,
+			PerPage: 100,
+			Page:    2,
 		},
 	)
 	require.NoError(t, err)
@@ -541,11 +527,9 @@ func TestClient_MergeRequestNoteList(t *testing.T) {
 		int64(42),
 		55,
 		&ListMergeRequestNotesOptions{
-			ListOptions: ListOptions{
-				PerPage: 20,
-				Page:    2,
-			},
-			Sort: new("asc"),
+			PerPage: 20,
+			Page:    2,
+			Sort:    new("asc"),
 		},
 	)
 	require.NoError(t, err)
@@ -581,17 +565,25 @@ func TestClient_MergeRequestDiscussionList(t *testing.T) {
 		w.Header().Set("X-Page", "2")
 		w.Header().Set("X-Next-Page", "3")
 		w.Header().Set("X-Total-Pages", "4")
-		writeJSON(t, w, http.StatusOK, []*Discussion{
-			{
-				ID: "discussion-1",
-				Notes: []*DiscussionNote{
-					{Resolvable: true, Resolved: false},
+		writeJSON(t, w, http.StatusOK, []any{
+			map[string]any{
+				"id": "discussion-1",
+				"notes": []any{
+					map[string]any{
+						"resolvable": true,
+						"resolved":   false,
+						"position": map[string]any{
+							"position_type": "file",
+							"new_path":      "warp.go",
+							"old_path":      "warp.go",
+						},
+					},
 				},
 			},
-			{
-				ID: "discussion-2",
-				Notes: []*DiscussionNote{
-					{Resolvable: true, Resolved: true},
+			map[string]any{
+				"id": "discussion-2",
+				"notes": []any{
+					map[string]any{"resolvable": true, "resolved": true},
 				},
 			},
 		})
@@ -604,10 +596,8 @@ func TestClient_MergeRequestDiscussionList(t *testing.T) {
 		int64(42),
 		55,
 		&ListMergeRequestDiscussionsOptions{
-			ListOptions: ListOptions{
-				PerPage: 100,
-				Page:    2,
-			},
+			PerPage: 100,
+			Page:    2,
 		},
 	)
 	require.NoError(t, err)
@@ -616,10 +606,207 @@ func TestClient_MergeRequestDiscussionList(t *testing.T) {
 	require.Len(t, discussions[0].Notes, 1)
 	assert.True(t, discussions[0].Notes[0].Resolvable)
 	assert.False(t, discussions[0].Notes[0].Resolved)
+	require.NotNil(t, discussions[0].Notes[0].Position)
+	assert.Equal(t, "file", discussions[0].Notes[0].Position.PositionType)
 	assert.Equal(t, 100, resp.ItemsPerPage)
 	assert.Equal(t, 2, resp.CurrentPage)
 	assert.Equal(t, 3, resp.NextPage)
 	assert.Equal(t, 4, resp.TotalPages)
+}
+
+func TestClient_MergeRequestDiscussionCreate(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/discussions", r.URL.Path)
+		assertJSONBody(t, r, `{
+			"body":"Check this range.",
+			"position":{
+				"base_sha":"base",
+				"head_sha":"head",
+				"start_sha":"start",
+				"position_type":"text",
+				"new_path":"warp.go",
+				"old_path":"warp.go",
+				"new_line":12,
+				"line_range":{
+					"start":{"line_code":"hash_0_10","type":"new","new_line":10},
+					"end":{"line_code":"hash_0_12","type":"new","new_line":12}
+				}
+			}
+		}`)
+		writeJSON(t, w, http.StatusCreated, Discussion{
+			ID: "discussion-1",
+			Notes: []*DiscussionNote{
+				{ID: 88, Body: "Check this range."},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	discussion, _, err := client.MergeRequestDiscussionCreate(
+		t.Context(), 42, 55,
+		&CreateMergeRequestDiscussionOptions{
+			Body: new("Check this range."),
+			Position: &PositionOptions{
+				BaseSHA:      new("base"),
+				HeadSHA:      new("head"),
+				StartSHA:     new("start"),
+				PositionType: new("text"),
+				NewPath:      new("warp.go"),
+				OldPath:      new("warp.go"),
+				NewLine:      new(int64(12)),
+				LineRange: &LineRangeOptions{
+					Start: &LinePositionOptions{
+						LineCode: new("hash_0_10"),
+						Type:     new("new"),
+						NewLine:  new(int64(10)),
+					},
+					End: &LinePositionOptions{
+						LineCode: new("hash_0_12"),
+						Type:     new("new"),
+						NewLine:  new(int64(12)),
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "discussion-1", discussion.ID)
+	require.Len(t, discussion.Notes, 1)
+	assert.Equal(t, int64(88), discussion.Notes[0].ID)
+}
+
+func TestClient_MergeRequestDiscussionCreate_filePosition(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/discussions", r.URL.Path)
+		assertJSONBody(t, r, `{
+			"body":"Check this file.",
+			"position":{
+				"base_sha":"base",
+				"head_sha":"head",
+				"start_sha":"start",
+				"position_type":"file",
+				"new_path":"warp.go",
+				"old_path":"warp.go"
+			}
+		}`)
+		writeJSON(t, w, http.StatusCreated, Discussion{
+			ID: "discussion-1",
+			Notes: []*DiscussionNote{
+				{ID: 88, Body: "Check this file."},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	discussion, _, err := client.MergeRequestDiscussionCreate(
+		t.Context(), 42, 55,
+		&CreateMergeRequestDiscussionOptions{
+			Body: new("Check this file."),
+			Position: &PositionOptions{
+				BaseSHA:      new("base"),
+				HeadSHA:      new("head"),
+				StartSHA:     new("start"),
+				PositionType: new("file"),
+				NewPath:      new("warp.go"),
+				OldPath:      new("warp.go"),
+			},
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "discussion-1", discussion.ID)
+}
+
+func TestClient_MergeRequestDiscussionMutations(t *testing.T) {
+	var requests int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		switch requests {
+		case 1:
+			assert.Equal(t, http.MethodPost, r.Method)
+			assert.Equal(t,
+				"/api/v4/projects/42/merge_requests/55/discussions/discussion%2F1/notes",
+				r.URL.EscapedPath())
+			assertJSONBody(t, r, `{"body":"Reply."}`)
+			writeJSON(t, w, http.StatusCreated, DiscussionNote{ID: 89})
+		case 2:
+			assert.Equal(t, http.MethodPut, r.Method)
+			assert.Equal(t,
+				"/api/v4/projects/42/merge_requests/55/discussions/discussion%2F1/notes/89",
+				r.URL.EscapedPath())
+			assertJSONBody(t, r, `{"body":"Edited reply."}`)
+			writeJSON(t, w, http.StatusOK, DiscussionNote{ID: 89})
+		case 3:
+			assert.Equal(t, http.MethodPut, r.Method)
+			assert.Equal(t,
+				"/api/v4/projects/42/merge_requests/55/discussions/discussion%2F1",
+				r.URL.EscapedPath())
+			assertJSONBody(t, r, `{"resolved":true}`)
+			writeJSON(t, w, http.StatusOK, Discussion{ID: "discussion/1"})
+		default:
+			t.Fatalf("unexpected request %d", requests)
+		}
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	note, _, err := client.MergeRequestDiscussionNoteCreate(
+		t.Context(), 42, 55, "discussion/1",
+		&AddMergeRequestDiscussionNoteOptions{Body: new("Reply.")},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(89), note.ID)
+
+	_, _, err = client.MergeRequestDiscussionNoteUpdate(
+		t.Context(), 42, 55, "discussion/1", 89,
+		&UpdateMergeRequestDiscussionNoteOptions{Body: new("Edited reply.")},
+	)
+	require.NoError(t, err)
+
+	_, _, err = client.MergeRequestDiscussionResolve(
+		t.Context(), 42, 55, "discussion/1",
+		&ResolveMergeRequestDiscussionOptions{Resolved: new(true)},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, 3, requests)
+}
+
+func TestClient_MergeRequestReviewerList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/reviewers", r.URL.Path)
+		writeJSON(t, w, http.StatusOK, []*MergeRequestReviewer{
+			{User: BasicUser{Username: "spock"}, State: ReviewerStateReviewed},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	reviewers, _, err := client.MergeRequestReviewerList(t.Context(), 42, 55)
+	require.NoError(t, err)
+	require.Len(t, reviewers, 1)
+	assert.Equal(t, "spock", reviewers[0].User.Username)
+	assert.Equal(t, ReviewerStateReviewed, reviewers[0].State)
+}
+
+func TestClient_MergeRequestApprove(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/approve", r.URL.Path)
+		assertJSONBody(t, r, `{"sha":"head"}`)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	_, err := client.MergeRequestApprove(
+		t.Context(), 42, 55,
+		&ApproveMergeRequestOptions{SHA: new("head")},
+	)
+	require.NoError(t, err)
 }
 
 func TestClient_ProjectTemplateList(t *testing.T) {

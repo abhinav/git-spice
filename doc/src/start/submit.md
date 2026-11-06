@@ -12,7 +12,9 @@ next_page: ../guide/index.md
 
 This page will walk you through creating and updating
 *GitHub Pull Requests*, *GitLab Merge Requests*,
-or *Bitbucket Pull Requests* with git-spice.
+*Bitbucket Pull Requests*, *Gitea Pull Requests*,
+*Forgejo Pull Requests*, or *Azure DevOps Pull Requests*
+with git-spice.
 git-spice refers to these as *Change Requests* (CRs).
 
 ## Prerequisites
@@ -30,7 +32,8 @@ git-spice refers to these as *Change Requests* (CRs).
       text "feat2"
       ```
 
-- [x] Set up a GitHub, GitLab, or Bitbucket repository.
+- [x] Set up a GitHub, GitLab, Bitbucket, Gitea, Forgejo,
+      or Azure DevOps repository.
 
     ??? info "Optional: Create an experimental repository"
 
@@ -38,8 +41,7 @@ git-spice refers to these as *Change Requests* (CRs).
         you may want to create a new repository
         to experiment with instead of using a real project.
 
-        To do this, if you have the GitHub or GitLab CLI installed,
-        run the following inside your experimental repository:
+        Use the instructions for the service you want to try:
 
         === "<!-- gs:github -->"
 
@@ -61,6 +63,24 @@ git-spice refers to these as *Change Requests* (CRs).
 
             If you don't have the GitLab CLI installed,
             go to <https://gitlab.com/projects/new> and follow the instructions there.
+
+        === "<!-- gs:gitea -->"
+
+            To create a repository on Gitea,
+            go to the repository creation page on your Gitea instance
+            and follow the instructions there.
+
+        === "<!-- gs:forgejo -->"
+
+            To create a repository on Codeberg,
+            go to <https://codeberg.org/repo/create>
+            and follow the instructions there.
+
+        === "<!-- gs:azuredevops -->"
+
+            To create a repository on Azure DevOps,
+            go to the repository creation page for your Azure DevOps project
+            and follow the instructions there.
 
     !!! note "Forked repositories"
 

@@ -1,0 +1,104 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 133
+        host: 127.0.0.1:53776
+        body: '{"subject":"Testing file review thread azR1Lj4K","body":"Test change for a file-level review thread","base":"main","head":"azR1Lj4K"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 81
+        body: |-
+            {
+              "number": 31,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/31"
+            }
+        headers:
+            Content-Length:
+                - "81"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 12.427541ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 83
+        host: 127.0.0.1:53776
+        body: '{"change":31,"comments":[{"path":"review.go","body":"File-level review comment."}]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/reviews
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 88
+        body: |-
+            {
+              "comments": [
+                {
+                  "threadID": "thread-15",
+                  "commentID": 15
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "88"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 22.329ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:53776
+        form:
+            change:
+                - "31"
+        url: http://127.0.0.1:53776/abhinav/test-repo/review-threads?change=31
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 347
+        body: |-
+            {
+              "items": [
+                {
+                  "id": 15,
+                  "threadID": "thread-15",
+                  "path": "review.go",
+                  "commitHash": "407eb606d1c3af8188b89935656d5bde864836bf",
+                  "body": "File-level review comment.",
+                  "author": "test-user",
+                  "resolved": false,
+                  "outdated": false,
+                  "createdAt": "2026-10-23T07:07:13.915473-07:00"
+                }
+              ]
+            }
+        headers:
+            Content-Length:
+                - "347"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 13.392333ms

@@ -1,3 +1,5 @@
+//go:build linux
+
 package main
 
 import (
@@ -52,6 +54,7 @@ func TestNewPackagePlan_customValues(t *testing.T) {
 		SourceDateEpoch: 1_779_770_939,
 		Series:          seriesFlag{"noble", "plucky"},
 		PPARevision:     2,
+		OmitOrig:        true,
 		Dput:            true,
 		DputTarget:      "ppa:test/git-spice",
 	})
@@ -63,6 +66,7 @@ func TestNewPackagePlan_customValues(t *testing.T) {
 	assert.Equal(t,
 		time.Unix(1_779_770_939, 0).UTC(),
 		plan.SourceModTime)
+	assert.True(t, plan.OmitOrig)
 	assert.Nil(t, plan.Sign)
 	assert.True(t, plan.Dput)
 	assert.Equal(t, "ppa:test/git-spice", plan.DputTarget)
@@ -90,6 +94,22 @@ func TestNewPackagePlan_invalidSourceDateEpoch(t *testing.T) {
 
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "-source-date-epoch must be positive: -1")
+}
+
+func TestPackagePlan_sourceUploadMode(t *testing.T) {
+	t.Run("FirstSeriesIncludesOrig", func(t *testing.T) {
+		plan := packagePlan{}
+
+		assert.Equal(t, sourceUploadWithOrig, plan.sourceUploadMode(0))
+		assert.Equal(t, sourceUploadWithoutOrig, plan.sourceUploadMode(1))
+	})
+
+	t.Run("OmitOrigExcludesOrigFromAllSeries", func(t *testing.T) {
+		plan := packagePlan{OmitOrig: true}
+
+		assert.Equal(t, sourceUploadWithoutOrig, plan.sourceUploadMode(0))
+		assert.Equal(t, sourceUploadWithoutOrig, plan.sourceUploadMode(1))
+	})
 }
 
 func TestSignConfigFromEnv(t *testing.T) {
@@ -136,6 +156,98 @@ func TestRenderDputCommand(t *testing.T) {
 		))
 }
 
+func TestBuildSeries_omitsOrigTarAfterFirstSeries(t *testing.T) {
+	root := t.TempDir()
+	workDir := t.TempDir()
+	sourceDir := filepath.Join(workDir, "git-spice-0.30.0")
+	require.NoError(t, os.MkdirAll(filepath.Join(sourceDir, "debian"), 0o755))
+
+	origTar := filepath.Join(workDir, "git-spice_0.30.0.orig.tar.gz")
+	require.NoError(t, os.WriteFile(origTar, []byte("orig tarball"), 0o644))
+
+	binDir := t.TempDir()
+	writeExecutable(t,
+		filepath.Join(binDir, "ubuntu-distro-info"),
+		`#!/bin/sh
+set -eu
+case "$1" in
+  --series=noble) echo "24.04 LTS" ;;
+  --series=questing) echo "25.10" ;;
+  *) echo "unexpected series $1" >&2; exit 1 ;;
+esac
+`)
+	writeExecutable(t,
+		filepath.Join(binDir, "dpkg-buildpackage"),
+		`#!/bin/sh
+set -eu
+include_orig=1
+for arg do
+  if [ "$arg" = "-sd" ]; then
+    include_orig=0
+  fi
+done
+version=$(sed -n '1s/.*(\([^)]*\)).*/\1/p' debian/changelog)
+series=$(sed -n '1s/.*) \([^;]*\);.*/\1/p' debian/changelog)
+base="../git-spice_${version}"
+printf 'Source: git-spice\nVersion: %s\nFiles:\n abc 1 git-spice_0.30.0.orig.tar.gz\n def 1 git-spice_%s.debian.tar.xz\n' "$version" "$version" > "$base.dsc"
+printf 'debian tarball' > "$base.debian.tar.xz"
+printf 'build info' > "${base}_source.buildinfo"
+{
+  printf 'Source: git-spice\n'
+  printf 'Version: %s\n' "$version"
+  printf 'Distribution: %s\n' "$series"
+  printf 'Files:\n'
+  printf ' abc 1 vcs optional git-spice_%s.dsc\n' "$version"
+  if [ "$include_orig" = 1 ]; then
+    printf ' def 1 vcs optional git-spice_0.30.0.orig.tar.gz\n'
+  fi
+  printf ' ghi 1 vcs optional git-spice_%s.debian.tar.xz\n' "$version"
+  printf ' jkl 1 vcs optional git-spice_%s_source.buildinfo\n' "$version"
+} > "${base}_source.changes"
+`)
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	plan := packagePlan{
+		Version:           "v0.30.0",
+		UpstreamVersion:   "0.30.0",
+		BaseDebianVersion: "0.30.0-1~ppa1",
+	}
+
+	nobleChanges, err := buildSeries(
+		t.Context(),
+		silog.Nop(),
+		root,
+		sourceDir,
+		workDir,
+		origTar,
+		plan,
+		"noble",
+		sourceUploadWithOrig,
+		time.Unix(1_700_000_000, 0).UTC(),
+	)
+	require.NoError(t, err)
+	assertFileContains(t, nobleChanges, "git-spice_0.30.0.orig.tar.gz")
+	assert.FileExists(t,
+		filepath.Join(root, "dist", "debian", "noble", "git-spice_0.30.0.orig.tar.gz"))
+
+	questingChanges, err := buildSeries(
+		t.Context(),
+		silog.Nop(),
+		root,
+		sourceDir,
+		workDir,
+		origTar,
+		plan,
+		"questing",
+		sourceUploadWithoutOrig,
+		time.Unix(1_700_000_000, 0).UTC(),
+	)
+	require.NoError(t, err)
+	assertFileNotContains(t, questingChanges, "git-spice_0.30.0.orig.tar.gz")
+	assert.NoFileExists(t,
+		filepath.Join(root, "dist", "debian", "questing", "git-spice_0.30.0.orig.tar.gz"))
+}
+
 func TestWriteOrigTar_usesSourceModificationTime(t *testing.T) {
 	sourceDir := t.TempDir()
 	require.NoError(t,
@@ -176,4 +288,26 @@ func TestWriteOrigTar_usesSourceModificationTime(t *testing.T) {
 		assert.Equal(t, wantTime.Unix(), header.ChangeTime.Unix())
 		return
 	}
+}
+
+func writeExecutable(t *testing.T, path string, body string) {
+	t.Helper()
+
+	require.NoError(t, os.WriteFile(path, []byte(body), 0o755))
+}
+
+func assertFileContains(t *testing.T, path string, want string) {
+	t.Helper()
+
+	bs, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Contains(t, string(bs), want)
+}
+
+func assertFileNotContains(t *testing.T, path string, want string) {
+	t.Helper()
+
+	bs, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.NotContains(t, string(bs), want)
 }

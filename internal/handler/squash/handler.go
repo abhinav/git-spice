@@ -57,7 +57,7 @@ var _ Service = (*spice.Service)(nil)
 
 // RestackHandler provides methods to restack branches.
 type RestackHandler interface {
-	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
+	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
 }
 
 // Handler handles git-spice's squash commands.
@@ -79,6 +79,8 @@ type Options struct {
 	Fill     bool `short:"c" help:"Fill the commit message using the configured message generator."`
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"branchSquash.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
+
 	// git.commentString is the prefix for comments in commit messages.
 	CommentPrefix string `hidden:"" config:"@core.commentString" default:"#"`
 
@@ -97,8 +99,7 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 	}
 
 	if err := h.Service.VerifyRestacked(ctx, branchName); err != nil {
-		var restackErr *spice.BranchNeedsRestackError
-		if errors.As(err, &restackErr) {
+		if _, ok := errors.AsType[*spice.BranchNeedsRestackError](err); ok {
 			return fmt.Errorf("branch %v needs to be restacked before it can be squashed", branchName)
 		}
 		return fmt.Errorf("verify restacked: %w", err)
@@ -227,7 +228,13 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 	}
 	reattachedHead = true
 
-	return h.Restack.RestackUpstack(ctx, branchName, nil)
+	if opts.Restack.None() {
+		return nil
+	}
+
+	return h.Restack.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: branchName,
+	})
 }
 
 func commitMessageTemplate(

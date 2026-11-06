@@ -10,7 +10,7 @@ git init
 git commit --allow-empty -m 'Initial commit'
 gs repo init
 
-shamhub init
+shamhub-setup
 shamhub new upstream alice/example.git
 shamhub register bob
 git push upstream main

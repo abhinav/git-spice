@@ -18,9 +18,24 @@ const (
 
 // PrintOptions customizes the behavior of Print.
 type PrintOptions struct {
+	// DownstackLimit caps the number of ancestors shown below the current
+	// change. Zero means unlimited; the current change and its upstacks
+	// are always shown.
+	DownstackLimit int
+
 	// Marker is the marker to use for the current change.
 	// If empty, defaults to "◀".
 	Marker string
+
+	// Simple renders the stack as a flat list with the top of the stack first.
+	// If the stack forks above the current change,
+	// Print falls back to the default tree layout
+	// because a flat list can't show the fork.
+	Simple bool
+
+	// Trunk is the name of the trunk branch.
+	// If set, Simple output ends with it as the bottom-most entry.
+	Trunk string
 }
 
 // Node is a single item in the stack navigation list.
@@ -95,21 +110,40 @@ func Print[N Node](w io.Writer, nodes []N, currentIdx int, opts *PrintOptions) {
 		return true
 	}
 
+	// Collect ancestors nearest first so the same limit applies to both layouts.
+	limit := len(nodes)
+	if opts != nil && opts.DownstackLimit > 0 {
+		limit = min(limit, opts.DownstackLimit)
+	}
+	var downstacks []int
+	for base := nodes[currentIdx].BaseIdx(); len(downstacks) < limit && ok(base); base = nodes[base].BaseIdx() {
+		downstacks = append(downstacks, base)
+	}
+
+	if opts != nil && opts.Simple {
+		if upstacks, linear := linearUpstacks(aboves, currentIdx); linear {
+			for _, idx := range slices.Backward(upstacks) {
+				writeNode(idx, 0)
+			}
+			writeNode(currentIdx, 0)
+			for _, idx := range downstacks {
+				writeNode(idx, 0)
+			}
+			if opts.Trunk != "" {
+				_, _ = fmt.Fprintf(w, "- `%v`\n", opts.Trunk)
+			}
+			return
+		}
+	}
+
 	// Write the downstacks, not including the current node.
 	// This will change the indent level.
 	// The downstacks leading up to the current branch are always linear.
 	var indent int
-	{
-		var downstacks []int
-		for base := nodes[currentIdx].BaseIdx(); ok(base); base = nodes[base].BaseIdx() {
-			downstacks = append(downstacks, base)
-		}
-
-		// Reverse order to print from base to current.
-		for _, v := range slices.Backward(downstacks) {
-			writeNode(v, indent)
-			indent++
-		}
+	// Reverse order to print from base to current.
+	for _, v := range slices.Backward(downstacks) {
+		writeNode(v, indent)
+		indent++
 	}
 
 	// For the upstacks, we'll need to traverse the graph
@@ -129,4 +163,20 @@ func Print[N Node](w io.Writer, nodes []N, currentIdx int, opts *PrintOptions) {
 
 	// Current branch and its upstacks.
 	visit(currentIdx, indent)
+}
+
+// linearUpstacks returns the changes stacked above currentIdx,
+// nearest first,
+// and reports whether they form a single line with no forks.
+func linearUpstacks(aboves [][]int, currentIdx int) ([]int, bool) {
+	var upstacks []int
+	for idx := currentIdx; len(aboves[idx]) > 0; {
+		// A longer chain than there are nodes means a cycle.
+		if len(aboves[idx]) > 1 || len(upstacks) >= len(aboves) {
+			return nil, false
+		}
+		idx = aboves[idx][0]
+		upstacks = append(upstacks, idx)
+	}
+	return upstacks, true
 }

@@ -1,0 +1,26 @@
+# Commit create accepts repeated message flags.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+git add foo.txt
+gs commit create -m 'Subject line' -m 'Body paragraph.'
+
+git log -1 --format=%B
+cmp stdout $WORK/golden/message.txt
+
+-- golden/message.txt --
+Subject line
+
+Body paragraph.
+
+-- repo/foo.txt --
+Contents of foo.

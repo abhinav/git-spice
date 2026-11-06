@@ -53,20 +53,20 @@ A  foo.txt
 A  bar.txt
 A  foo.txt
 -- golden/ls-feat1.txt --
-┏━■ feat1 ◀
+┏━━■ feat1 ◀
 main
 -- golden/ls-feat2.txt --
-  ┏━■ feat2 ◀
+  ┏━━■ feat2 ◀
 ┏━┻□ feat1
 main
 -- golden/ls-feat3.txt --
-    ┏━■ feat3 ◀
+    ┏━━■ feat3 ◀
   ┏━┻□ feat2
 ┏━┻□ feat1
 main
 -- golden/ll-feat3.txt --
-    ┏━■ feat3 ◀
-    ┃   2a17718 Add foo and bar (now)
+    ┏━━■ feat3 ◀
+    ┃    2a17718 Add foo and bar (now)
   ┏━┻□ feat2
 ┏━┻□ feat1
 main

@@ -7,7 +7,7 @@ cd repo
 git init
 git commit --allow-empty -m 'Initial commit'
 
-shamhub init
+shamhub-setup
 shamhub register alice
 shamhub new origin alice/example.git
 git push origin main

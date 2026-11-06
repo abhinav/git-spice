@@ -1,7 +1,7 @@
 package widget
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"os"
 	"strings"
 	"testing"
@@ -31,7 +31,11 @@ func TestBranchSplit_Script(t *testing.T) {
 		func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
 			var commits []commit.Summary
 			require.NoError(t,
-				json.Unmarshal([]byte(ts.ReadFile("commits")), &commits),
+				json.Unmarshal(
+					[]byte(ts.ReadFile("commits")),
+					&commits,
+					json.MatchCaseInsensitiveNames(true),
+				),
 				"read 'commits' file")
 
 			var want []git.Hash

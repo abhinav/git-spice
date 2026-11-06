@@ -10,7 +10,7 @@ git config spice.experiment.merge true
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-shamhub init
+shamhub-setup
 shamhub config mergeMethod squash
 shamhub new origin alice/example.git
 shamhub register alice

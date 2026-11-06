@@ -60,12 +60,12 @@ feature1
 # Save and quit the editor to apply the changes.
 # Delete all lines in the editor to abort the operation.
 -- golden/ls-before.txt --
-    ┏━■ feature3 ◀
+    ┏━━■ feature3 ◀
   ┏━┻□ feature2
 ┏━┻□ feature1
 main
 -- golden/ls-after.txt --
-    ┏━□ feature1
+    ┏━━□ feature1
   ┏━┻□ feature2
 ┏━┻□ feature3
 main ◀

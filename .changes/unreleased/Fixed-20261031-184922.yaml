@@ -1,0 +1,3 @@
+kind: Fixed
+body: State updates that write multiple values are accelerated by batching Git object writes.
+time: 2026-10-31T18:49:22.874111-07:00

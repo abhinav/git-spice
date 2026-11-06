@@ -15,6 +15,9 @@ description: >-
     - <!-- gs:github -->
     - <!-- gs:gitlab --> (<!-- gs:version v0.9.0 -->)
     - <!-- gs:bitbucket --> (<!-- gs:version v0.25.0 -->)
+    - <!-- gs:gitea --> (<!-- gs:version v0.30.0 -->)
+    - <!-- gs:forgejo --> (<!-- gs:version v0.30.0 -->)
+    - <!-- gs:azuredevops --> (<!-- gs:version v0.32.0 -->)
 
     If you're using a different service,
     you can still use git-spice,
@@ -22,15 +25,16 @@ description: >-
 
     See:
 
-    - [:material-tooltip-check: Recipes > Working with unsupported remotes](../community/recipes.md#working-with-unsupported-remotes)
-    - [:material-frequently-asked-questions: FAQ > Will git-spice add support for other Git hosting services](../community/faq.md#will-git-spice-add-support-for-other-git-hosting-services)
+    - [:material-tooltip-check: Recipes > Working with unsupported remotes](../resources/recipes.md#working-with-unsupported-remotes)
+    - [:material-frequently-asked-questions: FAQ > Will git-spice add support for other Git hosting services](../resources/faq.md#will-git-spice-add-support-for-other-git-hosting-services)
 
 ## Submitting change requests
 
 !!! info
 
     git-spice uses the term *Change Request* to refer to submitted branches.
-    These correspond to Pull Requests on GitHub and Bitbucket,
+    These correspond to Pull Requests on GitHub, Bitbucket, Gitea, Forgejo,
+    and Azure DevOps,
     and to Merge Requests on GitLab.
 
 When your local changes are ready,
@@ -168,15 +172,17 @@ you may also specify title and body directly.
 {green}INF{reset} Created #123: https://github.com/abhinav/git-spice/pull/123
 ```
 
-!!! info "Setting draft status non-interactively"
+!!! info "Submitting non-interactively"
 
-    Change requests may be marked as draft or ready for review
-    non-interactively with the `--draft` and `--no-draft` flags.
+    Supply messages from text files with `--message-file PATH` for
+    $$gs branch submit$$, or repeat `--message-file BRANCH:PATH` for
+    $$gs stack submit$$, $$gs upstack submit$$, and $$gs downstack submit$$.
+    The first line is the title; the rest is the body.
+    <!-- gs:version unreleased -->
 
-    By default, the submit commands will leave
-    the draft state of existing PRs unchanged.
-    If the `--draft` or `--no-draft` flags are provided,
-    the draft state of all PRs will be set accordingly.
+    Set `--draft` or `--no-draft` to skip the draft-status prompt.
+    These flags also change the draft status of existing CRs;
+    existing descriptions are left unchanged.
 
 ### Force pushing
 
@@ -237,6 +243,22 @@ that have already been submitted.
         of the [stack navigation commands](branch.md#navigating-the-stack).
         With this flag, the command prints the hash of the target branch
         without checking it out.
+
+### Native stacks
+
+<!-- gs:version v0.33.0 -->
+<!-- gs:badge:github -->
+
+On supported forges such as GitHub,
+submit commands automatically register your CRs as a native stack.
+This includes submitted branches and their already-submitted downstack.
+Resubmit after changing your local stack to update its native representation.
+
+Forges without native stacks use ordinary submission.
+
+See [GitHub native-stack limitations](limits.md#github-native-stack-limitations)
+for restrictions.
+Set $$spice.forge.github.stacks$$ to `false` to opt out on GitHub.
 
 ## Syncing with upstream
 
@@ -434,4 +456,4 @@ and use $$gs downstack track$$ to track them all at once.
 {green}${reset} gs downstack track
 ```
 
-See also [:material-tooltip-check: Recipes > Track an existing stack](../community/recipes.md#track-an-existing-stack).
+See also [:material-tooltip-check: Recipes > Track an existing stack](../resources/recipes.md#track-an-existing-stack).

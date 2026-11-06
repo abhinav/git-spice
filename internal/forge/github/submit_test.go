@@ -1,7 +1,8 @@
 package github
 
 import (
-	"encoding/json"
+	"context"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,10 +10,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
@@ -29,13 +30,13 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 				Input map[string]any `json:"input"`
 			} `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.UnmarshalRead(r.Body, &body))
 
 		if strings.Contains(body.Query, "repository(owner: $owner, name: $repo)") {
 			assert.Equal(t, "test-owner-robot", body.Variables.Owner)
 			assert.Equal(t, "test-repo", body.Variables.Repo)
 
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			require.NoError(t, json.MarshalWrite(w, map[string]any{
 				"data": map[string]any{
 					"repository": map[string]any{
 						"id": "pushRepoID",
@@ -53,7 +54,7 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 		assert.Equal(t, "pushRepoID", input["headRepositoryId"])
 		created = true
 
-		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+		require.NoError(t, json.MarshalWrite(w, map[string]any{
 			"data": map[string]any{
 				"createPullRequest": map[string]any{
 					"pullRequest": map[string]any{
@@ -66,12 +67,18 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 		}))
 	}))
 	defer srv.Close()
+	gatewayClient, err := github.NewGateway(github.Config{
+		Deployment: github.Deployment{APIURL: srv.URL},
+		HTTPClient: srv.Client(),
+		Tokens:     gatewayTestTokenSource("token"),
+	})
+	require.NoError(t, err)
 
 	repo, err := newRepository(
 		t.Context(), new(Forge),
 		"test-owner", "test-repo",
 		silogtest.New(t),
-		githubv4.NewEnterpriseClient(srv.URL, nil),
+		gatewayClient,
 		"repoID",
 	)
 	require.NoError(t, err)
@@ -88,60 +95,79 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.True(t, created)
-	assert.Equal(t, &PR{Number: 55, GQLID: githubv4.ID("prID")}, change.ID)
+	assert.Equal(t, &PR{Number: 55, GQLID: "prID"}, change.ID)
 	assert.Equal(t,
 		"https://github.com/test-owner/test-repo/pull/55",
 		change.URL)
 }
 
-func TestRepository_prMetadataCachesUserIDs(t *testing.T) {
+type gatewayTestTokenSource string
+
+func (s gatewayTestTokenSource) Token(context.Context) (string, error) {
+	return string(s), nil
+}
+
+func TestRepository_addPullRequestMetadata(t *testing.T) {
 	var userQueries int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPost, r.Method)
 
 		var body struct {
-			Query     string `json:"query"`
-			Variables struct {
-				Login string         `json:"login"`
-				Input map[string]any `json:"input"`
-			} `json:"variables"`
+			Query     string         `json:"query"`
+			Variables map[string]any `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.UnmarshalRead(r.Body, &body))
 
 		switch {
-		case strings.Contains(body.Query, "user(login: $login)"):
-			userQueries++
-			assert.Equal(t, "alice", body.Variables.Login)
-
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+		case strings.Contains(body.Query, "label0:label(name: $label0)"):
+			assert.Equal(t, "enhancement", body.Variables["label0"])
+			assert.Equal(t, "test-repo", body.Variables["name"])
+			assert.Equal(t, "test-owner", body.Variables["owner"])
+			require.NoError(t, json.MarshalWrite(w, map[string]any{
 				"data": map[string]any{
-					"user": map[string]any{
+					"repository": map[string]any{
+						"label0": map[string]any{"id": "labelID"},
+					},
+				},
+			}))
+
+		case strings.Contains(body.Query, "user0:user(login: $user0)"):
+			userQueries++
+			assert.Equal(t, "alice", body.Variables["user0"])
+			assert.Equal(t, "bob", body.Variables["user1"])
+
+			require.NoError(t, json.MarshalWrite(w, map[string]any{
+				"data": map[string]any{
+					"user0": map[string]any{
 						"id": "aliceID",
 					},
-				},
-			}))
-
-		case strings.Contains(body.Query, "requestReviews(input:"):
-			assert.Equal(t, "prID", body.Variables.Input["pullRequestId"])
-			assert.Equal(t, []any{"aliceID"}, body.Variables.Input["userIds"])
-
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
-				"data": map[string]any{
-					"requestReviews": map[string]any{
-						"clientMutationId": "reviewMutation",
+					"user1": map[string]any{
+						"id": "bobID",
 					},
 				},
 			}))
 
-		case strings.Contains(body.Query, "addAssigneesToAssignable(input:"):
-			assert.Equal(t, "prID", body.Variables.Input["assignableId"])
-			assert.Equal(t, []any{"aliceID"}, body.Variables.Input["assigneeIds"])
+		case strings.Contains(body.Query, "reviews:requestReviews(input:"):
+			labels, ok := body.Variables["labels"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "prID", labels["labelableId"])
+			assert.Equal(t, []any{"labelID"}, labels["labelIds"])
 
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			reviews, ok := body.Variables["reviews"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "prID", reviews["pullRequestId"])
+			assert.Equal(t, []any{"aliceID"}, reviews["userIds"])
+
+			assignees, ok := body.Variables["assignees"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "prID", assignees["assignableId"])
+			assert.Equal(t, []any{"bobID"}, assignees["assigneeIds"])
+
+			require.NoError(t, json.MarshalWrite(w, map[string]any{
 				"data": map[string]any{
-					"addAssigneesToAssignable": map[string]any{
-						"clientMutationId": "assigneeMutation",
-					},
+					"labels":    map[string]any{},
+					"reviews":   map[string]any{},
+					"assignees": map[string]any{},
 				},
 			}))
 
@@ -150,34 +176,34 @@ func TestRepository_prMetadataCachesUserIDs(t *testing.T) {
 		}
 	}))
 	defer srv.Close()
+	gatewayClient, err := github.NewGateway(github.Config{
+		Deployment: github.Deployment{APIURL: srv.URL},
+		HTTPClient: srv.Client(),
+		Tokens:     gatewayTestTokenSource("token"),
+	})
+	require.NoError(t, err)
 
 	repo, err := newRepository(
 		t.Context(), new(Forge),
 		"test-owner", "test-repo",
 		silogtest.New(t),
-		githubv4.NewEnterpriseClient(srv.URL, nil),
+		gatewayClient,
 		"repoID",
 	)
 	require.NoError(t, err)
 
-	err = repo.addReviewersToPullRequest(
-		t.Context(),
-		[]string{"alice"},
-		githubv4.ID("prID"),
-	)
-	require.NoError(t, err)
-
-	err = repo.addAssigneesToPullRequest(
-		t.Context(),
-		[]string{"alice"},
-		githubv4.ID("prID"),
-	)
+	err = repo.addPullRequestMetadata(t.Context(), pullRequestMetadataRequest{
+		PullRequestID: "prID",
+		Labels:        []string{"enhancement"},
+		Reviewers:     []string{"alice"},
+		Assignees:     []string{"bob", "bob"},
+	})
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, userQueries)
 }
 
-func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
+func TestRepository_identityIDsCoalescesConcurrentMisses(t *testing.T) {
 	var userQueries atomic.Int32
 	firstQueryStarted := make(chan struct{})
 	releaseQuery := make(chan struct{})
@@ -190,12 +216,12 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 		var body struct {
 			Query     string `json:"query"`
 			Variables struct {
-				Login string `json:"login"`
+				User0 string `json:"user0"`
 			} `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-		require.Contains(t, body.Query, "user(login: $login)")
-		assert.Equal(t, "alice", body.Variables.Login)
+		require.NoError(t, json.UnmarshalRead(r.Body, &body))
+		require.Contains(t, body.Query, "user0:user(login: $user0)")
+		assert.Equal(t, "alice", body.Variables.User0)
 
 		if userQueries.Add(1) == 1 {
 			close(firstQueryStarted)
@@ -205,9 +231,9 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 		// so the second goroutine must join the in-flight lookup
 		// instead of reading from a warmed cache.
 		<-releaseQuery
-		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+		require.NoError(t, json.MarshalWrite(w, map[string]any{
 			"data": map[string]any{
-				"user": map[string]any{
+				"user0": map[string]any{
 					"id": "aliceID",
 				},
 			},
@@ -219,7 +245,7 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 		t.Context(), new(Forge),
 		"test-owner", "test-repo",
 		silogtest.New(t),
-		githubv4.NewEnterpriseClient(srv.URL, nil),
+		newTestGateway(t, srv.URL),
 		"repoID",
 	)
 	require.NoError(t, err)
@@ -228,9 +254,9 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 	errs := make(chan error, 2)
 
 	wg.Go(func() {
-		id, err := repo.userID(t.Context(), "alice")
+		userIDs, _, err := repo.identityIDs(t.Context(), []string{"alice"}, nil)
 		if err == nil {
-			assert.Equal(t, githubv4.ID("aliceID"), id)
+			assert.Equal(t, []github.ID{"aliceID"}, userIDs)
 		}
 		errs <- err
 	})
@@ -238,9 +264,9 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 	<-firstQueryStarted
 
 	wg.Go(func() {
-		id, err := repo.userID(t.Context(), "alice")
+		userIDs, _, err := repo.identityIDs(t.Context(), []string{"alice"}, nil)
 		if err == nil {
-			assert.Equal(t, githubv4.ID("aliceID"), id)
+			assert.Equal(t, []github.ID{"aliceID"}, userIDs)
 		}
 		errs <- err
 	})

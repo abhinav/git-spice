@@ -47,7 +47,9 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
-		require.NoError(t, handler.RestackBranch(t.Context(), "feature"))
+		require.NoError(t, handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "feature",
+		}))
 		assert.Contains(t, logBuffer.String(), "feature: restacked on main")
 	})
 
@@ -82,7 +84,9 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Service:  mockService,
 		}
 
-		require.NoError(t, handler.RestackBranch(t.Context(), "feature"))
+		require.NoError(t, handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "feature",
+		}))
 	})
 
 	t.Run("UntrackedBranch", func(t *testing.T) {
@@ -113,7 +117,9 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Service:  mockService,
 		}
 
-		err := handler.RestackBranch(t.Context(), "untracked")
+		err := handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "untracked",
+		})
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "untracked branch")
 		assert.Contains(t, logBuffer.String(), "untracked: branch not tracked: run '"+cli.Name()+" branch track")
@@ -146,7 +152,9 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
-		require.NoError(t, handler.RestackBranch(t.Context(), "already-restacked"))
+		require.NoError(t, handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "already-restacked",
+		}))
 		assert.Contains(t, logBuffer.String(), "already-restacked: branch does not need to be restacked.")
 	})
 
@@ -177,7 +185,9 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
-		err := handler.RestackBranch(t.Context(), "feature")
+		err := handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "feature",
+		})
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "restack branch")
 		assert.ErrorIs(t, err, unexpectedErr)

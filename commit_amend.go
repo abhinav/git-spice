@@ -4,13 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
-	"go.abhg.dev/gs/internal/msggen"
-	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -21,15 +18,16 @@ import (
 type commitAmendCmd struct {
 	branchCreateConfig // TODO: find a way to avoid this
 
-	All         bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty  bool   `help:"Create a commit even if it contains no changes."`
-	Fill        bool   `short:"c" negatable:"" config:"message.autoFill" help:"Fill the commit message using the configured message updater. Defaults to spice.message.autoFill."`
-	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
-	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
+	All         bool     `short:"a" help:"Stage all changes before committing."`
+	AllowEmpty  bool     `help:"Create a commit even if it contains no changes."`
+	Message     []string `short:"m" xor:"commit-message-source" sep:"none" placeholder:"MSG" help:"Use the given message as the commit message. May be repeated to add multiple paragraphs."`
+	MessageFile string   `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
 	NoEdit   bool `help:"Don't edit the commit message"`
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"commitAmend.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
 }
 
 func (*commitAmendCmd) Help() string {
@@ -37,6 +35,9 @@ func (*commitAmendCmd) Help() string {
 	return text.Dedent(fmt.Sprintf(`
 		Staged changes are amended into the topmost commit.
 		Branches upstack are restacked if necessary.
+		Use --no-restack to disable automatic restacking,
+		or the 'spice.commitAmend.restack' configuration option
+		to change the default.
 		This is a shortcut for 'git commit --amend'
 		followed by '%[1]s upstack restack'.
 
@@ -60,7 +61,6 @@ func (*commitAmendCmd) Help() string {
 func (cmd *commitAmendCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	cfg *spice.Config,
 	view ui.View,
 	repo *git.Repository,
 	wt *git.Worktree,
@@ -133,7 +133,7 @@ func (cmd *commitAmendCmd) Run(
 					MessageFile:        cmd.MessageFile,
 					Signoff:            cmd.Signoff,
 					Commit:             true,
-				}).Run(ctx, log, cfg, repo, wt, store, svc, restackHandler)
+				}).Run(ctx, log, repo, wt, store, svc, restackHandler)
 			}
 		}
 	}
@@ -223,44 +223,8 @@ func (cmd *commitAmendCmd) Run(
 		}
 	}
 
-	// If --fill is set and no message was provided,
-	// try to update the existing message
-	// using the configured script.
-	if cmd.Fill && cmd.Message == "" {
-		script := cfg.MessageGenerator()
-		if script == "" {
-			return msggen.ErrNoGenerator
-		}
-
-		var extras []string
-		existingMsg, err := repo.CommitMessageFull(
-			ctx, "HEAD",
-		)
-		if err == nil {
-			extras = append(extras,
-				"GS_MESSAGE="+existingMsg,
-			)
-		}
-		env := commitEnv(ctx, wt, scriptrun.OpCommitAmend, true, extras...)
-
-		result, err := (&msggen.Runner{
-			Log:  log,
-			Args: os.Args,
-		}).Run(
-			ctx, script, wt.RootDir(), env,
-		)
-		if err != nil {
-			log.Warn("Message generator failed, "+
-				"falling back to editor",
-				"error", err)
-		} else {
-			cmd.Message = result.Message()
-			cmd.NoEdit = true
-		}
-	}
-
 	if err := wt.Commit(ctx, git.CommitRequest{
-		Message:     cmd.Message,
+		Messages:    cmd.Message,
 		MessageFile: cmd.MessageFile,
 		AllowEmpty:  cmd.AllowEmpty,
 		Amend:       true,
@@ -282,7 +246,14 @@ func (cmd *commitAmendCmd) Run(
 		return nil
 	}
 
-	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{
-		SkipStart: true,
+	if cmd.Restack.None() {
+		return nil
+	}
+
+	return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: currentBranch,
+		Options: &restack.UpstackOptions{
+			SkipStart: true,
+		},
 	})
 }

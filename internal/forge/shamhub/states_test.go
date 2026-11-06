@@ -1,7 +1,7 @@
 package shamhub
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -46,7 +46,7 @@ func TestForgeRepository_MergeChange_mergeMethod(t *testing.T) {
 						"/owner/repo/change/42/merge",
 						r.URL.Path,
 					)
-					require.NoError(t, json.NewDecoder(r.Body).Decode(&got))
+					require.NoError(t, json.UnmarshalRead(r.Body, &got))
 					_, _ = w.Write([]byte(`{}`))
 				},
 			))
@@ -54,11 +54,9 @@ func TestForgeRepository_MergeChange_mergeMethod(t *testing.T) {
 
 			repo, err := newRepository(
 				&Forge{
-					Options: Options{
-						URL:    "https://example.com",
-						APIURL: srv.URL,
-					},
-					Log: silog.Nop(),
+					URL:    "https://example.com",
+					APIURL: srv.URL,
+					Log:    silog.Nop(),
 				},
 				&AuthenticationToken{tok: "token"},
 				&RepositoryID{

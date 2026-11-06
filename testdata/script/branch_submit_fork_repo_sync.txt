@@ -10,7 +10,7 @@ cd alice/store
 git init
 git commit --allow-empty -m 'Initial commit'
 
-shamhub init
+shamhub-setup
 shamhub register alice
 shamhub register bob
 shamhub new upstream alice/store

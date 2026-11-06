@@ -68,8 +68,8 @@ true
 > Do you want to track this branch now?: [Y/n]
 false
 -- golden/ls-feat1.txt --
-┏━■ feat1 ◀
+┏━━■ feat1 ◀
 main
 -- golden/ls-feat2.txt --
-┏━□ feat1
+┏━━□ feat1
 main

@@ -1,0 +1,37 @@
+# commit amend --no-restack leaves upstack branches untouched.
+
+as 'Test <test@example.com>'
+at '2026-07-12T12:10:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs branch create feature1 -m 'Add feature1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+gs down
+
+mv $WORK/extra/feature1-updated.txt feature1.txt
+git add feature1.txt
+gs commit amend --no-restack --no-edit
+
+# Amending feature1 changes its head, so an unchanged feature2 head proves that
+# the upstack was not replayed.
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- extra/feature1-updated.txt --
+Feature 1 updated
+-- golden/feature2-before.txt --
+8ea3c5b

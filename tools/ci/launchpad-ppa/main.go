@@ -54,6 +54,9 @@ type publishRequest struct {
 	// PPARevision is the Debian package revision suffix for Launchpad retries.
 	PPARevision int
 
+	// OmitOrig excludes the upstream orig tarball from every source upload.
+	OmitOrig bool
+
 	// Sign controls whether source packages are signed before upload.
 	Sign bool
 
@@ -94,6 +97,8 @@ func main() {
 		"Unix timestamp to use for reproducible package outputs")
 	flag.Var(&req.Series, "series", "Ubuntu series to target")
 	flag.IntVar(&req.PPARevision, "ppa-revision", 1, "PPA revision number")
+	flag.BoolVar(&req.OmitOrig, "omit-orig", false,
+		"Omit the upstream orig tarball from every source upload")
 	flag.BoolVar(&req.Sign, "sign", false, "Sign packages with Launchpad GPG environment variables")
 	flag.BoolVar(&req.Dput, "dput", false, "Upload signed packages with dput")
 	flag.StringVar(&req.DputTarget, "dput-target", _defaultDputTarget, "dput upload target")
@@ -127,6 +132,7 @@ func run(log *silog.Logger, req publishRequest) error {
 		"sourceDateEpoch", sourceDateEpoch,
 		"series", strings.Join(plan.Series, ","),
 		"ppaRevision", plan.PPARevision,
+		"omitOrig", plan.OmitOrig,
 		"dput", plan.Dput,
 		"dputTarget", plan.DputTarget)
 
@@ -190,9 +196,11 @@ func run(log *silog.Logger, req publishRequest) error {
 	}
 
 	var dputCommands []string
-	for _, series := range plan.Series {
+	for i, series := range plan.Series {
 		changes, err := buildSeries(
-			ctx, log, root, sourceDir, workDir, origTar, plan, series, mtime)
+			ctx, log,
+			root, sourceDir, workDir, origTar,
+			plan, series, plan.sourceUploadMode(i), mtime)
 		if err != nil {
 			return fmt.Errorf("build %s: %w", series, err)
 		}
@@ -205,8 +213,12 @@ func run(log *silog.Logger, req publishRequest) error {
 
 		if plan.Dput {
 			log.Info("Uploading source package", "series", series, "changes", changes)
-			if err := xec.Command(ctx, log, "dput", "--unchecked", plan.DputTarget, changes).
-				Run(); err != nil {
+			if err := uploadSourcePackage(
+				ctx,
+				log,
+				plan.DputTarget,
+				changes,
+			); err != nil {
 				return fmt.Errorf("dput %s: %w", series, err)
 			}
 		} else {
@@ -222,6 +234,43 @@ func run(log *silog.Logger, req publishRequest) error {
 	}
 
 	return nil
+}
+
+// uploadSourcePackage runs dput up to three times with exponential backoff.
+func uploadSourcePackage(
+	ctx context.Context,
+	log *silog.Logger,
+	target string,
+	changes string,
+) error {
+	const maxAttempts = 3
+	for attempt := 1; ; attempt++ {
+		output, flushOutput := silog.Writer(log.WithPrefix("dput"), silog.LevelInfo)
+		err := xec.Command(ctx, log, "dput", "--unchecked", target, changes).
+			WithStdout(output).
+			WithStderr(output).
+			Run()
+		flushOutput()
+		if err == nil {
+			return nil
+		}
+		if attempt >= maxAttempts {
+			return err
+		}
+
+		delay := 15 * time.Second << (attempt - 1)
+		log.Warn("dput failed; retrying",
+			"attempt", attempt,
+			"maxAttempts", maxAttempts,
+			"delay", delay,
+			"error", err)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+	}
 }
 
 func writeDebianPackaging(log *silog.Logger, sourceDir string) error {
@@ -294,6 +343,9 @@ type packagePlan struct {
 	// PPARevision is the Launchpad PPA source package revision.
 	PPARevision int
 
+	// OmitOrig excludes the upstream orig tarball from every source upload.
+	OmitOrig bool
+
 	// Ref is the Git object exported as upstream source.
 	Ref string
 
@@ -308,6 +360,49 @@ type packagePlan struct {
 
 	// DputTarget is the destination passed to dput.
 	DputTarget string
+}
+
+func (p packagePlan) sourceUploadMode(seriesIndex int) sourceUploadMode {
+	if p.OmitOrig || seriesIndex > 0 {
+		return sourceUploadWithoutOrig
+	}
+	return sourceUploadWithOrig
+}
+
+// sourceUploadMode controls whether the generated .changes upload manifest
+// includes the upstream orig tarball.
+type sourceUploadMode int
+
+const (
+	sourceUploadWithOrig sourceUploadMode = iota
+	sourceUploadWithoutOrig
+)
+
+func (m sourceUploadMode) String() string {
+	switch m {
+	case sourceUploadWithOrig:
+		return "with-orig"
+	case sourceUploadWithoutOrig:
+		return "without-orig"
+	default:
+		return fmt.Sprintf("sourceUploadMode(%d)", m)
+	}
+}
+
+func (m sourceUploadMode) dpkgBuildpackageArgs() []string {
+	args := []string{
+		"-S", // build source package only
+	}
+	if m == sourceUploadWithoutOrig {
+		args = append(args,
+			"-sd", // omit the upstream orig tarball from .changes
+		)
+	}
+	return append(args,
+		"-us", // leave the .dsc unsigned
+		"-uc", // leave .buildinfo and .changes unsigned
+		"-d",  // skip build dependency checks on CI runners
+	)
 }
 
 func newPackagePlan(req publishRequest) (packagePlan, error) {
@@ -361,6 +456,7 @@ func newPackagePlan(req publishRequest) (packagePlan, error) {
 		),
 		SourceModTime: sourceModTime,
 		PPARevision:   req.PPARevision,
+		OmitOrig:      req.OmitOrig,
 		Ref:           req.Ref,
 		Series:        series,
 		Sign:          sign,
@@ -562,9 +658,10 @@ func buildSeries(
 	origTar string,
 	plan packagePlan,
 	series string,
+	uploadMode sourceUploadMode,
 	mtime time.Time,
 ) (string, error) {
-	log.Info("Building source package", "series", series)
+	log.Info("Building source package", "series", series, "uploadMode", uploadMode)
 
 	ubuntuVersion, err := ubuntuVersionForSeries(ctx, log, series)
 	if err != nil {
@@ -581,7 +678,7 @@ func buildSeries(
 		return "", fmt.Errorf("clean previous build products: %w", err)
 	}
 
-	if err := xec.Command(ctx, log, "dpkg-buildpackage", "-S", "-us", "-uc", "-d").
+	if err := xec.Command(ctx, log, "dpkg-buildpackage", uploadMode.dpkgBuildpackageArgs()...).
 		WithDir(sourceDir).
 		AppendEnv("SOURCE_DATE_EPOCH=" + strconv.FormatInt(mtime.Unix(), 10)).
 		Run(); err != nil {
@@ -595,8 +692,19 @@ func buildSeries(
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return "", fmt.Errorf("create output directory: %w", err)
 	}
-	if err := copyFile(origTar, filepath.Join(outDir, filepath.Base(origTar))); err != nil {
-		return "", fmt.Errorf("copy orig tarball: %w", err)
+	if uploadMode == sourceUploadWithOrig {
+		// The first series upload must carry the upstream orig tarball.
+		// Later source uploads can refer to the tarball Launchpad already has.
+		if err := copyFile(origTar, filepath.Join(outDir, filepath.Base(origTar))); err != nil {
+			return "", fmt.Errorf("copy orig tarball: %w", err)
+		}
+	} else {
+		// With -sd, dpkg-buildpackage omits the orig tarball from .changes.
+		// Do not copy it next to the upload manifest,
+		// so the dry-run output matches what dput will upload.
+		log.Info("Omitting orig tarball from source upload",
+			"series", series,
+			"origTar", filepath.Base(origTar))
 	}
 
 	pattern := filepath.Join(workDir, _packageName+"_"+debianVersion+"*")

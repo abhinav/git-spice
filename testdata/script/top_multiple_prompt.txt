@@ -81,17 +81,17 @@ feature 1 sub feature 2 sub feature
 -- robot.golden --
 ===
 > Pick a branch: 
-> ┏━■ f2 ◀
-> ┣━□ f1-s1
-> ┣━□ f1-s2-s
+> ┏━━■ f2 ◀
+> ┣━━□ f1-s1
+> ┣━━□ f1-s2-s
 > main
 >
 > There are multiple top-level branches reachable from the current branch.
 "f2"
 ===
 > Pick a branch: 
-> ┏━■ f1-s1 ◀
-> ┣━□ f1-s2-s
+> ┏━━■ f1-s1 ◀
+> ┣━━□ f1-s2-s
 > f1
 >
 > There are multiple top-level branches reachable from the current branch.

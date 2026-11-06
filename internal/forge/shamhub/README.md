@@ -89,5 +89,13 @@ func (r *forgeRepository) EditChange(...) (*forge.EditChangeResponse, error) {
 
 ## Adding command line functionality
 
-Functionality for the shamhub CLI is defined in cli.go (for now).
-Just add code there, and call directly into the `*ShamHub` implementation.
+Functionality for the shamhub CLI is defined in `cli_main.go`.
+The CLI talks to a running ShamHub server through administration endpoints
+under `/_shamhub/admin`.
+
+Test scripts start ShamHub with the `shamhub-setup` command,
+then run the same `shamhub` CLI used for local experimentation.
+When adding a new command,
+add the server-side operation first,
+then make the CLI translate command-line arguments
+into that administration request.

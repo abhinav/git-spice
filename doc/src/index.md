@@ -15,7 +15,8 @@ description: >-
 git-spice is a tool for stacking Git branches.
 It lets you manage and navigate stacks of branches,
 conveniently modify and rebase them, and create
-<!-- gs:github --> <!-- gs:bitbucket --> *Pull Requests* or
+<!-- gs:github --> <!-- gs:bitbucket --> <!-- gs:gitea -->
+<!-- gs:forgejo --> <!-- gs:azuredevops --> *Pull Requests* or
 <!-- gs:gitlab --> *Merge Requests* from them.
 
 It works with Git instead of trying to replace Git.
@@ -60,7 +61,7 @@ $ gs repo sync
     It allows chaining interdependent changes together,
     while still keeping the individual changes small and focused.
 
-    See also [:material-frequently-asked-questions: FAQ > What is stacking?](community/faq.md#what-is-stacking)
+    See also [:material-frequently-asked-questions: FAQ > What is stacking?](resources/faq.md#what-is-stacking)
 
 [:material-run: Get started](start/index.md){ .md-button }
 [:material-compass: Learn more](guide/index.md){ .md-button }
@@ -95,7 +96,10 @@ $ gs repo sync
     you can keep your stack in sync with the trunk branch,
     automatically rebase dependent branches, and more.
 
--   [:octicons-git-pull-request-16:{ .lg .middle } __Submit change requests__](guide/cr.md) <!-- gs:icon:github --> <!-- gs:icon:gitlab --> <!-- gs:icon:bitbucket -->
+-   [:octicons-git-pull-request-16:{ .lg .middle } __Submit change requests__](guide/cr.md)
+    <!-- gs:icon:github --> <!-- gs:icon:gitlab -->
+    <!-- gs:icon:bitbucket --> <!-- gs:icon:gitea -->
+    <!-- gs:icon:forgejo --> <!-- gs:icon:azuredevops -->
 
     ---
 
@@ -108,6 +112,23 @@ $ gs repo sync
     If a branch has already been submitted, git-spice will update the submission.
     If it has been merged, git-spice will automatically retarget branches
     that depend on it.
+
+-   [:octicons-git-merge-16:{ .lg .middle } __Merge stacked change requests__](guide/merge.md)
+
+    ---
+
+    Merge submitted CRs bottom-up from the command line.
+    git-spice waits for CRs to be ready,
+    merges them,
+    then restacks and updates surviving branches as needed.
+
+-   [:octicons-comment-discussion-16:{ .lg .middle } __Review stacked change requests__](guide/review.md)
+
+    ---
+
+    Draft comments locally, inspect review threads,
+    and publish feedback from the command line.
+    Keep each branch's feedback with its CR as you move through the stack.
 
 -   [:material-stairs:{ .lg .middle } __Incremental improvements__](start/stack.md)
 
@@ -124,7 +145,8 @@ $ gs repo sync
 
     git-spice operates entirely locally.
     It talks directly to Git, and when you ask for it,
-    to GitHub/GitLab/Bitbucket.
+    to GitHub, GitLab, Bitbucket, Gitea, Forgejo (including Codeberg),
+    and Azure DevOps.
     All state is stored locally in your Git repository.
     A network connection is not required, except when pushing or pulling.
 

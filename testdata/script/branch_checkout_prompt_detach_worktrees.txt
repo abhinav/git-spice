@@ -65,7 +65,7 @@ feat1
 -- robot-unix.golden --
 ===
 > Select a branch to checkout: 
-> ┏━□ feat1 [wt: ~/repo]
+> ┏━━□ feat1 [wt: ~/repo]
 > main ◀
 "feat1"
 -- robot-windows.golden --
@@ -77,7 +77,7 @@ feat1
 -- robot-name-unix.golden --
 ===
 > Select a branch to checkout: 
-> ┏━■ feat1 [wt: ~/repo] ◀
+> ┏━━■ feat1 [wt: ~/repo] ◀
 > main
 "feat1"
 -- robot-name-windows.golden --

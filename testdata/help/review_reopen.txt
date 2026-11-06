@@ -1,0 +1,21 @@
+Usage: gs review reopen <thread-id> [flags]
+
+Reopen a resolved review thread
+
+Reopens a resolved review thread on the change request for the current branch.
+
+The thread ID is shown in 'gs review list'.
+
+Arguments:
+  <thread-id>    Thread ID to reopen.
+
+Flags:
+  -b, --branch=BRANCH    Branch containing the thread. Defaults to the current
+                         branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

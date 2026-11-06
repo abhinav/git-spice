@@ -17,9 +17,13 @@ import (
 // so the renderer can place them without corrupting the rendered frame.
 type OutputWriter struct {
 	mu sync.Mutex
+	// cond wakes sendLoop when an active program has complete lines to print.
+	cond *sync.Cond
+	wg   sync.WaitGroup
 
 	out     io.Writer    // underlying writer
 	program printProgram // bubble tea program
+	closing bool         // sendLoop should exit instead of waiting for output
 
 	// tea.Println needs complete lines
 	// so we'll buffer them in memory and flush
@@ -27,11 +31,17 @@ type OutputWriter struct {
 	lines lineBuffer
 }
 
-var _ io.Writer = (*OutputWriter)(nil)
+var (
+	_ io.Writer = (*OutputWriter)(nil)
+	_ io.Closer = (*OutputWriter)(nil)
+)
 
 // NewOutputWriter builds an OutputWriter over the given writer.
 func NewOutputWriter(out io.Writer) *OutputWriter {
-	return &OutputWriter{out: out}
+	w := &OutputWriter{out: out}
+	w.cond = sync.NewCond(&w.mu)
+	w.wg.Go(w.sendLoop)
+	return w
 }
 
 type printProgram interface{ Send(tea.Msg) }
@@ -48,6 +58,7 @@ func (w *OutputWriter) printTo(program printProgram) (cleanup func()) {
 
 	w.program = program
 	w.lines = lineBuffer{}
+	w.cond.Signal()
 
 	return func() {
 		w.mu.Lock()
@@ -69,22 +80,62 @@ func (w *OutputWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if w.program == nil {
+	if w.closing || w.program == nil {
 		return w.out.Write(p)
 	}
 
 	w.lines.Write(p)
-	for line := range w.lines.TakeLines() {
-		// Bubble Tea print messages add their own newline.
-		// Trim the CR from CRLF output before routing the line.
-		line = bytes.TrimSuffix(line, []byte("\r"))
-
-		// Use Send instead of Print or Printf
-		// so late writes after shutdown are ignored
-		// instead of blocking on a stopped program.
-		w.program.Send(tea.Println(string(line))())
-	}
+	w.cond.Signal()
 	return len(p), nil
+}
+
+// Close stops the background print dispatcher.
+//
+// Callers should stop the active program and run the printTo cleanup before
+// Close.
+// Close does not flush buffered active-program output.
+func (w *OutputWriter) Close() error {
+	w.mu.Lock()
+	w.closing = true
+	w.cond.Signal()
+	w.mu.Unlock()
+
+	w.wg.Wait()
+	return nil
+}
+
+// sendLoop owns delivery of completed print lines to the active program.
+// Write only appends to the buffer and signals this loop,
+// so ordinary log output never waits on Bubble Tea's update loop.
+func (w *OutputWriter) sendLoop() {
+	for {
+		w.mu.Lock()
+		for !w.closing && (w.program == nil || !w.lines.HasLine()) {
+			w.cond.Wait()
+		}
+		if w.closing {
+			w.mu.Unlock()
+			return
+		}
+
+		program := w.program
+		var msgs []tea.Msg
+		for line := range w.lines.TakeLines() {
+			// Bubble Tea print messages add their own newline.
+			// Trim the CR from CRLF output before routing the line.
+			line = bytes.TrimSuffix(line, []byte("\r"))
+
+			msgs = append(msgs, tea.Println(string(line))())
+		}
+		w.mu.Unlock()
+
+		for _, msg := range msgs {
+			// Use Send instead of Print or Printf
+			// so late writes after shutdown are ignored
+			// instead of blocking on a stopped program.
+			program.Send(msg)
+		}
+	}
 }
 
 // Unwrap reports the underlying writer.
@@ -108,6 +159,11 @@ type lineBuffer struct {
 // Write appends raw output bytes without interpreting partial lines.
 func (b *lineBuffer) Write(p []byte) {
 	b.pending = append(b.pending, p...)
+}
+
+// HasLine reports whether the buffer has at least one complete line.
+func (b *lineBuffer) HasLine() bool {
+	return bytes.Contains(b.pending, []byte{'\n'})
 }
 
 // TakeLines yields complete lines and consumes them from the buffer.

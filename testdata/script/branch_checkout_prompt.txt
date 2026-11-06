@@ -68,15 +68,15 @@ whatever
 -- robot.golden --
 ===
 > Select a branch to checkout: 
-> ┏━□ bar
-> ┣━□ foo
+> ┏━━□ bar
+> ┣━━□ foo
 > main ◀
 "bar"
 ===
 > Select a branch to checkout: 
 > baz
-> ┏━□ bar
-> ┣━□ foo
+> ┏━━□ bar
+> ┣━━□ foo
 > main ◀
 > quux
 > qux
@@ -87,8 +87,8 @@ true
 ===
 > Select a branch to checkout: 
 > baz
-> ┏━□ bar
-> ┣━□ foo
+> ┏━━□ bar
+> ┣━━□ foo
 > main ◀
 > quux
 > qux

@@ -50,13 +50,13 @@ var _ Service = (*spice.Service)(nil)
 
 // Handler handles git-spice's branch split commands.
 type Handler struct {
-	Log            *silog.Logger                            // required
-	View           ui.View                                  // required
-	Repository     GitRepository                            // required
-	Store          Store                                    // required
-	Service        Service                                  // required
-	FindForge      func(forgeID string) (forge.Forge, bool) // required
-	HighlightStyle ui.Style                                 // required
+	Log            *silog.Logger                                     // required
+	View           ui.View                                           // required
+	Repository     GitRepository                                     // required
+	Store          Store                                             // required
+	Service        Service                                           // required
+	FindForge      func(context.Context, string) (forge.Forge, bool) // required
+	HighlightStyle ui.Style                                          // required
 }
 
 // Options defines options for the SplitBranch method.
@@ -81,18 +81,18 @@ func (b *Point) Decode(ctx *kong.DecodeContext) error {
 		return err
 	}
 
-	idx := strings.LastIndex(spec, ":")
+	commit, name, ok := strings.CutLast(spec, ":")
 	switch {
-	case idx == -1:
+	case !ok:
 		return fmt.Errorf("expected COMMIT:NAME, got %q", spec)
-	case len(spec[:idx]) == 0:
+	case commit == "":
 		return fmt.Errorf("part before : cannot be empty: %q", spec)
-	case len(spec[idx+1:]) == 0:
+	case name == "":
 		return fmt.Errorf("part after : cannot be empty: %q", spec)
 	}
 
-	b.Commit = spec[:idx]
-	b.Name = spec[idx+1:]
+	b.Commit = commit
+	b.Name = name
 	return nil
 }
 
@@ -209,22 +209,18 @@ func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) (*BranchR
 	}
 
 	branchTx := h.Store.BeginBranchTx()
+	updates := make([]state.UpsertRequest, 0, len(opts.At)+1)
 	for idx, split := range opts.At {
 		base, baseHash := branchInfo.Base, branchInfo.BaseHash
 		if idx > 0 {
 			base, baseHash = opts.At[idx-1].Name, commitHashes[idx-1]
 		}
 
-		if err := branchTx.Upsert(ctx, state.UpsertRequest{
+		updates = append(updates, state.UpsertRequest{
 			Name:     split.Name,
 			Base:     base,
 			BaseHash: baseHash,
-		}); err != nil {
-			return nil, fmt.Errorf("add branch %v with base %v: %w", split.Name, base, err)
-		}
-		h.Log.Debug("Updating tracked branch state",
-			"branch", split.Name,
-			"base", base+"@"+baseHash.String())
+		})
 	}
 
 	// If the original branch is being moved, its state update
@@ -235,17 +231,19 @@ func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) (*BranchR
 			finalBase, finalBaseHash = opts.At[len(opts.At)-1].Name, commitHashes[len(opts.At)-1]
 		}
 
-		if err := branchTx.Upsert(ctx, state.UpsertRequest{
+		updates = append(updates, state.UpsertRequest{
 			Name:     branch,
 			Base:     finalBase,
 			BaseHash: finalBaseHash,
-		}); err != nil {
-			return nil, fmt.Errorf("update branch %v with base %v: %w", branch, finalBase, err)
-		}
-
+		})
+	}
+	if err := branchTx.UpsertMany(ctx, updates); err != nil {
+		return nil, fmt.Errorf("update split branches: %w", err)
+	}
+	for _, update := range updates {
 		h.Log.Debug("Updating tracked branch state",
-			"branch", branch,
-			"base", finalBase+"@"+finalBaseHash.String())
+			"branch", update.Name,
+			"base", update.Base+"@"+update.BaseHash.String())
 	}
 
 	if branchInfo.Change != nil && !ui.Interactive(h.View) {
@@ -337,7 +335,7 @@ func (h *Handler) prepareChangeMetadataTransfer(
 	tx *state.BranchTx,
 ) (transfer func(), _ error) {
 	forgeID := meta.ForgeID()
-	f, ok := h.FindForge(forgeID)
+	f, ok := h.FindForge(ctx, forgeID)
 	if !ok {
 		return nil, fmt.Errorf("unknown forge: %v", forgeID)
 	}
@@ -355,21 +353,17 @@ func (h *Handler) prepareChangeMetadataTransfer(
 	toUpstreamBranch := cmp.Or(upstreamBranch, fromBranch)
 
 	var empty string
-	if err := tx.Upsert(ctx, state.UpsertRequest{
+	if err := tx.UpsertMany(ctx, []state.UpsertRequest{{
 		Name:           fromBranch,
 		ChangeMetadata: state.Null,
 		UpstreamBranch: &empty,
-	}); err != nil {
-		return nil, fmt.Errorf("clear change metadata from %v: %w", fromBranch, err)
-	}
-
-	if err := tx.Upsert(ctx, state.UpsertRequest{
+	}, {
 		Name:           toBranch,
 		ChangeMetadata: metaJSON,
 		ChangeForge:    forgeID,
 		UpstreamBranch: &toUpstreamBranch,
-	}); err != nil {
-		return nil, fmt.Errorf("set change metadata on %v: %w", toBranch, err)
+	}}); err != nil {
+		return nil, fmt.Errorf("transfer change metadata: %w", err)
 	}
 	h.Log.Debug("Transferring submitted CR metadata between tracked branches",
 		"from", fromBranch, "to", toBranch)

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
 
 // ChangeMergeability reports whether the pull request can be merged.
@@ -20,32 +20,22 @@ func (r *Repository) ChangeMergeability(
 			fmt.Errorf("resolve PR ID: %w", err)
 	}
 
-	var q struct {
-		Node struct {
-			PullRequest struct {
-				Mergeable        githubv4.MergeableState   `graphql:"mergeable"`
-				MergeStateStatus githubv4.MergeStateStatus `graphql:"mergeStateStatus"`
-				IsDraft          githubv4.Boolean          `graphql:"isDraft"`
-			} `graphql:"... on PullRequest"`
-		} `graphql:"node(id: $id)"`
-	}
-	if err := r.client.Query(ctx, &q, map[string]any{
-		"id": gqlID,
-	}); err != nil {
+	mergeability, err := r.gateway.PullRequestMergeability(ctx, gqlID)
+	if err != nil {
 		return forge.ChangeMergeability{},
 			fmt.Errorf("query mergeability: %w", err)
 	}
 
 	return changeMergeabilityFromGitHub(
-		q.Node.PullRequest.Mergeable,
-		q.Node.PullRequest.MergeStateStatus,
-		bool(q.Node.PullRequest.IsDraft),
+		mergeability.Mergeable,
+		mergeability.MergeStateStatus,
+		mergeability.IsDraft,
 	), nil
 }
 
 func changeMergeabilityFromGitHub(
-	mergeable githubv4.MergeableState,
-	mergeState githubv4.MergeStateStatus,
+	mergeable github.MergeableState,
+	mergeState github.MergeStateStatus,
 	isDraft bool,
 ) forge.ChangeMergeability {
 	if isDraft {
@@ -59,29 +49,28 @@ func changeMergeabilityFromGitHub(
 	}
 
 	switch mergeState {
-	case githubv4.MergeStateStatusClean,
-		githubv4.MergeStateStatusHasHooks,
-		githubv4.MergeStateStatusUnstable:
+	case github.MergeStateStatusClean, github.MergeStateStatusHasHooks,
+		github.MergeStateStatusUnstable:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityReady,
 			Reason: forge.ChangeMergeabilityReasonUnknown,
 		}
-	case githubv4.MergeStateStatusDirty:
+	case github.MergeStateStatusDirty:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityBlocked,
 			Reason: forge.ChangeMergeabilityReasonConflicts,
 		}
-	case githubv4.MergeStateStatusBehind:
+	case github.MergeStateStatusBehind:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityBlocked,
 			Reason: forge.ChangeMergeabilityReasonBehind,
 		}
-	case githubv4.MergeStateStatusDraft:
+	case github.MergeStateStatusDraft:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityBlocked,
 			Reason: forge.ChangeMergeabilityReasonDraft,
 		}
-	case githubv4.MergeStateStatusBlocked:
+	case github.MergeStateStatusBlocked:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityWaiting,
 			Reason: forge.ChangeMergeabilityReasonUnknown,
@@ -89,13 +78,12 @@ func changeMergeabilityFromGitHub(
 	}
 
 	switch mergeable {
-	case githubv4.MergeableStateConflicting:
+	case github.MergeableStateConflicting:
 		return forge.ChangeMergeability{
 			State:  forge.ChangeMergeabilityBlocked,
 			Reason: forge.ChangeMergeabilityReasonConflicts,
 		}
-	case githubv4.MergeableStateMergeable,
-		githubv4.MergeableStateUnknown:
+	case github.MergeableStateMergeable, github.MergeableStateUnknown:
 		// PullRequest.mergeable only reports the conflict calculation.
 		// When mergeStateStatus is UNKNOWN or unsupported,
 		// MERGEABLE does not prove that branch protection is satisfied.

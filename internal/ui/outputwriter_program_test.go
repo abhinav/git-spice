@@ -2,6 +2,7 @@ package ui_test
 
 import (
 	"bytes"
+	"io"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/hexops/autogold/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/vito/midterm"
@@ -16,9 +18,83 @@ import (
 )
 
 func TestOutputWriter_TeaProgram_printsLines(t *testing.T) {
+	tests := []struct {
+		name    string
+		profile colorprofile.Profile
+	}{
+		{name: "Unwrapped", profile: colorprofile.Unknown},
+		{name: "Color", profile: colorprofile.TrueColor},
+		{name: "Plain", profile: colorprofile.ASCII},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var raw lockedBuffer
+			output := ui.NewOutputWriter(&raw)
+			defer func() {
+				require.NoError(t, output.Close())
+			}()
+			model := new(outputWriterProgramModel)
+			var writer io.Writer = output
+			if tt.profile != colorprofile.Unknown {
+				writer = &colorprofile.Writer{Forward: output, Profile: tt.profile}
+			}
+
+			errc := make(chan error, 1)
+			go func() {
+				errc <- ui.RunModel(model, &ui.RunOptions{
+					Input:          bytes.NewReader(nil),
+					Output:         writer,
+					Width:          40,
+					Height:         8,
+					TERM:           "xterm-256color",
+					WithoutSignals: true,
+				})
+			}()
+			defer func() {
+				model.Stop()
+				select {
+				case err := <-errc:
+					require.NoError(t, err)
+				case <-time.After(time.Second):
+					t.Error("timed out waiting for program to stop")
+				}
+			}()
+
+			var rows []string
+			require.Eventually(t, func() bool {
+				rows = renderedRowsFrom(t, raw.Bytes())
+				return slices.Contains(rows, "model frame")
+			}, time.Second, 10*time.Millisecond)
+			autogold.Expect([]string{
+				"model frame",
+			}).Equal(t, rows)
+
+			_, err := output.Write([]byte("log line\n"))
+			require.NoError(t, err)
+			require.Eventually(t, func() bool {
+				rows = renderedRowsFrom(t, raw.Bytes())
+				return slices.Contains(rows, "log line") &&
+					slices.Contains(rows, "model frame")
+			}, time.Second, 10*time.Millisecond)
+			autogold.Expect([]string{
+				"log line",
+				"model frame",
+			}).Equal(t, rows)
+		})
+	}
+}
+
+func TestOutputWriter_TeaProgram_writeReturnsWhileModelBlocked(t *testing.T) {
 	var raw lockedBuffer
 	output := ui.NewOutputWriter(&raw)
-	model := new(outputWriterProgramModel)
+	defer func() {
+		require.NoError(t, output.Close())
+	}()
+	release := make(chan struct{})
+	model := &outputWriterBlockedModel{
+		blocked: make(chan struct{}),
+		release: release,
+	}
 
 	errc := make(chan error, 1)
 	go func() {
@@ -32,28 +108,40 @@ func TestOutputWriter_TeaProgram_printsLines(t *testing.T) {
 		})
 	}()
 
-	var rows []string
+	// The model must enter its blocking Update before the write.
+	// Otherwise, the test only proves that output can be delivered to an idle
+	// Bubble Tea program.
 	require.Eventually(t, func() bool {
-		rows = renderedRowsFrom(t, raw.Bytes())
-		return slices.Contains(rows, "model frame")
+		return slices.Contains(
+			renderedRowsFrom(t, raw.Bytes()),
+			"blocked model",
+		)
 	}, time.Second, 10*time.Millisecond)
-	autogold.Expect([]string{
-		"model frame",
-	}).Equal(t, rows)
 
-	_, err := output.Write([]byte("log line\n"))
-	require.NoError(t, err)
-	require.Eventually(t, func() bool {
-		rows = renderedRowsFrom(t, raw.Bytes())
-		return slices.Contains(rows, "log line") &&
-			slices.Contains(rows, "model frame")
-	}, time.Second, 10*time.Millisecond)
-	autogold.Expect([]string{
-		"log line",
-		"model frame",
-	}).Equal(t, rows)
+	select {
+	case <-model.blocked:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for model to block")
+	}
 
-	model.Stop()
+	// This write is the deadlock boundary.
+	// A synchronous Program.Send needs the Bubble Tea update loop to receive
+	// the print message, but the update loop is intentionally blocked above.
+	writec := make(chan error, 1)
+	go func() {
+		_, err := output.Write([]byte("log line\n"))
+		writec <- err
+	}()
+
+	select {
+	case err := <-writec:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for output write")
+	}
+
+	close(release)
+
 	select {
 	case err := <-errc:
 		require.NoError(t, err)
@@ -96,6 +184,43 @@ func (m *outputWriterProgramModel) View() tea.View {
 // Stop asks the next tick message to stop the Bubble Tea program.
 func (m *outputWriterProgramModel) Stop() {
 	m.done.Store(true)
+}
+
+// outputWriterBlockedModel simulates a Bubble Tea program that is alive but
+// unable to receive print messages through its update loop.
+//
+// This matches the branch-submit failure shape: the form waits for a background
+// result while that background path tries to log through the active program.
+type outputWriterBlockedModel struct {
+	blocked chan struct{}   // closed after Update enters the blocked section
+	release <-chan struct{} // unblocks Update so the test can shut down
+
+	once sync.Once
+}
+
+type outputWriterBlockedMsg struct{}
+
+func (m *outputWriterBlockedModel) Init() tea.Cmd {
+	return tea.Tick(10*time.Millisecond, func(time.Time) tea.Msg {
+		return outputWriterBlockedMsg{}
+	})
+}
+
+func (m *outputWriterBlockedModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if _, ok := msg.(outputWriterBlockedMsg); !ok {
+		return m, nil
+	}
+
+	// Keep Update blocked until the test proves OutputWriter.Write returned.
+	m.once.Do(func() {
+		close(m.blocked)
+	})
+	<-m.release
+	return m, tea.Quit
+}
+
+func (m *outputWriterBlockedModel) View() tea.View {
+	return tea.NewView("blocked model")
 }
 
 // lockedBuffer protects terminal output while the program is still rendering.

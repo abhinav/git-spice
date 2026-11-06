@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -40,7 +41,34 @@ func (r *Repository) projectID(ctx context.Context, id forge.RepositoryID) (int6
 var (
 	_ forge.Repository              = (*Repository)(nil)
 	_ forge.WithNavigationReference = (*Repository)(nil)
+	_ forge.WithComparisonURL       = (*Repository)(nil)
 )
+
+// ComparisonURL returns a URL for a comparison on GitLab.
+// See GitLab's [compare revisions documentation].
+//
+// [compare revisions documentation]: https://docs.gitlab.com/user/project/repository/compare_revisions/
+func (r *Repository) ComparisonURL(req forge.ComparisonRequest) string {
+	baseURL, owner, repo := r.forge.URL(), r.owner, r.repo
+	var query url.Values
+	if req.HeadRepository != nil {
+		headRepo := mustRepositoryID(req.HeadRepository)
+		if headRepo.owner != r.owner || headRepo.name != r.repo {
+			// GitLab serves cross-project comparisons from the head project
+			// and identifies the base project with from_project_id.
+			baseURL, owner, repo = headRepo.url, headRepo.owner, headRepo.name
+			query = url.Values{
+				"from_project_id": {strconv.FormatInt(r.repoID, 10)},
+			}
+		}
+	}
+	comparisonURL := fmt.Sprintf("%s/%s/%s/-/compare/%s...%s",
+		baseURL, owner, repo, req.BaseURLEncoded(), req.HeadURLEncoded())
+	if encodedQuery := query.Encode(); encodedQuery != "" {
+		comparisonURL += "?" + encodedQuery
+	}
+	return comparisonURL
+}
 
 // NavigationReference returns the GitLab reference to the given merge
 // request with the "+" expansion suffix.

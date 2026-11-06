@@ -46,21 +46,21 @@ gs ls -a
 -- robot-unix.golden --
 ===
 > Select a branch to checkout: 
->     ┏━□ feat3
+>     ┏━━□ feat3
 >   ┏━┻□ feat2 [wt: ~/feat2]
 > ┏━┻□ feat1 [wt: ~/feat1]
 > main ◀
 "feat3"
 ===
 > Select a branch to delete: 
->     ┏━■ feat3 ◀
+>     ┏━━■ feat3 ◀
 >   ┏━┻□ feat2 [wt: ~/feat2]
 > ┏━┻□ feat1 [wt: ~/feat1]
 > main
 "feat3"
 ===
 > Select a branch to move onto: 
->   ┏━□ feat2
+>   ┏━━□ feat2
 > ┏━┻■ feat1 [wt: ~/feat1] ◀
 > main
 >
@@ -90,8 +90,8 @@ gs ls -a
 > Moving feat2 onto another branch
 "main"
 -- golden/ls-unix.txt --
-┏━□ feat1 [wt: ~/feat1]
-┣━■ feat2 ◀
+┏━━□ feat1 [wt: ~/feat1]
+┣━━■ feat2 ◀
 main
 -- golden/ls-windows.txt --
 ┏━□ feat1 [wt: ~\feat1]

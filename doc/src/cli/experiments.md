@@ -57,11 +57,9 @@ after cherry-picking a commit.
 
 ### merge
 
-**Added**: <!-- gs:version unreleased -->
+**Added**: <!-- gs:version v0.30.0 -->
 <!-- TODO: **Removed**: -->
 
-Enables experimental merge commands,
-including the $$gs downstack merge$$ command.
-The downstack merge command acts as a local merge queue
-that merges a stack of Change Requests
-from the bottom up.
+Enables experimental merge commands:
+$$gs branch merge$$, $$gs downstack merge$$, and $$gs stack merge$$.
+These commands let git-spice manage merging stacks for you.

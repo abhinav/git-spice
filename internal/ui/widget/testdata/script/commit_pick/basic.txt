@@ -53,8 +53,8 @@ def
 Pick a commit to cherry-pick
 -- prompt --
 Select a commit:
-  ┏━□ feat2
-  ┃   ▶ ghi feat: add another feature (11 hours ago)
+  ┏━━□ feat2
+  ┃    ▶ ghi feat: add another feature (11 hours ago)
 ┏━┻□ feat1
 ┃      abc feat: add feature (11 hours ago)
 ┃      def refac: unrelated change (11 hours ago)
@@ -63,8 +63,8 @@ main
 Pick a commit to cherry-pick
 -- commit_2 --
 Select a commit:
-  ┏━□ feat2
-  ┃     ghi feat: add another feature (11 hours ago)
+  ┏━━□ feat2
+  ┃      ghi feat: add another feature (11 hours ago)
 ┏━┻□ feat1
 ┃    ▶ abc feat: add feature (11 hours ago)
 ┃      def refac: unrelated change (11 hours ago)
@@ -73,8 +73,8 @@ main
 Pick a commit to cherry-pick
 -- commit_3 --
 Select a commit:
-  ┏━□ feat2
-  ┃     ghi feat: add another feature (11 hours ago)
+  ┏━━□ feat2
+  ┃      ghi feat: add another feature (11 hours ago)
 ┏━┻□ feat1
 ┃      abc feat: add feature (11 hours ago)
 ┃    ▶ def refac: unrelated change (11 hours ago)

@@ -1,0 +1,68 @@
+# commit create can opt out of automatic upstack restacking.
+
+as 'Test <test@example.com>'
+at '2026-07-09T12:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a two-branch stack.
+git add feature1.txt
+gs branch create feature1 -m 'Add feature1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+# Updating the lower branch with --no-restack leaves the upstack branch in
+# place so the user can restack later.
+gs down
+mv $WORK/extra/feature1-updated.txt feature1.txt
+gs commit create --no-restack -a -m 'Update feature1'
+
+# feature2 remains based on the pre-update feature1 commit when restacking is
+# disabled.
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+# The config default can also disable restacking, and --restack=upstack can
+# force the restack for a single invocation.
+git config spice.commitCreate.restack none
+gs branch restack --branch feature2
+gs down
+mv $WORK/extra/feature1-updated-again.txt feature1.txt
+gs commit create -a -m 'Update feature1 again'
+git graph --branches
+cmp stdout $WORK/golden/config-none-graph.txt
+
+gs commit create --restack=upstack --allow-empty -m 'Force restack'
+git graph --branches
+cmp stdout $WORK/golden/flag-upstack-graph.txt
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- extra/feature1-updated.txt --
+Feature 1 updated
+-- extra/feature1-updated-again.txt --
+Feature 1 updated again
+-- golden/feature2-before.txt --
+6a4b12a
+-- golden/config-none-graph.txt --
+* b2616a3 (HEAD -> feature1) Update feature1 again
+| * 4d92a47 (feature2) Add feature2
+|/  
+* 55448f5 Update feature1
+* 75292ec Add feature1
+* 9003cd8 (main) Initial commit
+-- golden/flag-upstack-graph.txt --
+* 236c055 (feature2) Add feature2
+* cae30e6 (HEAD -> feature1) Force restack
+* b2616a3 Update feature1 again
+* 55448f5 Update feature1
+* 75292ec Add feature1
+* 9003cd8 (main) Initial commit
