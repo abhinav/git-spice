@@ -195,19 +195,8 @@ func (v *memoizedValue[T]) Get(get func() (T, error)) (T, error) {
 type BatchOptions struct {
 	UpdateOnlyDefault bool `config:"submit.updateOnly" help:"Default value for --update-only in batch submit operations." hidden:"" default:"false"`
 
-	// BranchMetadata provides per-branch title and body overrides
-	// for CR creation. When a branch has an entry here,
-	// its title and body are used directly
-	// instead of deriving from commits.
-	BranchMetadata map[string]BranchMeta `kong:"-"`
-}
-
-// BranchMeta holds per-branch CR metadata for batch submissions.
-// When provided via --fill-from, these values are used directly
-// instead of deriving title and body from commit messages.
-type BranchMeta struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
+	// MessageFiles supplies per-branch messages for new change requests.
+	MessageFiles []MessageFile `name:"message-file" placeholder:"BRANCH:PATH" sep:"none" help:"Read a new CR's message from PATH for BRANCH. First line is the title; remaining text is the body. Repeat for each branch."`
 }
 
 // BatchRequest is a request to submit one or more change requests.
@@ -238,6 +227,14 @@ func (h *Handler) SubmitBatch(
 		// If the user didn't specify --update-only flag,
 		// use the default value from the config.
 		opts.UpdateOnly = &batchOpts.UpdateOnlyDefault
+	}
+
+	messageFiles := make(map[string]*MessageFile, len(batchOpts.MessageFiles))
+	for _, file := range batchOpts.MessageFiles {
+		if _, exists := messageFiles[file.Branch]; exists {
+			return fmt.Errorf("multiple message files for branch %q", file.Branch)
+		}
+		messageFiles[file.Branch] = &file
 	}
 
 	graph := req.BranchGraph
@@ -285,15 +282,9 @@ func (h *Handler) SubmitBatch(
 			Options:      &opts,
 			upstreamBase: resolvedUpstreams[branchInfo.Base],
 			stackUpdates: &stackUpdates,
+			MessageFile:  messageFiles[branch],
 		}
 
-		// Use per-branch metadata if available.
-		if batchOpts.BranchMetadata != nil {
-			if meta, ok := batchOpts.BranchMetadata[branch]; ok {
-				sopts.Title = meta.Title
-				sopts.Body = meta.Body
-			}
-		}
 		status, err := h.submitBranch(
 			ctx,
 			graph,
@@ -401,6 +392,7 @@ type submitOptions struct {
 	*Options
 
 	Title, Body  string
+	MessageFile  *MessageFile
 	upstreamBase string
 	stackUpdates *submitStackUpdates
 }
@@ -1104,6 +1096,15 @@ func (h *Handler) prepareBranch(
 	pushRepository forge.RepositoryID,
 	opts *submitOptions,
 ) (*preparedBranch, error) {
+	if opts.MessageFile != nil {
+		message, err := opts.MessageFile.read()
+		if err != nil {
+			return nil, err
+		}
+		opts.Title = message.Title
+		opts.Body = message.Body
+	}
+
 	// Fetch the template while we're prompting the other fields.
 	changeTemplatesCh := make(chan []*forge.ChangeTemplate, 1)
 	go func() {
@@ -1190,7 +1191,7 @@ func (h *Handler) prepareBranch(
 		fields = append(fields, form.titleField(&opts.Title, msgs))
 	}
 
-	if opts.Body == "" {
+	if opts.Body == "" && opts.MessageFile == nil {
 		opts.Body = defaultBody.String()
 		if opts.Fill {
 			// If the user selected --fill,

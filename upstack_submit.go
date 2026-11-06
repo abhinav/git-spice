@@ -19,8 +19,6 @@ type upstackSubmitCmd struct {
 	submit.BatchOptions
 
 	Branch string `placeholder:"NAME" help:"Branch to start at" predictor:"trackedBranches"`
-
-	FillFrom string `name:"fill-from" help:"JSON file mapping branch names to {title, body} for CR creation. Use '-' for stdin." placeholder:"FILE"`
 }
 
 func (*upstackSubmitCmd) Help() string {
@@ -69,14 +67,6 @@ func (cmd *upstackSubmitCmd) Run(
 	}
 
 	// TODO: separate preparation of the stack from submission
-
-	if cmd.FillFrom != "" {
-		meta, err := parseFillFrom(cmd.FillFrom)
-		if err != nil {
-			return fmt.Errorf("--fill-from: %w", err)
-		}
-		cmd.BranchMetadata = meta
-	}
 
 	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
 		Branches:     upstacks,

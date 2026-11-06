@@ -172,6 +172,36 @@ you may also specify title and body directly.
 {green}INF{reset} Created #123: https://github.com/abhinav/git-spice/pull/123
 ```
 
+For $$gs stack submit$$, $$gs upstack submit$$, and $$gs downstack submit$$,
+use `--message-file BRANCH:PATH` to supply a new CR's message from a text file.
+Repeat the flag for each branch whose message you want to supply.
+<!-- gs:version unreleased -->
+
+```sh
+gs stack submit --no-draft \
+    --message-file validation:validation.md \
+    --message-file validation-tests:validation-tests.md
+```
+
+The first line of each file is the CR title.
+The remaining text is the body, with surrounding blank lines removed.
+A title-only file supplies an empty body,
+without adding commit messages or a CR template.
+For example, `validation.md` might contain:
+
+```text
+Validate input before saving
+
+Reject malformed input before changing stored data.
+```
+
+Supply `--draft` or `--no-draft` as well to skip the draft-status prompt.
+Branches without a message file follow the usual prompting or `--fill` behavior.
+Each file is read only when its branch needs a new CR;
+existing CR descriptions are left unchanged.
+Dry runs and `--no-publish` submissions do not read the message files.
+Paths are relative to the command's working directory.
+
 !!! info "Setting draft status non-interactively"
 
     Change requests may be marked as draft or ready for review

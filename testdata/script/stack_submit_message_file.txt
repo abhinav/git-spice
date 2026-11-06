@@ -1,0 +1,187 @@
+# Supply per-branch messages without prompting, reading files only for new CRs.
+
+as 'Test <test@example.com>'
+at '2026-11-06T18:00:00Z'
+
+cd repo
+git init
+git add .github
+git commit --allow-empty -m 'Initial commit'
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add one.txt
+gs branch create feature1 -m 'Default title one' -m 'Default body one'
+git add two.txt
+gs branch create feature2 -m 'Default title two'
+git add three.txt
+gs branch create feature3 -m 'Default title three'
+
+# Syntax errors and duplicate branches are rejected before submission.
+! gs --no-prompt stack submit --no-draft --message-file feature1
+stderr 'BRANCH:PATH'
+! gs --no-prompt stack submit --no-draft --message-file :missing
+stderr 'BRANCH:PATH'
+! gs --no-prompt stack submit --no-draft --message-file feature1:
+stderr 'BRANCH:PATH'
+! gs --no-prompt stack submit --no-draft --message-file feature1:missing --message-file feature1:other
+stderr 'multiple message files for branch "feature1"'
+
+# File errors are reported when creating a CR, before pushing that branch.
+! gs --no-prompt downstack submit --branch feature1 --no-draft --message-file feature1:missing
+stderr 'read message file'
+! git show-ref --verify refs/remotes/origin/feature1
+! gs --no-prompt downstack submit --branch feature1 --no-draft --message-file feature1:$WORK/messages/empty.md
+stderr 'non-empty title'
+
+# A title-only file supplies an empty body, even with --fill and a CR template.
+gs --no-prompt downstack submit --branch feature1 --no-draft --fill --message-file feature1:$WORK/messages/one.md
+stderr 'Created #1'
+
+# Upstack submission also accepts title-only files without --fill.
+gs --no-prompt upstack submit --branch feature2 --draft --message-file feature2:$WORK/messages/two.md --message-file feature3:$WORK/messages/three.md
+stderr 'Created #2'
+stderr 'Created #3'
+
+# Existing descriptions do not require the supplied files to exist.
+gs --no-prompt stack submit --no-draft --message-file feature1:missing --message-file feature2:missing --message-file feature3:missing
+
+# Dry runs and push-only submissions do not consume message files.
+git add four.txt
+gs branch create feature4 -m 'Default title four'
+gs --no-prompt stack submit --dry-run --no-draft --message-file feature4:missing
+stderr 'WOULD create a CR for feature4'
+gs --no-prompt stack submit --no-publish --no-draft --message-file feature4:missing
+stderr 'Pushed'
+
+# Stack submission reads the remaining new CR's file.
+gs --no-prompt stack submit --no-draft --message-file feature4:$WORK/messages/four.md --message-file feature1:missing
+stderr 'Created #4'
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/one.txt --
+one
+-- repo/two.txt --
+two
+-- repo/three.txt --
+three
+-- repo/four.txt --
+four
+-- repo/.github/pull_request_template.md --
+Default template body
+-- messages/empty.md --
+
+-- messages/one.md --
+Custom title one
+-- messages/two.md --
+Custom title two
+
+First paragraph.
+
+    Indented text.
+-- messages/three.md --
+Custom title three
+-- messages/four.md --
+Custom title four
+
+Body four.
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Custom title one",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "09d3cb1072433d7c28a8a4a5a3414ae1b6600eab"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "0d0a20310aba676b5045c3c6f100e71dfc8d3829"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Custom title two",
+    "body": "First paragraph.\n\n    Indented text.",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "0d0a20310aba676b5045c3c6f100e71dfc8d3829"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "958efa04524de428f165b224d1e552c7e9ea3be4"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "Custom title three",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "958efa04524de428f165b224d1e552c7e9ea3be4"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature3",
+      "sha": "d85e9593280bae1437f73a512c0528d4632dda70"
+    }
+  },
+  {
+    "number": 4,
+    "html_url": "$SHAMHUB_URL/alice/example/change/4",
+    "state": "open",
+    "title": "Custom title four",
+    "body": "Body four.",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature3",
+      "sha": "d85e9593280bae1437f73a512c0528d4632dda70"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature4",
+      "sha": "4e37470b647af418b5edf577f0abda8507045985"
+    }
+  }
+]
