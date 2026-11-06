@@ -35,9 +35,20 @@ func (h *Handler) updateStackRepresentations(
 	ctx context.Context,
 	opts *Options,
 	stackUpdates *submitStackUpdates,
-	submittedBranches []string,
-	completedBranches []string,
+	results []submitResult,
 ) error {
+	var submittedBranches, completedBranches []string
+	for _, result := range results {
+		switch result.change {
+		case changeIncomplete:
+			submittedBranches = append(submittedBranches, result.branch)
+		case changeComplete:
+			submittedBranches = append(submittedBranches, result.branch)
+			completedBranches = append(completedBranches, result.branch)
+		case changeNotSelected:
+			// Push-only and skipped branches do not update stack representations.
+		}
+	}
 	if len(submittedBranches) == 0 || opts.DryRun {
 		return nil
 	}

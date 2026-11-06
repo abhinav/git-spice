@@ -242,7 +242,7 @@ func (h *Handler) SubmitBatch(
 	stackUpdates := submitStackUpdates{
 		requestedBranches: slices.Clone(req.Branches),
 	}
-	var submittedBranches, completedBranches []string
+	var results []submitResult
 	// A later branch failure must not strand earlier published changes without
 	// their stack representations. Synchronize every completed submission on
 	// every exit from the loop.
@@ -253,8 +253,7 @@ func (h *Handler) SubmitBatch(
 				ctx,
 				opts,
 				&stackUpdates,
-				submittedBranches,
-				completedBranches,
+				results,
 			),
 		)
 	}()
@@ -277,16 +276,11 @@ func (h *Handler) SubmitBatch(
 				stackUpdates: &stackUpdates,
 			},
 		)
-		if status.Submitted {
-			submittedBranches = append(submittedBranches, branch)
-		}
+		results = append(results, status)
 		if err != nil {
 			return fmt.Errorf("submit branch %s: %w", branch, err)
 		}
 		resolvedUpstreams[branch] = status.upstreamBranch
-		if status.Submitted {
-			completedBranches = append(completedBranches, branch)
-		}
 	}
 
 	return nil
@@ -326,7 +320,7 @@ func (h *Handler) Submit(ctx context.Context, req *Request) (retErr error) {
 	}
 
 	stackUpdates := submitStackUpdates{requestedBranches: []string{req.Branch}}
-	var submittedBranches, completedBranches []string
+	var results []submitResult
 	defer func() {
 		retErr = errors.Join(
 			retErr,
@@ -334,8 +328,7 @@ func (h *Handler) Submit(ctx context.Context, req *Request) (retErr error) {
 				ctx,
 				opts,
 				&stackUpdates,
-				submittedBranches,
-				completedBranches,
+				results,
 			),
 		)
 	}()
@@ -351,28 +344,33 @@ func (h *Handler) Submit(ctx context.Context, req *Request) (retErr error) {
 			stackUpdates: &stackUpdates,
 		},
 	)
-	if status.Submitted {
-		submittedBranches = append(submittedBranches, req.Branch)
-	}
+	results = append(results, status)
 	if err != nil {
 		return fmt.Errorf("submit branch %s: %w", req.Branch, err)
 	}
-	if status.Submitted {
-		completedBranches = append(completedBranches, req.Branch)
-	}
+
 	return nil
 }
 
-type submitStatus struct {
-	// Submitted indicates whether the branch was actually submitted
-	// to a Forge.
-	//
-	// If yes, comments will be added or updated
-	// based on the NavComment option.
-	Submitted bool
-
+// submitResult remains meaningful on failure.
+// An incomplete change still gets navigation updates,
+// but cannot seed native stack reconciliation.
+type submitResult struct {
+	branch         string
+	change         changeSubmission
 	upstreamBranch string
 }
+
+// changeSubmission describes eligibility for post-submit stack updates.
+// It does not claim that local bookkeeping succeeded:
+// those failures remain warnings, and stack updates reload the persisted graph.
+type changeSubmission int
+
+const (
+	changeNotSelected changeSubmission = iota // push-only, skipped, or not reached
+	changeIncomplete                          // selected for creation or update
+	changeComplete                            // selected branch returned without error
+)
 
 type submitOptions struct {
 	*Options
@@ -387,7 +385,13 @@ func (h *Handler) submitBranch(
 	graph *spice.BranchGraph,
 	branchToSubmit string,
 	opts *submitOptions,
-) (status submitStatus, err error) {
+) (status submitResult, err error) {
+	status.branch = branchToSubmit
+	defer func() {
+		if status.change == changeIncomplete && err == nil {
+			status.change = changeComplete
+		}
+	}()
 	if branchToSubmit == h.Store.Trunk() {
 		return status, errors.New("cannot submit trunk")
 	}
@@ -398,16 +402,6 @@ func (h *Handler) submitBranch(
 	branch, ok := graph.Lookup(branchToSubmit)
 	if !ok {
 		return status, fmt.Errorf("lookup branch: %w", state.ErrNotExist)
-	}
-
-	// Various code paths down below should call this
-	// if the branch is being published as a CR (new or existing)
-	// so it should get a nav comment.
-	var _needsNavCommentOnce sync.Once
-	needsNavComment := func() {
-		_needsNavCommentOnce.Do(func() {
-			status.Submitted = true
-		})
 	}
 
 	commitHash, err := h.Repository.PeelToCommit(ctx, branchToSubmit)
@@ -712,7 +706,7 @@ func (h *Handler) submitBranch(
 
 		var prepared *preparedBranch
 		if opts.Publish {
-			needsNavComment()
+			status.change = changeIncomplete
 
 			remoteRepo, err := h.upstreamRepository(ctx)
 			if err != nil {
@@ -795,14 +789,20 @@ func (h *Handler) submitBranch(
 		}
 
 		if prepared != nil {
-			changeID, changeURL, err := prepared.Publish(ctx)
+			created, err := prepared.Publish(ctx)
 			if err != nil {
 				return status, fmt.Errorf("publish change: %w", err)
 			}
-			openURL = changeURL
+			// Prepared information recovers user input after failed creation.
+			// Remote creation succeeded; local association is a separate step.
+			if err := h.Store.ClearPreparedBranch(ctx, branchToSubmit); err != nil {
+				log.Warn("Could not clear prepared branch", "error", err)
+			}
+			log.Infof("Created %v: %s", created.ID, created.URL)
+			openURL = created.URL
 
 			remoteRepo := prepared.remoteRepo
-			changeMeta, err := remoteRepo.NewChangeMetadata(ctx, changeID)
+			changeMeta, err := remoteRepo.NewChangeMetadata(ctx, created.ID)
 			if err != nil {
 				return status, fmt.Errorf("get change metadata: %w", err)
 			}
@@ -819,7 +819,7 @@ func (h *Handler) submitBranch(
 			log.Infof("Pushed %s", branchToSubmit)
 		}
 	} else {
-		needsNavComment()
+		status.change = changeIncomplete
 		if upstreamBranch == "" {
 			log.Error("No upstream branch was found for branch %v with existing CR %v", branchToSubmit, existingChange.ID)
 			log.Error("We cannot update the CR without an upstream branch name.")
@@ -1256,7 +1256,6 @@ func (h *Handler) prepareBranch(
 		base:           upstreamBase,
 		pushRepository: pushRepository,
 		remoteRepo:     remoteRepo,
-		store:          h.Store,
 		log:            h.Log,
 		labels:         effectiveLabels(opts.Options, true /* isCreate */),
 		reviewers:      effectiveReviewers(opts.Options, draft),
@@ -1305,11 +1304,13 @@ type preparedBranch struct {
 
 	pushRepository forge.RepositoryID
 	remoteRepo     forge.Repository
-	store          Store
 	log            *silog.Logger
 }
 
-func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, error) {
+// Publish creates the remote change.
+// The caller owns clearing saved input
+// and associating the created change with the local branch.
+func (b *preparedBranch) Publish(ctx context.Context) (forge.SubmitChangeResult, error) {
 	result, err := b.remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
 		Subject:        b.Subject,
 		Body:           b.Body,
@@ -1328,15 +1329,10 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, e
 			b.log.Errorf("%v: cannot be submitted because base branch %q does not exist in the remote.", b.Name, b.base)
 			b.log.Errorf("Try submitting the base branch first:")
 			b.log.Errorf("  %s branch submit --branch=%s", cli.Name(), b.base)
-			return nil, "", fmt.Errorf("create change: %w", err)
+			return forge.SubmitChangeResult{}, fmt.Errorf("create change: %w", err)
 		}
-		return nil, "", fmt.Errorf("create change: %w", err)
+		return forge.SubmitChangeResult{}, fmt.Errorf("create change: %w", err)
 	}
 
-	if err := b.store.ClearPreparedBranch(ctx, b.Name); err != nil {
-		b.log.Warn("Could not clear prepared branch", "error", err)
-	}
-
-	b.log.Infof("Created %v: %s", result.ID, result.URL)
-	return result.ID, result.URL, nil
+	return result, nil
 }

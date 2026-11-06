@@ -61,8 +61,10 @@ func TestHandler_updateStackRepresentations(t *testing.T) {
 		t.Context(),
 		&Options{NavComment: NavCommentNever},
 		&submitStackUpdates{requestedBranches: []string{"top", "middle"}},
-		[]string{"top", "middle"},
-		[]string{"top", "middle"},
+		[]submitResult{
+			{branch: "top", change: changeComplete},
+			{branch: "middle", change: changeComplete},
+		},
 	))
 	require.Len(t, stackRepo.plans, 1)
 
@@ -156,9 +158,13 @@ func TestHandler_updateStackRepresentations_submissionScope(t *testing.T) {
 				}), nil,
 			)
 			handler := newStackFinalizationTestHandler(forgetest.NewMockForge(ctrl), stackRepo, service)
+			var results []submitResult
+			for _, branch := range tt.submitted {
+				results = append(results, submitResult{branch: branch, change: changeComplete})
+			}
 			require.NoError(t, handler.updateStackRepresentations(
 				t.Context(), &Options{NavComment: NavCommentNever},
-				&submitStackUpdates{requestedBranches: tt.submitted}, tt.submitted, tt.submitted,
+				&submitStackUpdates{requestedBranches: tt.submitted}, results,
 			))
 			require.Len(t, stackRepo.plans, 1)
 			assert.ElementsMatch(t, tt.want, stackRepo.plans[0])
@@ -196,8 +202,7 @@ func TestHandler_updateStackRepresentations_unsupported(t *testing.T) {
 		t.Context(),
 		&Options{NavComment: NavCommentNever},
 		&submitStackUpdates{requestedBranches: []string{"feature"}},
-		[]string{"feature"},
-		[]string{"feature"},
+		[]submitResult{{branch: "feature", change: changeComplete}},
 	))
 }
 
@@ -260,8 +265,7 @@ func TestHandler_updateStackRepresentations_nativeStackErrors(t *testing.T) {
 				t.Context(),
 				&Options{NavComment: NavCommentNever},
 				&submitStackUpdates{requestedBranches: []string{"feature"}},
-				[]string{"feature"},
-				[]string{"feature"},
+				[]submitResult{{branch: "feature", change: changeComplete}},
 			))
 			require.Len(t, stackRepo.plans, 1)
 
@@ -309,8 +313,7 @@ func TestHandler_updateStackRepresentations_fallsBackAfterUnsupportedPlan(t *tes
 				{branch: "feature", repository: remoteRepo, change: change, base: "main"},
 			},
 		},
-		[]string{"feature"},
-		[]string{"feature"},
+		[]submitResult{{branch: "feature", change: changeComplete}},
 	)
 	require.NoError(t, err)
 }
