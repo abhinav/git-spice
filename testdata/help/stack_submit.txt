@@ -49,6 +49,10 @@ Flags:
   -a, --assign=ASSIGNEE,...      Assign the change request to these users.
                                  Pass multiple times or separate with commas.
       --no-web                   Alias for --web=false.
+      --message-file=BRANCH:PATH
+                                 Read a new CR's message from PATH for BRANCH.
+                                 First line is the title; remaining text is the
+                                 body. Repeat for each branch.
 
 Global Flags:
   -h, --help           Show help for the command

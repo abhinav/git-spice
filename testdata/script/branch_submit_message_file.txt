@@ -1,0 +1,55 @@
+# A single branch accepts a message file without a branch prefix.
+
+as 'Test <test@example.com>'
+at '2026-11-06T18:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature.txt
+gs branch create feature -m 'Default title' -m 'Default body'
+gs --no-prompt branch submit --no-draft --message-file $WORK/message.md
+stderr 'Created #1'
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature.txt --
+Feature contents
+-- message.md --
+Supplied title
+
+Supplied body.
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Supplied title",
+    "body": "Supplied body.",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "916aa67db81180eaa7caedbebc50e8edb234c4ae"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature",
+      "sha": "d068acee358bfcbd342c2f6e9dcd454e498d5948"
+    }
+  }
+]

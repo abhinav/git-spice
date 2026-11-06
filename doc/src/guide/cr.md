@@ -172,15 +172,17 @@ you may also specify title and body directly.
 {green}INF{reset} Created #123: https://github.com/abhinav/git-spice/pull/123
 ```
 
-!!! info "Setting draft status non-interactively"
+!!! info "Submitting non-interactively"
 
-    Change requests may be marked as draft or ready for review
-    non-interactively with the `--draft` and `--no-draft` flags.
+    Supply messages from text files with `--message-file PATH` for
+    $$gs branch submit$$, or repeat `--message-file BRANCH:PATH` for
+    $$gs stack submit$$, $$gs upstack submit$$, and $$gs downstack submit$$.
+    The first line is the title; the rest is the body.
+    <!-- gs:version unreleased -->
 
-    By default, the submit commands will leave
-    the draft state of existing PRs unchanged.
-    If the `--draft` or `--no-draft` flags are provided,
-    the draft state of all PRs will be set accordingly.
+    Set `--draft` or `--no-draft` to skip the draft-status prompt.
+    These flags also change the draft status of existing CRs;
+    existing descriptions are left unchanged.
 
 ### Force pushing
 

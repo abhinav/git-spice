@@ -1,0 +1,5 @@
+kind: Added
+body: >-
+  submit: Add --message-file option to supply CR message from a file.
+  For stack submissions, use `--message-file BRANCH:PATH` form.
+time: 2026-05-13T11:37:40.724695-07:00

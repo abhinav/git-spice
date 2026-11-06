@@ -194,6 +194,9 @@ func (v *memoizedValue[T]) Get(get func() (T, error)) (T, error) {
 // that are only available to batch submit operations.
 type BatchOptions struct {
 	UpdateOnlyDefault bool `config:"submit.updateOnly" help:"Default value for --update-only in batch submit operations." hidden:"" default:"false"`
+
+	// MessageFiles supplies per-branch messages for new change requests.
+	MessageFiles MessageFiles `name:"message-file" placeholder:"BRANCH:PATH" help:"Read a new CR's message from PATH for BRANCH. First line is the title; remaining text is the body. Repeat for each branch."`
 }
 
 // BatchRequest is a request to submit one or more change requests.
@@ -266,15 +269,18 @@ func (h *Handler) SubmitBatch(
 
 		// Shallow copy the options because submitBranch may modify them.
 		opts := *opts
+		sopts := &submitOptions{
+			Options:      &opts,
+			upstreamBase: resolvedUpstreams[branchInfo.Base],
+			stackUpdates: &stackUpdates,
+			MessageFile:  batchOpts.MessageFiles[branch],
+		}
+
 		status, err := h.submitBranch(
 			ctx,
 			graph,
 			branch,
-			&submitOptions{
-				Options:      &opts,
-				upstreamBase: resolvedUpstreams[branchInfo.Base],
-				stackUpdates: &stackUpdates,
-			},
+			sopts,
 		)
 		results = append(results, status)
 		if err != nil {
@@ -293,6 +299,10 @@ type Request struct {
 
 	// Title and Body are the title and body of the change request.
 	Title, Body string // optional
+
+	// MessageFile supplies the complete message for a new change request.
+	// When set, Title and Body are not used.
+	MessageFile MessageFile // optional
 
 	// Options are the options for the submit operation.
 	Options *Options // optional
@@ -341,6 +351,7 @@ func (h *Handler) Submit(ctx context.Context, req *Request) (retErr error) {
 			Options:      opts,
 			Title:        req.Title,
 			Body:         req.Body,
+			MessageFile:  req.MessageFile,
 			stackUpdates: &stackUpdates,
 		},
 	)
@@ -376,6 +387,7 @@ type submitOptions struct {
 	*Options
 
 	Title, Body  string
+	MessageFile  MessageFile
 	upstreamBase string
 	stackUpdates *submitStackUpdates
 }
@@ -1081,6 +1093,15 @@ func (h *Handler) prepareBranch(
 	pushRepository forge.RepositoryID,
 	opts *submitOptions,
 ) (*preparedBranch, error) {
+	if opts.MessageFile != "" {
+		title, body, err := opts.MessageFile.read()
+		if err != nil {
+			return nil, fmt.Errorf("read message file %q: %w", opts.MessageFile, err)
+		}
+		opts.Title = title
+		opts.Body = body
+	}
+
 	// Fetch the template while we're prompting the other fields.
 	changeTemplatesCh := make(chan []*forge.ChangeTemplate, 1)
 	go func() {
@@ -1167,7 +1188,7 @@ func (h *Handler) prepareBranch(
 		fields = append(fields, form.titleField(&opts.Title, msgs))
 	}
 
-	if opts.Body == "" {
+	if opts.Body == "" && opts.MessageFile == "" {
 		opts.Body = defaultBody.String()
 		if opts.Fill {
 			// If the user selected --fill,

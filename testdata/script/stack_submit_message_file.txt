@@ -1,0 +1,161 @@
+# Supply per-branch messages without prompting, reading files only for new CRs.
+
+as 'Test <test@example.com>'
+at '2026-11-06T18:00:00Z'
+
+cd repo
+git init
+git add .shamhub
+git commit --allow-empty -m 'Initial commit'
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add one.txt
+gs branch create feature1 -m 'Default title one' -m 'Default body one'
+git add two.txt
+gs branch create feature2 -m 'Default title two' -m 'Default body two'
+git add three.txt
+gs branch create feature3 -m 'Default title three'
+
+# A title-only file supplies an empty body, even with --fill and a CR template.
+gs --no-prompt downstack submit --branch feature1 --no-draft --fill --message-file feature1:$WORK/messages/one.md
+stderr 'Created #1'
+
+# Mixed submission uses file content for feature3 and commit defaults for feature2.
+gs --no-prompt upstack submit --branch feature2 --draft --fill --message-file feature3:$WORK/messages/three.md
+stderr 'Created #2'
+stderr 'Created #3'
+
+# Dry runs and push-only submissions do not consume message files.
+git add four.txt
+gs branch create feature4 -m 'Default title four'
+gs --no-prompt stack submit --dry-run --no-draft --message-file feature4:$WORK/messages/empty.md
+stderr 'WOULD create a CR for feature4'
+gs --no-prompt stack submit --no-publish --no-draft --message-file feature4:$WORK/messages/empty.md
+stderr 'Pushed'
+
+# Stack submission reads the remaining new CR's file.
+gs --no-prompt stack submit --no-draft --message-file feature4:$WORK/messages/four.md
+stderr 'Created #4'
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/one.txt --
+one
+-- repo/two.txt --
+two
+-- repo/three.txt --
+three
+-- repo/four.txt --
+four
+-- repo/.shamhub/CHANGE_TEMPLATE.md --
+Default template body
+-- messages/empty.md --
+
+-- messages/one.md --
+Custom title one
+-- messages/three.md --
+Custom title three
+-- messages/four.md --
+Custom title four
+
+Body four.
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Custom title one",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "9b1b9f755413140392f7f7d01e3d37bc102fb5fb"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "287ae61d06acab3b8146b76bff7934dce2d920b3"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Default title two",
+    "body": "Default body two\n\nDefault template body\n",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "287ae61d06acab3b8146b76bff7934dce2d920b3"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "e9c9f755ae5cd9493c5939bb778dcdb17d692281"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "Custom title three",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "e9c9f755ae5cd9493c5939bb778dcdb17d692281"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature3",
+      "sha": "eab0039cdff3fdbfec49176326bf5abbc0d59c1c"
+    }
+  },
+  {
+    "number": 4,
+    "html_url": "$SHAMHUB_URL/alice/example/change/4",
+    "state": "open",
+    "title": "Custom title four",
+    "body": "Body four.",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature3",
+      "sha": "eab0039cdff3fdbfec49176326bf5abbc0d59c1c"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature4",
+      "sha": "a4907c69ebbcd249f619238aa39ffa22a314da90"
+    }
+  }
+]
