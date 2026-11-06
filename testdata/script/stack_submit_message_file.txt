@@ -21,23 +21,6 @@ gs branch create feature2 -m 'Default title two'
 git add three.txt
 gs branch create feature3 -m 'Default title three'
 
-# Syntax errors and duplicate branches are rejected before submission.
-! gs --no-prompt stack submit --no-draft --message-file feature1
-stderr 'BRANCH:PATH'
-! gs --no-prompt stack submit --no-draft --message-file :missing
-stderr 'BRANCH:PATH'
-! gs --no-prompt stack submit --no-draft --message-file feature1:
-stderr 'BRANCH:PATH'
-! gs --no-prompt stack submit --no-draft --message-file feature1:missing --message-file feature1:other
-stderr 'multiple message files for branch "feature1"'
-
-# File errors are reported when creating a CR, before pushing that branch.
-! gs --no-prompt downstack submit --branch feature1 --no-draft --message-file feature1:missing
-stderr 'read message file'
-! git show-ref --verify refs/remotes/origin/feature1
-! gs --no-prompt downstack submit --branch feature1 --no-draft --message-file feature1:$WORK/messages/empty.md
-stderr 'non-empty title'
-
 # A title-only file supplies an empty body, even with --fill and a CR template.
 gs --no-prompt downstack submit --branch feature1 --no-draft --fill --message-file feature1:$WORK/messages/one.md
 stderr 'Created #1'
@@ -47,19 +30,19 @@ gs --no-prompt upstack submit --branch feature2 --draft --message-file feature2:
 stderr 'Created #2'
 stderr 'Created #3'
 
-# Existing descriptions do not require the supplied files to exist.
-gs --no-prompt stack submit --no-draft --message-file feature1:missing --message-file feature2:missing --message-file feature3:missing
+# Files for existing descriptions are validated but their contents are not read.
+gs --no-prompt stack submit --no-draft --message-file feature1:$WORK/messages/empty.md --message-file feature2:$WORK/messages/empty.md --message-file feature3:$WORK/messages/empty.md
 
 # Dry runs and push-only submissions do not consume message files.
 git add four.txt
 gs branch create feature4 -m 'Default title four'
-gs --no-prompt stack submit --dry-run --no-draft --message-file feature4:missing
+gs --no-prompt stack submit --dry-run --no-draft --message-file feature4:$WORK/messages/empty.md
 stderr 'WOULD create a CR for feature4'
-gs --no-prompt stack submit --no-publish --no-draft --message-file feature4:missing
+gs --no-prompt stack submit --no-publish --no-draft --message-file feature4:$WORK/messages/empty.md
 stderr 'Pushed'
 
 # Stack submission reads the remaining new CR's file.
-gs --no-prompt stack submit --no-draft --message-file feature4:$WORK/messages/four.md --message-file feature1:missing
+gs --no-prompt stack submit --no-draft --message-file feature4:$WORK/messages/four.md --message-file feature1:$WORK/messages/empty.md
 stderr 'Created #4'
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/changes.json

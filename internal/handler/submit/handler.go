@@ -196,7 +196,7 @@ type BatchOptions struct {
 	UpdateOnlyDefault bool `config:"submit.updateOnly" help:"Default value for --update-only in batch submit operations." hidden:"" default:"false"`
 
 	// MessageFiles supplies per-branch messages for new change requests.
-	MessageFiles []MessageFile `name:"message-file" placeholder:"BRANCH:PATH" sep:"none" help:"Read a new CR's message from PATH for BRANCH. First line is the title; remaining text is the body. Repeat for each branch."`
+	MessageFiles MessageFiles `name:"message-file" placeholder:"BRANCH:PATH" help:"Read a new CR's message from PATH for BRANCH. First line is the title; remaining text is the body. Repeat for each branch."`
 }
 
 // BatchRequest is a request to submit one or more change requests.
@@ -227,14 +227,6 @@ func (h *Handler) SubmitBatch(
 		// If the user didn't specify --update-only flag,
 		// use the default value from the config.
 		opts.UpdateOnly = &batchOpts.UpdateOnlyDefault
-	}
-
-	messageFiles := make(map[string]*MessageFile, len(batchOpts.MessageFiles))
-	for _, file := range batchOpts.MessageFiles {
-		if _, exists := messageFiles[file.Branch]; exists {
-			return fmt.Errorf("multiple message files for branch %q", file.Branch)
-		}
-		messageFiles[file.Branch] = &file
 	}
 
 	graph := req.BranchGraph
@@ -282,7 +274,7 @@ func (h *Handler) SubmitBatch(
 			Options:      &opts,
 			upstreamBase: resolvedUpstreams[branchInfo.Base],
 			stackUpdates: &stackUpdates,
-			MessageFile:  messageFiles[branch],
+			MessageFile:  batchOpts.MessageFiles[branch],
 		}
 
 		status, err := h.submitBranch(
@@ -313,6 +305,10 @@ type Request struct {
 
 	// Title and Body are the title and body of the change request.
 	Title, Body string // optional
+
+	// MessageFile supplies the complete message for a new change request.
+	// When set, Title and Body are not used.
+	MessageFile *MessageFile // optional
 
 	// Options are the options for the submit operation.
 	Options *Options // optional
@@ -362,6 +358,7 @@ func (h *Handler) Submit(ctx context.Context, req *Request) (retErr error) {
 			Options:      opts,
 			Title:        req.Title,
 			Body:         req.Body,
+			MessageFile:  req.MessageFile,
 			stackUpdates: &stackUpdates,
 		},
 	)
@@ -1097,12 +1094,12 @@ func (h *Handler) prepareBranch(
 	opts *submitOptions,
 ) (*preparedBranch, error) {
 	if opts.MessageFile != nil {
-		message, err := opts.MessageFile.read()
+		title, body, err := opts.MessageFile.read()
 		if err != nil {
 			return nil, err
 		}
-		opts.Title = message.Title
-		opts.Body = message.Body
+		opts.Title = title
+		opts.Body = body
 	}
 
 	// Fetch the template while we're prompting the other fields.

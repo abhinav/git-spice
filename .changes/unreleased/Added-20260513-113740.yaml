@@ -1,3 +1,3 @@
 kind: Added
-body: "submit: Per-branch CR messages can be supplied to stack, upstack, and downstack submit with repeatable --message-file BRANCH:PATH flags."
+body: "submit: Support non-interactive messages during stack submission with the `--message-file BRANCH:PATH` option."
 time: 2026-05-13T11:37:40.724695-07:00

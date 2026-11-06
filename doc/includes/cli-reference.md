@@ -1239,7 +1239,8 @@ Use the --branch flag to target a different branch.
 
 For new Change Requests, a prompt will allow filling metadata.
 Use the --title and --body flags to skip the prompt,
-or the --fill flag to use the commit message to fill them in.
+or --message-file PATH to read both from a text file.
+Use --fill to fill them from commit messages.
 The --[no-]draft flag marks the CR as draft or not.
 Use the 'spice.submit.draft' configuration option
 to mark new CRs as drafts (or not) by default,
@@ -1276,6 +1277,7 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 * `--title=TITLE`: Title of the change request
 * `--body=BODY`: Body of the change request
+* `--message-file=PATH`: Read a new CR's message from PATH. First line is the title; remaining text is the body.
 * `--branch=NAME`: Branch to submit
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationComment.trunkComparison](/cli/config.md#spicesubmitnavigationcommenttrunkcomparison), [spice.submit.navigationCommentStyle.layout](/cli/config.md#spicesubmitnavigationcommentstylelayout), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentStyle.trunkComparisonText](/cli/config.md#spicesubmitnavigationcommentstyletrunkcomparisontext), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)

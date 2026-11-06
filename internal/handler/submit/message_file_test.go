@@ -10,34 +10,81 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMessageFiles_Decode(t *testing.T) {
+	dir := t.TempDir()
+	first := filepath.Join(dir, "message,file:one.md")
+	second := filepath.Join(dir, "message two.md")
+	require.NoError(t, os.WriteFile(first, nil, 0o600))
+	require.NoError(t, os.WriteFile(second, nil, 0o600))
+	var opts BatchOptions
+	parser, err := kong.New(&opts)
+	require.NoError(t, err)
+	_, err = parser.Parse([]string{
+		"--message-file", "feature=one:" + first,
+		"--message-file", "feature-two:" + second,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, MessageFiles{
+		"feature=one": {Path: first},
+		"feature-two": {Path: second},
+	}, opts.MessageFiles)
+}
+
+func TestMessageFiles_Decode_invalid(t *testing.T) {
+	tests := []struct {
+		spec string
+		want string
+	}{
+		{spec: "missing-separator", want: `must be in BRANCH:PATH form, got: "missing-separator"`},
+		{spec: ":file.md", want: "branch name must be supplied"},
+		{spec: "branch:", want: "path must be supplied"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.spec, func(t *testing.T) {
+			var opts BatchOptions
+			parser, err := kong.New(&opts)
+			require.NoError(t, err)
+			_, err = parser.Parse([]string{"--message-file", tt.spec})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
+}
+
 func TestMessageFile_Decode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "message.md")
+	require.NoError(t, os.WriteFile(path, nil, 0o600))
 	var cli struct {
-		Files []MessageFile `name:"message-file" sep:"none"`
+		File *MessageFile `name:"message-file"`
 	}
 	parser, err := kong.New(&cli)
 	require.NoError(t, err)
-	_, err = parser.Parse([]string{
-		"--message-file", "feature=one:missing,file:one.md",
-		"--message-file", "feature-two:missing two.md",
-	})
+	_, err = parser.Parse([]string{"--message-file", path})
 	require.NoError(t, err)
-	assert.Equal(t, []MessageFile{
-		{Branch: "feature=one", Path: "missing,file:one.md"},
-		{Branch: "feature-two", Path: "missing two.md"},
-	}, cli.Files)
+	assert.Equal(t, path, cli.File.Path)
 }
 
 func TestMessageFile_Decode_invalid(t *testing.T) {
-	for _, spec := range []string{"missing-separator", ":file.md", "branch:"} {
-		t.Run(spec, func(t *testing.T) {
+	dir := t.TempDir()
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "Empty", want: "path must be supplied"},
+		{name: "Missing", path: filepath.Join(dir, "missing"), want: "stat message file"},
+		{name: "Directory", path: dir, want: "must be a regular file"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			var cli struct {
-				File MessageFile `name:"message-file"`
+				File *MessageFile `name:"message-file"`
 			}
 			parser, err := kong.New(&cli)
 			require.NoError(t, err)
-			_, err = parser.Parse([]string{"--message-file", spec})
+			_, err = parser.Parse([]string{"--message-file", tt.path})
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "BRANCH:PATH")
+			assert.Contains(t, err.Error(), tt.want)
 		})
 	}
 }
@@ -58,23 +105,23 @@ func TestMessageFile_read(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "message.md")
 			require.NoError(t, os.WriteFile(path, []byte(tt.contents), 0o600))
-			message, err := (MessageFile{Branch: "feature", Path: path}).read()
+			title, body, err := (&MessageFile{Path: path}).read()
 			require.NoError(t, err)
-			assert.Equal(t, tt.title, message.Title)
-			assert.Equal(t, tt.body, message.Body)
+			assert.Equal(t, tt.title, title)
+			assert.Equal(t, tt.body, body)
 		})
 	}
 }
 
 func TestMessageFile_read_invalid(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "message.md")
-	file := MessageFile{Branch: "feature", Path: path}
-	_, err := file.read()
+	file := &MessageFile{Path: path}
+	_, _, err := file.read()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), path)
 	for _, contents := range []string{"", " \nA body without a title."} {
 		require.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
-		_, err = file.read()
+		_, _, err = file.read()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "title")
 	}
