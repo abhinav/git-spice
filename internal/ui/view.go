@@ -1,12 +1,15 @@
 package ui
 
 import (
+	"cmp"
 	"errors"
 	"io"
 	"os"
 	"sync"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
+	"go.abhg.dev/gs/internal/sigstack"
 )
 
 // ErrPrompt indicates that we're not running in interactive mode.
@@ -37,6 +40,14 @@ type InteractiveView interface {
 	Prompt(...Field) error
 }
 
+// ModelView is a view that can run a Bubble Tea model.
+type ModelView interface {
+	View
+
+	// RunModel runs the given Bubble Tea model against this view.
+	RunModel(tea.Model, *RunOptions) error
+}
+
 // Interactive reports whether the given view is interactive.
 func Interactive(v View) bool {
 	_, ok := v.(InteractiveView)
@@ -54,14 +65,16 @@ var _ View = (*FileView)(nil)
 
 // NewFileView builds a non-interactive view for the given writer.
 func NewFileView(w io.Writer) *FileView {
+	detectOutput := unwrapOutput(w)
+
 	cpw, ok := w.(*colorprofile.Writer)
 	if !ok {
-		cpw = colorprofile.NewWriter(w, os.Environ())
+		cpw = colorprofile.NewWriter(detectOutput, os.Environ())
 	}
 
 	return &FileView{
 		w:     cpw,
-		theme: detectTheme(nil, w),
+		theme: detectTheme(nil, detectOutput),
 	}
 }
 
@@ -80,20 +93,32 @@ type TerminalView struct {
 	r io.Reader
 	w io.Writer
 
-	theme func() Theme
+	theme   func() Theme
+	signals *sigstack.Stack
 }
 
 var _ InteractiveView = (*TerminalView)(nil)
 
 // NewTerminalView builds an interactive view for the given streams.
 func NewTerminalView(r io.Reader, w io.Writer) *TerminalView {
+	detectOutput := unwrapOutput(w)
+
 	return &TerminalView{
 		r: r,
 		w: w,
 		theme: sync.OnceValue(func() Theme {
-			return detectTheme(r, w)
+			return detectTheme(r, detectOutput)
 		}),
 	}
+}
+
+// WithSignals sets the signal stack used by terminal UI components.
+//
+// If WithSignals is not called,
+// components that need signal handling create private stacks.
+func (tv *TerminalView) WithSignals(signals *sigstack.Stack) *TerminalView {
+	tv.signals = signals
+	return tv
 }
 
 func (tv *TerminalView) Write(p []byte) (int, error) {
@@ -108,8 +133,40 @@ func (tv *TerminalView) Theme() Theme {
 // Prompt prompts the user for input with the given interactive fields.
 func (tv *TerminalView) Prompt(fields ...Field) error {
 	return NewForm(fields...).Run(&FormRunOptions{
-		Input:  tv.r,
-		Output: tv.w,
-		Theme:  tv.theme(),
+		Input:   tv.r,
+		Output:  tv.w,
+		Theme:   tv.theme(),
+		Signals: tv.signals,
 	})
+}
+
+// RunModel runs the given Bubble Tea model against the terminal.
+func (tv *TerminalView) RunModel(
+	model tea.Model,
+	opts *RunOptions,
+) error {
+	opts = cmp.Or(opts, &RunOptions{})
+	if opts.Input == nil {
+		opts.Input = tv.r
+	}
+	if opts.Output == nil {
+		opts.Output = tv.w
+	}
+	if opts.Theme == (Theme{}) {
+		opts.Theme = tv.theme()
+	}
+	if opts.Signals == nil {
+		opts.Signals = tv.signals
+	}
+	return RunModel(model, opts)
+}
+
+func unwrapOutput(w io.Writer) io.Writer {
+	if cw, ok := w.(*colorprofile.Writer); ok {
+		w = cw.Forward
+	}
+	if ow, ok := w.(*OutputWriter); ok {
+		w = ow.Unwrap()
+	}
+	return w
 }

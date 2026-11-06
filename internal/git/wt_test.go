@@ -91,3 +91,26 @@ func TestIntegrationWorktrees(t *testing.T) {
 		},
 	}, worktrees)
 }
+
+func TestWorktree_IndexFile(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		git init
+		git add file.txt
+		git commit -m 'Initial commit'
+
+		-- file.txt --
+		contents
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	indexFile, err := wt.IndexFile(t.Context())
+	require.NoError(t, err)
+	assert.True(t, filepath.IsAbs(indexFile))
+	assert.FileExists(t, indexFile)
+}

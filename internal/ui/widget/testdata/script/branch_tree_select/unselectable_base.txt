@@ -38,7 +38,7 @@ feed <Down> <Enter>
 bar
 -- prompt --
 Select a branch:
-  ┏━■ baz ◀
+  ┏━━■ baz ◀
 ┏━┻□ bar
 foo
 -- filter --

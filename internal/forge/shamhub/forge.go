@@ -2,8 +2,9 @@ package shamhub
 
 import (
 	"bytes"
+	"cmp"
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,9 +12,44 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 )
+
+// stacksMode controls whether ShamHub exposes native stack capabilities.
+// Its zero value disables them.
+type stacksMode uint8
+
+const (
+	stacksOff stacksMode = iota
+	stacksOn
+)
+
+// UnmarshalText accepts the case-insensitive configuration values `on`, `off`,
+// `1`, and `0`.
+func (m *stacksMode) UnmarshalText(text []byte) error {
+	switch strings.ToLower(string(text)) {
+	case "off", "0":
+		*m = stacksOff
+	case "on", "1":
+		*m = stacksOn
+	default:
+		return fmt.Errorf("invalid value %q: expected on or off", text)
+	}
+	return nil
+}
+
+func (m stacksMode) String() string {
+	switch m {
+	case stacksOff:
+		return "off"
+	case stacksOn:
+		return "on"
+	default:
+		return fmt.Sprintf("stacksMode(%d)", m)
+	}
+}
 
 // Options defines CLI options for the ShamHub forge.
 type Options struct {
@@ -24,40 +60,100 @@ type Options struct {
 
 	// APIURL is the base URL for the ShamHub API.
 	APIURL string `name:"shamhub-api-url" hidden:"" env:"SHAMHUB_API_URL" help:"Base URL for ShamHub API requests"`
+
+	// Stacks controls whether ShamHub exposes native stack operations.
+	// The default is `off`.
+	// Opened repositories expose optional native stack capabilities only when
+	// the value is `on`.
+	Stacks stacksMode `name:"shamhub-stacks" hidden:"" config:"forge.shamhub.stacks" default:"off" help:"Whether to expose ShamHub native stack operations. One of 'on' and 'off'."`
 }
 
-// Forge provides an implementation of [forge.Forge] backed by a ShamHub
-// server.
-type Forge struct {
+// Definition configures ShamHub forge instances.
+type Definition struct {
+	changeMetadataCodec
+
+	// Options stores CLI and environment configuration.
 	Options
 
 	// Log is the logger to use for logging.
 	Log *silog.Logger
 }
 
-var _ forge.Forge = (*Forge)(nil)
+var (
+	_ forge.Definition = (*Definition)(nil)
+	_ forge.Forge      = (*Forge)(nil)
+)
+
+// ID reports a unique identifier for this forge.
+func (*Definition) ID() string { return "shamhub" }
+
+// BaseURL reports the ShamHub web URL used for host matching.
+func (d *Definition) BaseURL() string {
+	return d.URL
+}
+
+// CLIPlugin registers additional CLI flags for the ShamHub forge.
+func (d *Definition) CLIPlugin() any { return &d.Options }
+
+// New constructs a ShamHub Forge from the configured options.
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	opts = cmp.Or(opts, &forge.NewOptions{})
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	if err := forge.ValidateRemoteURL(d.URL, remoteURL); err != nil {
+		return nil, err
+	}
+
+	return &Forge{
+		HTTPClient: httpClient,
+		Options:    d.Options,
+		baseURL:    d.BaseURL(),
+		Log:        d.Log,
+	}, nil
+}
+
+// Forge provides an implementation of [forge.Forge] backed by a ShamHub
+// server.
+type Forge struct {
+	changeMetadataCodec
+	Options
+
+	// HTTPClient sends API and authentication requests.
+	// If nil, the default HTTP client is used.
+	HTTPClient *http.Client
+
+	baseURL string
+
+	// Log is the logger to use for logging.
+	Log *silog.Logger
+}
 
 func (f *Forge) jsonHTTPClient() *jsonHTTPClient {
 	return &jsonHTTPClient{
 		log:    f.Log,
-		client: http.DefaultClient,
+		client: cmp.Or(f.HTTPClient, http.DefaultClient),
 	}
 }
 
 // ID reports a unique identifier for this forge.
 func (*Forge) ID() string { return "shamhub" }
 
-// CLIPlugin registers additional CLI flags for the ShamHub forge.
-func (f *Forge) CLIPlugin() any { return &f.Options }
+// BaseURL reports the ShamHub web URL used for host matching and links.
+func (f *Forge) BaseURL() string {
+	return f.baseURL
+}
 
-// ParseRemoteURL parses the given remote URL and returns a [RepositoryID]
-// for the repository if it matches the ShamHub URL.
-func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
+// ParseRepositoryPath parses a ShamHub repository path and returns
+// a [RepositoryID] for the repository it identifies.
+func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 	if f.URL == "" {
 		return nil, fmt.Errorf("%w: ShamHub is not initialized", forge.ErrUnsupportedURL)
 	}
 
-	owner, repo, err := extractRepoInfo(f.URL, remoteURL)
+	owner, repo, err := extractRepoInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
@@ -71,7 +167,7 @@ func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
 
 // OpenRepository opens the repository that this repository ID points to.
 func (f *Forge) OpenRepository(_ context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
-	return newRepository(f, token.(*AuthenticationToken), id.(*RepositoryID), http.DefaultClient)
+	return newRepository(f, token.(*AuthenticationToken), id.(*RepositoryID), cmp.Or(f.HTTPClient, http.DefaultClient))
 }
 
 // newRepository creates a new repository instance with the given HTTP client.
@@ -92,14 +188,18 @@ func newRepository(f *Forge, token *AuthenticationToken, rid *RepositoryID, http
 		return nil, fmt.Errorf("parse API URL: %w", err)
 	}
 
-	return &forgeRepository{
+	repo := &forgeRepository{
 		forge:  f,
 		owner:  rid.owner,
 		repo:   rid.repo,
 		apiURL: apiURL,
 		log:    f.Log,
 		client: client,
-	}, nil
+	}
+	if f.Stacks == stacksOn {
+		return &stackRepository{forgeRepository: repo}, nil
+	}
+	return repo, nil
 }
 
 // RepositoryID is a unique identifier for a ShamHub repository.
@@ -120,19 +220,13 @@ func (rid *RepositoryID) String() string {
 func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	cr := id.(ChangeID)
 
-	return fmt.Sprintf("%s/%s/%s/changes/%v", rid.url, rid.owner, rid.repo, int(cr))
+	return fmt.Sprintf("%s/%s/%s/change/%v", rid.url, rid.owner, rid.repo, int(cr))
 }
 
-func extractRepoInfo(forgeURL, remoteURL string) (owner, repo string, err error) {
-	tail, ok := strings.CutPrefix(remoteURL, forgeURL)
+func extractRepoInfo(path string) (owner, repo string, err error) {
+	owner, repo, ok := forge.SplitRepositoryPath(path)
 	if !ok {
-		return "", "", fmt.Errorf("unrecognized host: %v", remoteURL)
-	}
-
-	tail = strings.TrimSuffix(strings.TrimPrefix(tail, "/"), ".git")
-	owner, repo, ok = strings.Cut(tail, "/")
-	if !ok {
-		return "", "", fmt.Errorf("no '/' found in %q", tail)
+		return "", "", fmt.Errorf("no '/' found in %q", path)
 	}
 
 	return owner, repo, nil
@@ -200,9 +294,11 @@ func (c *jsonHTTPClient) do(ctx context.Context, method, url string, req, res an
 		return fmt.Errorf("unexpected status code: %d\nbody: %s", httpResp.StatusCode, resBody)
 	}
 
-	dec := json.NewDecoder(bytes.NewReader(resBody))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(res); err != nil {
+	if err := json.UnmarshalRead(
+		bytes.NewReader(resBody),
+		res,
+		json.RejectUnknownMembers(true),
+	); err != nil {
 		return fmt.Errorf("decode response: %w", err)
 	}
 

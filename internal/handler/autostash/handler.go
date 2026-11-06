@@ -186,6 +186,17 @@ func (h *Handler) BeginAutostash(
 			return
 		}
 
+		var rebaseErr *git.RebaseInterruptError
+		// Only rebase interruptions can safely defer autostash restoration.
+		// Other failures have no continuation path,
+		// so restore the stash before returning the original error.
+		if !errors.As(*errPtr, &rebaseErr) && !spice.IsRebaseRescue(*errPtr) {
+			if err := h.RestoreAutostash(ctx, stashHash.String()); err != nil {
+				*errPtr = errors.Join(*errPtr, err)
+			}
+			return
+		}
+
 		rescueBranch := opts.Branch
 		if cleanupOpts != nil && cleanupOpts.RescueBranch != "" {
 			rescueBranch = cleanupOpts.RescueBranch

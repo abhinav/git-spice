@@ -3,7 +3,7 @@ package gitlab
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -459,7 +459,7 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 
 		switch r.Header.Get("Accept") {
 		case "application/json":
-			_ = json.NewEncoder(w).Encode(result)
+			_ = json.MarshalWrite(w, result)
 		default:
 			q := make(url.Values)
 			for k, v := range result {
@@ -469,12 +469,13 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 		}
 	})
 
-	srv := httptest.NewServer(mux)
+	srv := httptest.NewTLSServer(mux)
 	defer srv.Close()
 
 	tok, err := (&DeviceFlowAuthenticator{
-		ClientID: "client-id",
-		Scopes:   []string{"scope"},
+		HTTPClient: srv.Client(),
+		ClientID:   "client-id",
+		Scopes:     []string{"scope"},
 		Endpoint: oauth2.Endpoint{
 			DeviceAuthURL: srv.URL + "/oauth/authorize_device",
 			TokenURL:      srv.URL + "/oauth/token",
@@ -582,6 +583,16 @@ func TestCLITokenParsing(t *testing.T) {
 		{
 			name: "Dots",
 			give: "  ✓ Token found: glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx\n",
+			want: "glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx",
+		},
+		{
+			name: "LongKeyring",
+			give: "  ✓ Token found in operating system keyring: glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx\n",
+			want: "glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx",
+		},
+		{
+			name: "LongPlainText",
+			give: "  ✓ Token found in configuration file (plaintext): glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx\n",
 			want: "glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx",
 		},
 		{

@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/handler/fixup"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
@@ -31,6 +32,9 @@ func (cmd *commitFixupCmd) Help() string {
 	return text.Dedent(`
 		Apply staged uncommited changes to another commit
 		down the stack, and restack the rest of the stack on top of it.
+		Use --no-restack to disable automatic restacking,
+		or the 'spice.commitFixup.restack' configuration option
+		to change the default.
 
 		If a commit is not specified, a prompt is shown to select one.
 		If the commit is specified,
@@ -53,12 +57,14 @@ func (cmd *commitFixupCmd) AfterApply(kctx *kong.Context) error {
 		log *silog.Logger,
 		repo *git.Repository,
 		wt *git.Worktree,
+		signals *sigstack.Stack,
 		svc *spice.Service,
 		restackHandler RestackHandler,
 	) (FixupHandler, error) {
 		return &fixup.Handler{
 			Log:        log,
 			Worktree:   wt,
+			Signals:    signals,
 			Repository: repo,
 			Service:    svc,
 			Restack:    restackHandler,

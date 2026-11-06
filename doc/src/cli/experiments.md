@@ -54,3 +54,12 @@ Enables the $$gs commit pick$$ command.
 This command is a stack-aware variant of `git cherry-pick`.
 It will automatically restack upstack branches
 after cherry-picking a commit.
+
+### merge
+
+**Added**: <!-- gs:version v0.30.0 -->
+<!-- TODO: **Removed**: -->
+
+Enables experimental merge commands:
+$$gs branch merge$$, $$gs downstack merge$$, and $$gs stack merge$$.
+These commands let git-spice manage merging stacks for you.

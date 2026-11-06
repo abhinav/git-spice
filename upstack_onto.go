@@ -7,7 +7,7 @@ import (
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/handler/onto"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -109,32 +109,11 @@ func (cmd *upstackOntoCmd) AfterApply(
 
 func (cmd *upstackOntoCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
-	svc *spice.Service,
-	restackHandler RestackHandler,
+	handler OntoHandler,
 ) error {
-	// Implementation note:
-	// This is a pretty straightforward operation despite the large scope.
-	// It starts by rebasing only the current branch onto the target
-	// branch, updating internal state to point to the new base.
-	// Following that, an 'upstack restack' will handle the upstack branches.
-	err := svc.BranchOnto(ctx, &spice.BranchOntoRequest{
-		Branch: cmd.Branch,
-		Onto:   cmd.Onto,
-	})
-	if err != nil {
-		// If the rebase is interrupted,
-		// we'll just re-run this command again later.
-		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-			Err:     err,
-			Command: []string{"upstack", "onto", cmd.Onto},
-			Branch:  cmd.Branch,
-			Message: fmt.Sprintf("interrupted: %s: upstack onto %s", cmd.Branch, cmd.Onto),
-		})
-	}
-	log.Infof("%v: moved upstack onto %v", cmd.Branch, cmd.Onto)
-
-	return restackHandler.RestackUpstack(ctx, cmd.Branch, &restack.UpstackOptions{
-		SkipStart: true,
+	return handler.UpstackOnto(ctx, &onto.UpstackRequest{
+		Branch:          cmd.Branch,
+		Onto:            cmd.Onto,
+		ContinueCommand: []string{"upstack", "onto", cmd.Onto},
 	})
 }

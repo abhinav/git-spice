@@ -5,7 +5,7 @@ import "log/slog"
 // Level is a log level.
 type Level slog.Level
 
-var _ slog.Leveler = (Level)(0)
+var _ slog.Leveler = Level(0)
 
 // Supported log levels.
 const (
@@ -60,22 +60,4 @@ type ByLevel[T any] struct {
 	Warn  T
 	Error T
 	Fatal T
-}
-
-// Get returns the value associated with the given log level.
-func (b *ByLevel[T]) Get(lvl Level) T {
-	switch lvl {
-	case LevelDebug:
-		return b.Debug
-	case LevelInfo:
-		return b.Info
-	case LevelWarn:
-		return b.Warn
-	case LevelError:
-		return b.Error
-	case LevelFatal:
-		return b.Fatal
-	default:
-		panic("invalid log level: " + lvl.String())
-	}
 }

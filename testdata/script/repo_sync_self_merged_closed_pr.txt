@@ -1,0 +1,67 @@
+# Trunk reachability proves inclusion even when the forge reports a closed PR.
+# No closed-change prompt is needed, and surviving upstacks retain the history.
+
+as 'Test <test@example.com>'
+at '2026-10-31T18:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feat1.txt
+gs bc -m 'Add feature 1' feat1
+git add feat2.txt
+gs bc -m 'Add feature 2' feat2
+gs ss --fill
+
+# Close the lower PR, then land its commits directly on trunk.
+shamhub reject alice/example 1
+git push origin feat1:main
+gs trunk
+
+# An empty robot script rejects unexpected prompts.
+env ROBOT_INPUT=$WORK/golden/no-prompts.txt ROBOT_OUTPUT=$WORK/prompts.actual
+gs repo sync
+stderr 'feat1: #1 was merged'
+! stderr 'closed but not merged'
+cmp $WORK/prompts.actual $WORK/golden/no-prompts.txt
+! git rev-parse --verify feat1
+
+# The open upstack is not reachable from trunk and must remain tracked.
+gs bco feat2
+gs sr
+gs ss --fill
+shamhub dump comments
+cmp stdout $WORK/golden/comments.txt
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- golden/no-prompts.txt --
+-- golden/comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

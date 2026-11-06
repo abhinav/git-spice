@@ -18,14 +18,16 @@ import (
 type commitAmendCmd struct {
 	branchCreateConfig // TODO: find a way to avoid this
 
-	All         bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty  bool   `help:"Create a commit even if it contains no changes."`
-	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
-	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
+	All         bool     `short:"a" help:"Stage all changes before committing."`
+	AllowEmpty  bool     `help:"Create a commit even if it contains no changes."`
+	Message     []string `short:"m" xor:"commit-message-source" sep:"none" placeholder:"MSG" help:"Use the given message as the commit message. May be repeated to add multiple paragraphs."`
+	MessageFile string   `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
 	NoEdit   bool `help:"Don't edit the commit message"`
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"commitAmend.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
 }
 
 func (*commitAmendCmd) Help() string {
@@ -33,6 +35,9 @@ func (*commitAmendCmd) Help() string {
 	return text.Dedent(fmt.Sprintf(`
 		Staged changes are amended into the topmost commit.
 		Branches upstack are restacked if necessary.
+		Use --no-restack to disable automatic restacking,
+		or the 'spice.commitAmend.restack' configuration option
+		to change the default.
 		This is a shortcut for 'git commit --amend'
 		followed by '%[1]s upstack restack'.
 
@@ -133,16 +138,21 @@ func (cmd *commitAmendCmd) Run(
 		}
 	}
 
-	// Check if we're in the middle of a rebase with unmerged paths
+	// rebaseAmendWarning carries the text for one warning before amend.
+	type rebaseAmendWarning struct {
+		logTitle          string
+		logSuggestion     string
+		promptDescription string
+	}
+
+	var rebaseWarning *rebaseAmendWarning
 	var rebasing bool
 	if _, err := wt.RebaseState(ctx); err == nil {
 		rebasing = true
 
-		// If we're in the middle of a rebase,
-		// and there are unmerged paths,
-		// what the user likely wants is 'git add' and 'git-spice rebase continue'.
-		//
-		// (If there are no unmerged paths, amending is fine.)
+		// If we're in the middle of a rebase and Git still has
+		// unmerged paths, the user likely wants to resolve conflicts,
+		// stage them, and run 'git-spice rebase continue'.
 		var numUnmerged int
 		for _, err := range wt.ListFilesPaths(ctx, &git.ListFilesOptions{Unmerged: true}) {
 			if err == nil {
@@ -151,42 +161,70 @@ func (cmd *commitAmendCmd) Run(
 		}
 
 		if numUnmerged > 0 {
-			if !ui.Interactive(view) {
-				log.Warnf("You are in the middle of a rebase with unmerged paths.")
-				log.Warnf(`You probably want resolve the conflicts and run "git add", then "%s rebase continue" instead.`, cli.Name())
-			} else {
-				var continueAmend bool
-				fields := []ui.Field{
-					ui.NewList[bool]().
-						WithTitle("Do you want to amend the commit?").
-						WithDescription(fmt.Sprintf("You are in the middle of a rebase with unmerged paths.\n"+
-							"You might want to resolve the conflicts and run 'git add', then '%s rebase continue' instead.", cli.Name())).
-						WithItems(
-							ui.ListItem[bool]{
-								Title:       "Yes",
-								Description: func(ui.Theme, bool) string { return "Continue with commit amend" },
-								Value:       true,
-							},
-							ui.ListItem[bool]{
-								Title:       "No",
-								Description: func(ui.Theme, bool) string { return "Abort the operation" },
-								Value:       false,
-							},
-						).
-						WithValue(&continueAmend),
-				}
-				if err := ui.Run(view, fields...); err != nil {
-					return fmt.Errorf("run prompt: %w", err)
-				}
-				if !continueAmend {
-					return errors.New("operation aborted")
+			rebaseWarning = &rebaseAmendWarning{
+				logTitle:      "You are in the middle of a rebase with unmerged paths.",
+				logSuggestion: fmt.Sprintf(`You probably want resolve the conflicts and run "git add", then "%s rebase continue" instead.`, cli.Name()),
+				promptDescription: fmt.Sprintf("You are in the middle of a rebase with unmerged paths.\n"+
+					"You might want to resolve the conflicts and run 'git add', then '%s rebase continue' instead.", cli.Name()),
+			}
+		} else {
+			// Once conflicts have been staged,
+			// unmerged paths are gone but the rebase is still waiting
+			// for 'git-spice rebase continue'.
+			//
+			// Deliberate stops like edit, reword, break, or exec are
+			// allowed to amend here; RebaseStopReason separates those
+			// from conflict-resolution stops.
+			stopReason := git.RebaseInterruptConflict
+			if r, err := wt.RebaseStopReason(ctx); err == nil {
+				stopReason = r
+			}
+			if stopReason == git.RebaseInterruptConflict {
+				rebaseWarning = &rebaseAmendWarning{
+					logTitle:      "You appear to have resolved a rebase conflict.",
+					logSuggestion: fmt.Sprintf(`You probably want "%s rebase continue" instead of amending.`, cli.Name()),
+					promptDescription: fmt.Sprintf("You appear to have resolved a rebase conflict.\n"+
+						"You might want to run '%s rebase continue' instead of amending.", cli.Name()),
 				}
 			}
 		}
 	}
 
+	if rebaseWarning != nil {
+		if !ui.Interactive(view) {
+			log.Warnf("%s", rebaseWarning.logTitle)
+			log.Warnf("%s", rebaseWarning.logSuggestion)
+		} else {
+			var continueAmend bool
+			fields := []ui.Field{
+				ui.NewList[bool]().
+					WithTitle("Do you want to amend the commit?").
+					WithDescription(rebaseWarning.promptDescription).
+					WithItems(
+						ui.ListItem[bool]{
+							Title:       "Yes",
+							Description: func(ui.Theme, bool) string { return "Continue with commit amend" },
+							Value:       true,
+						},
+						ui.ListItem[bool]{
+							Title:       "No",
+							Description: func(ui.Theme, bool) string { return "Abort the operation" },
+							Value:       false,
+						},
+					).
+					WithValue(&continueAmend),
+			}
+			if err := ui.Run(view, fields...); err != nil {
+				return fmt.Errorf("run prompt: %w", err)
+			}
+			if !continueAmend {
+				return errors.New("operation aborted")
+			}
+		}
+	}
+
 	if err := wt.Commit(ctx, git.CommitRequest{
-		Message:     cmd.Message,
+		Messages:    cmd.Message,
 		MessageFile: cmd.MessageFile,
 		AllowEmpty:  cmd.AllowEmpty,
 		Amend:       true,
@@ -208,7 +246,14 @@ func (cmd *commitAmendCmd) Run(
 		return nil
 	}
 
-	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{
-		SkipStart: true,
+	if cmd.Restack.None() {
+		return nil
+	}
+
+	return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: currentBranch,
+		Options: &restack.UpstackOptions{
+			SkipStart: true,
+		},
 	})
 }

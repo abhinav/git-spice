@@ -69,17 +69,17 @@ gs up -n 2
 cmp $WORK/robot.up-2.actual $WORK/robot.up-2.golden
 
 -- golden/ls.txt --
-    ┏━□ feature3
+    ┏━━□ feature3
   ┏━┻□ feature2
-  ┃ ┏━□ feature5
+  ┃ ┏━━□ feature5
   ┣━┻□ feature4
 ┏━┻□ feature1
 main ◀
 -- robot.up.golden --
 ===
 > Pick a branch: 
-> ┏━■ feature2 ◀
-> ┣━□ feature4
+> ┏━━■ feature2 ◀
+> ┣━━□ feature4
 > feature1
 >
 > There are multiple branches above the current branch.
@@ -88,8 +88,8 @@ main ◀
 -- robot.top.golden --
 ===
 > Pick a branch: 
-> ┏━■ feature3 ◀
-> ┣━□ feature5
+> ┏━━■ feature3 ◀
+> ┣━━□ feature5
 > feature1
 >
 > There are multiple top-level branches reachable from the current branch.
@@ -98,8 +98,8 @@ main ◀
 -- robot.up-2.golden --
 ===
 > Pick a branch: 
-> ┏━■ feature2 ◀
-> ┣━□ feature4
+> ┏━━■ feature2 ◀
+> ┣━━□ feature4
 > feature1
 >
 > There are multiple branches above the current branch.

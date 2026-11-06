@@ -4,25 +4,42 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+
+	"go.abhg.dev/gs/internal/forge"
 )
 
+func baseRepository(repo forge.Repository) *Repository {
+	switch repo := repo.(type) {
+	case *Repository:
+		return repo
+	case *reviewRepository:
+		return repo.Repository
+	default:
+		panic(fmt.Sprintf("unexpected Bitbucket repository %T", repo))
+	}
+}
+
+func cloudGW(repo forge.Repository) *testCloudGateway {
+	return baseRepository(repo).gw.(*testCloudGateway)
+}
+
 func prActionPath(
-	repo *Repository, prID int64, action string,
+	repo forge.Repository, prID int64, action string,
 ) string {
+	gw := cloudGW(repo)
 	return fmt.Sprintf(
 		"/repositories/%s/%s/pullrequests/%d/%s",
-		repo.workspace, repo.repo, prID, action,
+		gw.workspace, gw.repo, prID, action,
 	)
 }
 
-// MergeChange merges a pull request.
-// This is used by integration tests
-// to put PRs in different states.
+// MergeChange merges a pull request for integration tests.
 func MergeChange(
-	ctx context.Context, repo *Repository, id *PR,
+	ctx context.Context, repo forge.Repository, id *PR,
 ) error {
+	base := baseRepository(repo)
 	if err := approvePR(ctx, repo, id); err != nil {
-		repo.log.Debug(
+		base.log.Debug(
 			"Approval failed (may not be required)",
 			"err", err,
 		)
@@ -32,12 +49,12 @@ func MergeChange(
 	if err := doTestAction(ctx, repo, path); err != nil {
 		return fmt.Errorf("merge PR: %w", err)
 	}
-	repo.log.Debug("Merged pull request", "pr", id.Number)
+	base.log.Debug("Merged pull request", "pr", id.Number)
 	return nil
 }
 
 func approvePR(
-	ctx context.Context, repo *Repository, id *PR,
+	ctx context.Context, repo forge.Repository, id *PR,
 ) error {
 	path := prActionPath(repo, id.Number, "approve")
 	if err := doTestAction(ctx, repo, path); err != nil {
@@ -46,17 +63,15 @@ func approvePR(
 	return nil
 }
 
-// CloseChange declines (closes) a pull request
-// without merging. This is used by integration tests
-// to put PRs in different states.
+// CloseChange declines a pull request for integration tests.
 func CloseChange(
-	ctx context.Context, repo *Repository, id *PR,
+	ctx context.Context, repo forge.Repository, id *PR,
 ) error {
 	path := prActionPath(repo, id.Number, "decline")
 	if err := doTestAction(ctx, repo, path); err != nil {
 		return fmt.Errorf("decline PR: %w", err)
 	}
-	repo.log.Debug(
+	baseRepository(repo).log.Debug(
 		"Declined pull request", "pr", id.Number,
 	)
 	return nil
@@ -64,20 +79,21 @@ func CloseChange(
 
 func doTestAction(
 	ctx context.Context,
-	repo *Repository,
+	repo forge.Repository,
 	path string,
 ) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, repo.forge.APIURL()+path, nil)
+	gw := cloudGW(repo)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, gw.apiURL+path, nil)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "git-spice")
-	if repo.token != nil && repo.token.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+repo.token.AccessToken)
+	if gw.token != nil && gw.token.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+gw.token.AccessToken)
 	}
 
-	httpClient := repo.http
+	httpClient := gw.http
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}

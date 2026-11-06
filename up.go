@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -37,10 +38,13 @@ func (cmd *upCmd) Run(
 	svc *spice.Service,
 	checkoutHandler CheckoutHandler,
 ) error {
-	current, err := wt.CurrentBranch(ctx)
+	if cmd.N <= 0 {
+		return errors.New("number of branches must be positive")
+	}
+
+	current, _, err := currentBranchForNavigation(ctx, wt)
 	if err != nil {
-		// TODO: handle not a branch
-		return fmt.Errorf("get current branch: %w", err)
+		return err
 	}
 
 	graph, err := svc.BranchGraph(ctx, nil)

@@ -12,6 +12,8 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
@@ -129,11 +131,19 @@ func TestIntegration(t *testing.T) {
 	token := tokenFixture.Get(t)
 
 	shamForge := &Forge{
-		Options: Options{
-			URL:    gitURL,
-			APIURL: apiURL,
-		},
-		Log: silogtest.New(t),
+		URL:    gitURL,
+		APIURL: apiURL,
+		Stacks: stacksOn,
+		Log:    silogtest.New(t),
+	}
+
+	// Recording executes native merges with merge-tree --merge-base,
+	// which requires Git 2.40. Replaying HTTP fixtures does not.
+	if forgetest.Update() {
+		version, err := gittest.CurrentVersion()
+		require.NoError(t, err)
+		require.True(t, version.Compare(gittest.Version{Major: 2, Minor: 40}) >= 0,
+			"Git version must be >= 2.40 to run integration tests in update mode, got %s", version)
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
@@ -141,7 +151,10 @@ func TestIntegration(t *testing.T) {
 		PushRemoteURL: pushRepoURL,
 		Forge:         shamForge,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
-			repoID, err := shamForge.ParseRemoteURL(repoURL)
+			remoteURL, err := giturl.Parse(repoURL)
+			require.NoError(t, err)
+
+			repoID, err := shamForge.ParseRepositoryPath(remoteURL.Path)
 			require.NoError(t, err)
 
 			repo, err := newRepository(
@@ -155,7 +168,7 @@ func TestIntegration(t *testing.T) {
 		},
 		MergeChange: func(t *testing.T, repo forge.Repository, changeID forge.ChangeID) {
 			if forgetest.Update() {
-				r := repo.(*forgeRepository)
+				r := repo.(*stackRepository).forgeRepository
 				require.NoError(t, shamhub.MergeChange(MergeChangeRequest{
 					Owner:  r.owner,
 					Repo:   r.repo,
@@ -165,7 +178,7 @@ func TestIntegration(t *testing.T) {
 		},
 		CloseChange: func(t *testing.T, repo forge.Repository, changeID forge.ChangeID) {
 			if forgetest.Update() {
-				r := repo.(*forgeRepository)
+				r := repo.(*stackRepository).forgeRepository
 				require.NoError(t, shamhub.RejectChange(RejectChangeRequest{
 					Owner:  r.owner,
 					Repo:   r.repo,
@@ -173,8 +186,28 @@ func TestIntegration(t *testing.T) {
 				}))
 			}
 		},
-		SetCommentsPageSize: SetListChangeCommentsPageSize,
-		Reviewers:           []string{"reviewer1", "reviewer2"},
-		Assignees:           []string{"assignee1", "assignee2"},
+		SetChangeCheck: func(
+			t *testing.T,
+			_ *http.Client,
+			repo forge.Repository,
+			changeID forge.ChangeID,
+			_ git.Hash,
+			check forge.ChangeCheck,
+		) {
+			require.NoError(t,
+				repo.(*stackRepository).setChangeCheck(
+					t.Context(),
+					changeID,
+					check,
+				))
+		},
+		SetCommentsPageSize:    SetListChangeCommentsPageSize,
+		ReviewThreads:          true,
+		FileReviewThreads:      true,
+		ReviewThreadCommitHash: true,
+		Reviewers:              []string{"reviewer1", "reviewer2"},
+		Assignees:              []string{"assignee1", "assignee2"},
+		TestStacks:             true,
+		TestMergeRange:         true,
 	})
 }

@@ -1,0 +1,17 @@
+# 'gs ls --json' on trunk does not warn about missing remote forge data.
+
+as 'Test <test@example.com>'
+at '2026-05-23T18:28:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+gs ls --json
+cmp stdout $WORK/golden/ls.json
+! stderr 'Could not find information about the remote'
+
+-- golden/ls.json --
+{"name":"main","current":true}

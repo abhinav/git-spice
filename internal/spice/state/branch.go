@@ -3,7 +3,8 @@ package state
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"iter"
@@ -31,12 +32,12 @@ type branchStateBase struct {
 }
 
 type branchUpstreamState struct {
-	Branch string `json:"branch,omitempty"`
+	Branch string `json:"branch,omitzero"`
 }
 
 type branchChangeState struct {
 	Forge  string
-	Change json.RawMessage
+	Change jsontext.Value
 }
 
 func (bs *branchChangeState) MarshalJSON() ([]byte, error) {
@@ -44,7 +45,7 @@ func (bs *branchChangeState) MarshalJSON() ([]byte, error) {
 }
 
 func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
-	var m map[string]json.RawMessage
+	var m map[string]jsontext.Value
 	if err := json.Unmarshal(data, &m); err != nil {
 		return fmt.Errorf("unmarshal change state: %w", err)
 	}
@@ -63,10 +64,10 @@ func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
 
 type branchState struct {
 	Base     branchStateBase      `json:"base"`
-	Upstream *branchUpstreamState `json:"upstream,omitempty"`
-	Change   *branchChangeState   `json:"change,omitempty"`
+	Upstream *branchUpstreamState `json:"upstream,omitzero"`
+	Change   *branchChangeState   `json:"change,omitzero"`
 
-	MergedDownstack []json.RawMessage `json:"merged,omitempty"`
+	MergedDownstack []jsontext.Value `json:"merged,omitempty"`
 }
 
 // branchKey returns the path to the JSON file for the given branch
@@ -90,7 +91,7 @@ type LookupResponse struct {
 
 	// ChangeMetadata holds the metadata for the published change.
 	// This is forge-specific and must be deserialized by the forge.
-	ChangeMetadata json.RawMessage
+	ChangeMetadata jsontext.Value
 
 	// ChangeForge is the forge that the change was published to.
 	ChangeForge string
@@ -106,17 +107,45 @@ type LookupResponse struct {
 	// MergedDownstack is in the order that the branches were merged.
 	// For example, if the stack was main -> A -> B -> C,
 	// where C is this branch, MergedDownstack will be [A, B].
-	MergedDownstack []json.RawMessage
+	MergedDownstack []jsontext.Value
 }
 
 // LookupBranch returns information about a tracked branch.
 // If the branch is not found, [ErrNotExist] will be returned.
 func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse, error) {
-	state, err := s.lookupBranchState(ctx, name)
+	responses, err := s.LookupBranches(ctx, []string{name})
 	if err != nil {
 		return nil, err
 	}
 
+	return responses[0], nil
+}
+
+// LookupBranches returns information about tracked branches.
+// The returned slice matches the order of names.
+//
+// Missing branches have nil responses and are identified by the indexes in
+// [storage.MissingKeysError]. All other responses are valid in that case.
+// Other errors return no responses.
+func (s *Store) LookupBranches(
+	ctx context.Context,
+	names []string,
+) ([]*LookupResponse, error) {
+	states, err := s.lookupBranchStates(ctx, names)
+	if states == nil {
+		return nil, err
+	}
+
+	responses := make([]*LookupResponse, len(states))
+	for i, state := range states {
+		if state != nil {
+			responses[i] = branchStateLookupResponse(state)
+		}
+	}
+	return responses, err
+}
+
+func branchStateLookupResponse(state *branchState) *LookupResponse {
 	res := &LookupResponse{
 		Base:            state.Base.Name,
 		BaseHash:        git.Hash(state.Base.Hash),
@@ -132,18 +161,35 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 		res.UpstreamBranch = upstream.Branch
 	}
 
-	return res, nil
+	return res
 }
 
-// lookupBranchState loads the state of the given branch from the store.
-// Returns [ErrNotExist] if the branch does not exist in the store.
-// Trunk branch never exists in the store.
-func (s *Store) lookupBranchState(ctx context.Context, branch string) (*branchState, error) {
-	var state branchState
-	if err := s.db.Get(ctx, branchKey(branch), &state); err != nil {
-		return nil, fmt.Errorf("load branch %q: %w", branch, err)
+// lookupBranchStates returns raw persisted states in request order.
+// Missing entries are nil with a [storage.MissingKeysError]; other errors return
+// no states, so callers never cache incomplete reads.
+func (s *Store) lookupBranchStates(ctx context.Context, names []string) ([]*branchState, error) {
+	if len(names) == 0 {
+		return nil, nil
 	}
-	return &state, nil
+	values := make([]branchState, len(names))
+	states := make([]*branchState, len(names))
+	reqs := make([]storage.GetRequest, len(names))
+	for i, name := range names {
+		states[i] = &values[i]
+		reqs[i] = storage.GetRequest{Key: branchKey(name), Value: states[i]}
+	}
+	err := s.db.GetMany(ctx, reqs)
+	if err == nil {
+		return states, nil
+	}
+	missing, ok := errors.AsType[*storage.MissingKeysError](err)
+	if !ok {
+		return nil, fmt.Errorf("load branches: %w", err)
+	}
+	for _, index := range missing.Indexes {
+		states[index] = nil
+	}
+	return states, fmt.Errorf("load branches: %w", err)
 }
 
 // ListBranches reports the names of all tracked branches.
@@ -177,24 +223,55 @@ func (s *Store) listBranches(ctx context.Context) iter.Seq2[string, error] {
 type BranchTx struct {
 	store *Store
 
-	states map[string]*branchState // cached states with changes
-	sets   map[string]struct{}     // branches to set
-	dels   map[string]struct{}     // branches to delete
+	states  map[string]*branchState // cached states and pending changes; nil means absent
+	sets    map[string]struct{}     // branches to set
+	dels    map[string]struct{}     // branches to delete
+	renames map[string]string       // old branch name to new branch name
 }
 
 // BeginBranchTx starts a new transaction for updating the branch graph.
 // Changes are not persisted until Commit is called.
 func (s *Store) BeginBranchTx() *BranchTx {
 	return &BranchTx{
-		store:  s,
-		states: make(map[string]*branchState),
-		sets:   make(map[string]struct{}),
-		dels:   make(map[string]struct{}),
+		store:   s,
+		states:  make(map[string]*branchState),
+		sets:    make(map[string]struct{}),
+		dels:    make(map[string]struct{}),
+		renames: make(map[string]string),
 	}
 }
 
+// LookupBranches returns branch information from this transaction's view,
+// including pending upserts, renames, and deletions, without persisting changes.
+// Results follow names, with nil entries and [storage.MissingKeysError] indexes
+// for missing branches. Other errors return no results.
+func (tx *BranchTx) LookupBranches(ctx context.Context, names []string) ([]*LookupResponse, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+	states, err := tx.getStates(ctx, names)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]*LookupResponse, len(names))
+	var missing storage.MissingKeysError
+	for i, name := range names {
+		state := states[i]
+		if state == nil {
+			missing.Indexes = append(missing.Indexes, i)
+			missing.Keys = append(missing.Keys, branchKey(name))
+			continue
+		}
+		responses[i] = branchStateLookupResponse(state)
+	}
+	if len(missing.Indexes) > 0 {
+		return responses, &missing
+	}
+	return responses, nil
+}
+
 // Null is a JSON null value.
-var Null = json.RawMessage("null")
+var Null = jsontext.Value("null")
 
 // UpsertRequest is a request to add or update information about a branch.
 type UpsertRequest struct {
@@ -218,7 +295,7 @@ type UpsertRequest struct {
 	// Use Null to clear the current metadata.
 	//
 	// Leave this unset to keep the current metadata.
-	ChangeMetadata json.RawMessage
+	ChangeMetadata jsontext.Value
 
 	// ChangeForge is the forge that recorded the change.
 	//
@@ -231,20 +308,90 @@ type UpsertRequest struct {
 
 	// MergedDownstack is a list of branches that were previously
 	// downstack from this branch that have since been merged into trunk.
-	MergedDownstack *[]json.RawMessage
+	MergedDownstack *[]jsontext.Value
 }
 
 // Upsert adds or updates information about a branch.
 // If the branch is not known, it will be added.
 // For new branches, a base MUST be provided.
 func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
-	if req.Name == "" {
-		return errors.New("branch name is required")
-	}
+	return tx.UpsertMany(ctx, []UpsertRequest{req})
+}
 
-	if req.Name == tx.store.trunk {
-		return ErrTrunk
+// UpsertManyError identifies rejected requests from UpsertMany.
+// Indexes follow request order; Errors[i] describes request Indexes[i].
+// Requests not listed here were staged successfully, but are not persisted
+// until Commit. Use errors.As to distinguish this from an operational failure.
+type UpsertManyError struct {
+	Indexes []int
+	Errors  []error
+}
+
+func (e *UpsertManyError) Error() string {
+	return fmt.Sprintf("%d branch updates rejected: %v", len(e.Indexes), errors.Join(e.Errors...))
+}
+
+// Unwrap exposes rejection causes to errors.Is and errors.As.
+func (e *UpsertManyError) Unwrap() []error { return e.Errors }
+
+// UpsertMany applies requests in order after loading their uncached branches
+// and direct bases together. A request may use a branch created earlier in reqs.
+// Rejected requests are reported by UpsertManyError; other requests are staged.
+// Other errors leave none of this call's changes staged.
+// Changes from earlier calls remain intact. Nothing is persisted until Commit.
+func (tx *BranchTx) UpsertMany(ctx context.Context, reqs []UpsertRequest) error {
+	if len(reqs) == 0 {
+		return nil
 	}
+	names := make([]string, 0, 2*len(reqs))
+	for _, req := range reqs {
+		switch req.Name {
+		case "", tx.store.trunk:
+		default:
+			names = append(names, req.Name)
+		}
+
+		switch req.Base {
+		case "", tx.store.trunk:
+		default:
+			names = append(names, req.Base)
+		}
+	}
+	// Later requests must see creations and edits made by earlier requests,
+	// so this batch prepares reads; application uses the evolving view.
+	if _, err := tx.getStates(ctx, names); err != nil {
+		return err
+	}
+	// Apply against an isolated write set so operational failures cannot leak
+	// changes. Each edited state is copied by upsert before it is changed.
+	staged := *tx
+	staged.states = maps.Clone(tx.states)
+	staged.sets = maps.Clone(tx.sets)
+	staged.dels = maps.Clone(tx.dels)
+	var rejected UpsertManyError
+	for i, req := range reqs {
+		if err := staged.upsert(ctx, req); err != nil {
+			_, cycle := errors.AsType[*branchCycleError](err)
+			_, untracked := errors.AsType[*branchUntrackedError](err)
+			if !cycle && !untracked && !errors.Is(err, errBranchBaseRequired) {
+				return fmt.Errorf("update branch %q: %w", req.Name, err)
+			}
+			rejected.Indexes = append(rejected.Indexes, i)
+			rejected.Errors = append(rejected.Errors, fmt.Errorf("update branch %q: %w", req.Name, err))
+		}
+	}
+	tx.states, tx.sets, tx.dels = staged.states, staged.sets, staged.dels
+	if len(rejected.Indexes) > 0 {
+		return &rejected
+	}
+	return nil
+}
+
+var errBranchBaseRequired = errors.New("new branch must have a base")
+
+func (tx *BranchTx) upsert(ctx context.Context, req UpsertRequest) error {
+	must.NotBeBlankf(req.Name, "branch name is required")
+	must.NotBeEqualf(req.Name, tx.store.trunk, "branch name cannot be trunk")
 
 	state, err := tx.state(ctx, req.Name)
 	if err != nil {
@@ -253,13 +400,16 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 		}
 
 		if req.Base == "" {
-			return errors.New("new branch must have a base")
+			return errBranchBaseRequired
 		}
 
 		state = &branchState{Base: branchStateBase{Name: req.Base}}
 		// Note:
 		// Don't persist the state here until the rest
 		// of the request is validated.
+	} else {
+		updated := *state
+		state = &updated
 	}
 
 	if req.Base != "" {
@@ -325,28 +475,130 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 // The branch must not be a base for any other branch,
 // or an error will be returned.
 func (tx *BranchTx) Delete(ctx context.Context, name string) error {
-	if name == "" {
-		return errors.New("branch name is required")
-	}
-	if name == tx.store.trunk {
-		return ErrTrunk
-	}
+	return tx.DeleteMany(ctx, []string{name})
+}
 
-	if _, err := tx.state(ctx, name); err != nil {
+// DeleteManyError reports rejected deletions in request order.
+// Errors[i] describes the request at the original index Indexes[i].
+// Other deletions were staged successfully and will persist on Commit.
+type DeleteManyError struct {
+	Indexes []int
+	Errors  []error
+}
+
+func (e *DeleteManyError) Error() string {
+	return fmt.Sprintf("%d branch deletions rejected: %v", len(e.Indexes), errors.Join(e.Errors...))
+}
+
+// Unwrap exposes rejection causes to errors.Is and errors.As.
+func (e *DeleteManyError) Unwrap() []error { return e.Errors }
+
+// DeleteMany processes names in order. A branch with remaining dependents
+// cannot be deleted, but earlier successful deletions can remove that obstacle.
+// DeleteManyError identifies rejected requests; other errors stage no deletions.
+// Nothing is persisted until Commit.
+func (tx *BranchTx) DeleteMany(ctx context.Context, names []string) error {
+	var targets []string
+	for _, name := range names {
+		if name != "" && name != tx.store.trunk {
+			targets = append(targets, name)
+		}
+	}
+	states, err := tx.getStates(ctx, targets)
+	if err != nil {
 		return err
 	}
 
-	aboves, err := sliceutil.CollectErr(tx.aboves(ctx, name))
-	if err != nil {
-		return fmt.Errorf("list branches above %v: %w", name, err)
-	}
-	if len(aboves) > 0 {
-		return fmt.Errorf("branch %v is needed by %v", name, strings.Join(aboves, ", "))
+	// Complete graph reads before staging deletions. The local index evolves
+	// with this call's deletions and need not be maintained by other mutations.
+	var dependents map[string]map[string]struct{}
+	if slices.ContainsFunc(states, func(s *branchState) bool { return s != nil }) {
+		visible, err := sliceutil.CollectErr(tx.listBranches(ctx))
+		if err != nil {
+			return fmt.Errorf("list branches: %w", err)
+		}
+		states, err := tx.getStates(ctx, visible)
+		if err != nil {
+			return fmt.Errorf("load branches: %w", err)
+		}
+		dependents = make(map[string]map[string]struct{})
+		for i, state := range states {
+			if state == nil {
+				return fmt.Errorf("load branch %q: %w", visible[i], ErrNotExist)
+			}
+			if dependents[state.Base.Name] == nil {
+				dependents[state.Base.Name] = make(map[string]struct{})
+			}
+			dependents[state.Base.Name][visible[i]] = struct{}{}
+		}
 	}
 
-	tx.dels[name] = struct{}{}
-	delete(tx.sets, name)
-	delete(tx.states, name)
+	var rejected DeleteManyError
+	for i, name := range names {
+		var err error
+		state := tx.states[name]
+		switch {
+		case name == "":
+			err = errors.New("branch name is required")
+		case name == tx.store.trunk:
+			err = ErrTrunk
+		case state == nil:
+			err = ErrNotExist
+		case len(dependents[name]) > 0:
+			aboves := slices.Sorted(maps.Keys(dependents[name]))
+			err = fmt.Errorf("branch %v is needed by %v", name, strings.Join(aboves, ", "))
+		default:
+			delete(dependents[state.Base.Name], name)
+			tx.dels[name] = struct{}{}
+			delete(tx.sets, name)
+			tx.states[name] = nil
+			continue
+		}
+		rejected.Indexes = append(rejected.Indexes, i)
+		rejected.Errors = append(rejected.Errors, fmt.Errorf("delete branch %q: %w", name, err))
+	}
+	if len(rejected.Indexes) > 0 {
+		return &rejected
+	}
+	return nil
+}
+
+// Rename changes a tracked branch name while preserving its stored state.
+// Commit also moves state owned by the branch, such as review drafts.
+func (tx *BranchTx) Rename(
+	ctx context.Context,
+	oldName, newName string,
+) error {
+	if oldName == "" || newName == "" {
+		return errors.New("old and new branch names are required")
+	}
+	if oldName == tx.store.trunk || newName == tx.store.trunk {
+		return ErrTrunk
+	}
+
+	oldState, err := tx.state(ctx, oldName)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.state(ctx, newName); err == nil {
+		return fmt.Errorf("branch %v is already tracked", newName)
+	} else if !errors.Is(err, ErrNotExist) {
+		return err
+	}
+
+	newState := *oldState
+	tx.states[newName] = &newState
+	tx.states[oldName] = nil
+	tx.dels[oldName] = struct{}{}
+
+	if _, modified := tx.sets[oldName]; modified {
+		// The persisted source does not include earlier transaction changes.
+		// Write the changed state under its new name instead of moving it.
+		tx.sets[newName] = struct{}{}
+	} else {
+		tx.renames[oldName] = newName
+	}
+	delete(tx.sets, oldName)
 	return nil
 }
 
@@ -356,6 +608,7 @@ func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 	req := updateBranchesRequest{
 		Sets:    make([]setBranchStateRequest, 0, len(tx.sets)),
 		Deletes: slices.Collect(maps.Keys(tx.dels)),
+		Renames: maps.Clone(tx.renames),
 		Message: msg,
 	}
 
@@ -375,25 +628,55 @@ func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 	clear(tx.sets)
 	clear(tx.dels)
 	clear(tx.states)
+	clear(tx.renames)
 	return nil
 }
 
 func (tx *BranchTx) state(ctx context.Context, branch string) (*branchState, error) {
-	if _, ok := tx.dels[branch]; ok {
+	state, cached := tx.states[branch]
+	if !cached {
+		states, err := tx.getStates(ctx, []string{branch})
+		if err != nil {
+			return nil, err
+		}
+		state = states[0]
+	}
+	if state == nil {
 		return nil, ErrNotExist
 	}
-
-	if state, ok := tx.states[branch]; ok {
-		return state, nil
-	}
-
-	state, err := tx.store.lookupBranchState(ctx, branch)
-	if err != nil {
-		return nil, err
-	}
-
-	tx.states[branch] = state
 	return state, nil
+}
+
+// getStates returns transaction-owned states in request order, with nil entries
+// for absent names. Duplicate names share state. Later mutations may replace
+// entries, so callers must not treat these pointers as stable name handles.
+func (tx *BranchTx) getStates(ctx context.Context, names []string) ([]*branchState, error) {
+	var pending []string
+	seen := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		if _, ok := tx.states[name]; ok {
+			continue
+		}
+		if _, duplicate := seen[name]; duplicate {
+			continue
+		}
+		seen[name] = struct{}{}
+		pending = append(pending, name)
+	}
+	if len(pending) > 0 {
+		states, err := tx.store.lookupBranchStates(ctx, pending)
+		if states == nil {
+			return nil, err
+		}
+		for i, name := range pending {
+			tx.states[name] = states[i]
+		}
+	}
+	states := make([]*branchState, len(names))
+	for i, name := range names {
+		states[i] = tx.states[name]
+	}
+	return states, nil
 }
 
 func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
@@ -401,16 +684,21 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 		// seen prevents underlying branches from being listed twice.
 		seen := make(map[string]struct{})
 
-		// Entries in tx.sets take precedence unless they are deleted.
-		for branch := range tx.sets {
-			if _, ok := tx.dels[branch]; ok {
+		// The read view includes renamed destinations and staged creations.
+		// Only staged deletions hide persisted names: a listed record with
+		// missing state must still be reported by the caller as an error.
+		for branch, state := range tx.states {
+			if state == nil {
+				if _, deleted := tx.dels[branch]; deleted {
+					seen[branch] = struct{}{}
+				}
 				continue
 			}
+			seen[branch] = struct{}{}
 
 			if !yield(branch, nil) {
 				return
 			}
-			seen[branch] = struct{}{}
 		}
 
 		// List underlying branches.
@@ -420,9 +708,7 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 				return
 			}
 
-			_, overridden := seen[branch]
-			_, deleted := tx.dels[branch]
-			if overridden || deleted {
+			if _, overridden := seen[branch]; overridden {
 				continue
 			}
 
@@ -430,29 +716,6 @@ func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
 				return
 			}
 			seen[branch] = struct{}{}
-		}
-	}
-}
-
-func (tx *BranchTx) aboves(ctx context.Context, branch string) iter.Seq2[string, error] {
-	return func(yield func(string, error) bool) {
-		for branchName, err := range tx.listBranches(ctx) {
-			if err != nil {
-				yield("", err)
-				return
-			}
-
-			state, err := tx.state(ctx, branchName)
-			if err != nil {
-				yield("", fmt.Errorf("load branch %q: %w", branchName, err))
-				return
-			}
-
-			if state.Base.Name == branch {
-				if !yield(branchName, nil) {
-					return
-				}
-			}
 		}
 	}
 }
@@ -494,17 +757,18 @@ type setBranchStateRequest struct {
 }
 
 // updateBranchesRequest is a request to update the state of multiple branches.
-// The request can set the state of branches, delete branches, or both.
+// The request can set, delete, or rename branches in one transaction.
 // A message is recorded with the update.
 type updateBranchesRequest struct {
 	Sets    []setBranchStateRequest
 	Deletes []string
+	Renames map[string]string
 	Message string // required
 }
 
 // updateBranches atomically updates the state of multiple branches in the store.
 func (s *Store) updateBranches(ctx context.Context, req updateBranchesRequest) error {
-	if len(req.Sets) == 0 && len(req.Deletes) == 0 {
+	if len(req.Sets) == 0 && len(req.Deletes) == 0 && len(req.Renames) == 0 {
 		return nil
 	}
 
@@ -520,13 +784,36 @@ func (s *Store) updateBranches(ctx context.Context, req updateBranchesRequest) e
 		}
 	}
 
-	dels := make([]string, len(req.Deletes))
-	for idx, del := range req.Deletes {
-		dels[idx] = branchKey(del)
+	var dels []string
+	for _, del := range req.Deletes {
+		if _, renamed := req.Renames[del]; !renamed {
+			dels = append(
+				dels,
+				branchKey(del),
+				reviewDraftsJSON(del),
+			)
+		}
+	}
+
+	var moves []storage.MoveRequest
+	for _, oldName := range slices.Sorted(maps.Keys(req.Renames)) {
+		newName := req.Renames[oldName]
+		moves = append(
+			moves,
+			storage.MoveRequest{
+				From: branchKey(oldName),
+				To:   branchKey(newName),
+			},
+			storage.MoveRequest{
+				From: reviewDraftsJSON(oldName),
+				To:   reviewDraftsJSON(newName),
+			},
+		)
 	}
 
 	updReq := storage.UpdateRequest{
 		Sets:    sets,
+		Moves:   moves,
 		Deletes: dels,
 		Message: req.Message,
 	}

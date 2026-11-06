@@ -11,7 +11,7 @@ import (
 func (w *Worktree) Var(ctx context.Context, name string) (string, error) {
 	out, err := w.gitCmd(ctx, "var", name).Output()
 	if err != nil {
-		return "", fmt.Errorf("git var %s: %w", name, err)
+		return "", fmt.Errorf("git var %q: %w", name, err)
 	}
 	return strings.TrimSpace(string(out)), nil
 }

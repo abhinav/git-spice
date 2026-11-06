@@ -1,6 +1,7 @@
 package git_test
 
 import (
+	"errors"
 	"io"
 	"os/exec"
 	"sync"
@@ -92,4 +93,38 @@ func TestRepositoryListRemoteRefsOptions(t *testing.T) {
 		}, ref)
 		break
 	}
+}
+
+func TestRepository_RemoteConfigURL_errorQuotesRemote(t *testing.T) {
+	mockExecer := git.NewMockExecer(gomock.NewController(t))
+	repo, _ := git.NewFakeRepository(t, "", mockExecer)
+
+	mockExecer.EXPECT().
+		Output(gomock.Any()).
+		DoAndReturn(func(cmd *exec.Cmd) ([]byte, error) {
+			assert.Equal(t, []string{
+				"git", "config", "--get", "remote.up stream.url",
+			}, cmd.Args)
+			return nil, errors.New("git command failed")
+		})
+
+	_, err := repo.RemoteConfigURL(t.Context(), "up stream")
+	assert.ErrorContains(t, err, `config get remote."up stream".url`)
+}
+
+func TestRepository_RemoteFetchRefspecs_errorQuotesRemote(t *testing.T) {
+	mockExecer := git.NewMockExecer(gomock.NewController(t))
+	repo, _ := git.NewFakeRepository(t, "", mockExecer)
+
+	mockExecer.EXPECT().
+		Output(gomock.Any()).
+		DoAndReturn(func(cmd *exec.Cmd) ([]byte, error) {
+			assert.Equal(t, []string{
+				"git", "config", "--get-all", "remote.up stream.fetch",
+			}, cmd.Args)
+			return nil, errors.New("git command failed")
+		})
+
+	_, err := repo.RemoteFetchRefspecs(t.Context(), "up stream")
+	assert.ErrorContains(t, err, `config get-all remote."up stream".fetch`)
 }

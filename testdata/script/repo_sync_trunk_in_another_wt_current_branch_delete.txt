@@ -15,7 +15,7 @@ git commit --allow-empty -m 'Initial commit'
 gs repo init
 
 # set up a remote
-shamhub init
+shamhub-setup
 shamhub new origin alice/example.git
 git push origin main
 

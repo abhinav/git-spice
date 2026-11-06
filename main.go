@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -20,20 +21,27 @@ import (
 	"go.abhg.dev/gs/internal/cli/experiment"
 	"go.abhg.dev/gs/internal/cli/shorthand"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/azuredevops"
 	"go.abhg.dev/gs/internal/forge/bitbucket"
+	"go.abhg.dev/gs/internal/forge/forgejo"
+	"go.abhg.dev/gs/internal/forge/gitea"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/merge"
+	"go.abhg.dev/gs/internal/handler/onto"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/split"
 	"go.abhg.dev/gs/internal/handler/squash"
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
@@ -42,6 +50,7 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/xec"
 	"go.abhg.dev/komplete"
+	silogstyle "go.abhg.dev/log/silog"
 )
 
 // Version of git-spice.
@@ -58,7 +67,7 @@ var (
 	_browserLauncher browser.Launcher = new(browser.Browser)
 
 	// Forges to registry into main at startup besides the defaults.
-	_extraForges []forge.Forge
+	_extraForges []func(*silog.Logger) forge.Definition
 
 	_highlightStyle = ui.NewStyle().
 			Foreground(ui.Cyan).
@@ -109,21 +118,62 @@ func (b secretBackend) String() string {
 }
 
 func main() {
-	logger := silog.New(colorprofile.NewWriter(os.Stderr, os.Environ()), &silog.Options{
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stderr := ui.NewOutputWriter(os.Stderr)
+	colorWriter := &colorprofile.Writer{
+		Forward: stderr,
+		Profile: plainColorProfile(os.Stderr),
+	}
+	logger := silog.New(colorWriter, &silog.Options{
 		Level: silog.LevelInfo,
+
+		// The filter controls color; startup diagnostics stay plain
+		// until configuration has been loaded.
+		Style: silogstyle.DefaultStyle(),
 	})
+	spiceConfig, err := spice.LoadConfig(
+		ctx,
+		git.NewConfig(git.ConfigOptions{Log: logger}),
+		spice.ConfigOptions{Log: logger},
+	)
+	if err != nil {
+		logger.Error("Error loading spice configuration; continuing without it.", "error", err)
+	}
+
+	// Colored output can be disabled with color.ui
+	// or the git-spice specific spice.color in git configuration.
+	colorPref := colorUnset
+	if spiceConfig != nil {
+		colorPref = parseColorValue(spiceConfig.Color())
+	}
+	if colorPref == colorUnset && (os.Getenv("NO_COLOR") != "" || os.Getenv("CLICOLOR") == "0") {
+		colorPref = colorOff
+	}
+	colorProfile := colorprofile.Detect(stderr.Unwrap(), os.Environ())
+	switch colorPref {
+	case colorOff:
+		colorProfile = plainColorProfile(stderr.Unwrap())
+	case colorOn:
+		// The user explicitly asked for color:
+		// force it even if the environment detection
+		// found no color support.
+		colorProfile = colorprofile.TrueColor
+	}
+	colorWriter.Profile = colorProfile
 
 	// Register supported forges.
 	var forges forge.Registry
-	forges.Register(&bitbucket.Forge{Log: logger})
-	forges.Register(&github.Forge{Log: logger})
-	forges.Register(&gitlab.Forge{Log: logger})
-	for _, f := range _extraForges {
-		forges.Register(f)
+	forges.Register(&azuredevops.Definition{Log: logger})
+	forges.Register(&bitbucket.Definition{Log: logger})
+	forges.Register(&forgejo.Definition{Log: logger})
+	forges.Register(&gitea.Definition{Log: logger})
+	forges.Register(&github.Definition{Log: logger})
+	forges.Register(&gitlab.Definition{Log: logger})
+	for _, buildForge := range _extraForges {
+		forges.Register(buildForge(logger))
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	var sigStack sigstack.Stack
 	sigc := make(chan sigstack.Signal, 1)
@@ -138,17 +188,6 @@ func main() {
 		case <-ctx.Done():
 		}
 	}()
-
-	spiceConfig, err := spice.LoadConfig(
-		ctx,
-		git.NewConfig(git.ConfigOptions{Log: logger}),
-		spice.ConfigOptions{
-			Log: logger,
-		},
-	)
-	if err != nil {
-		logger.Error("Error loading spice configuration; continuing without it.", "error", err)
-	}
 
 	var cmd mainCmd
 
@@ -165,7 +204,8 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &forges, &sigStack),
+		kong.Bind(logger, &forges, &sigStack, &cmd, spiceConfig),
+		kong.BindTo(&cmd.Forge, (*forgeOptions)(nil)),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
 		kong.Vars{
@@ -174,6 +214,7 @@ func main() {
 		},
 		kong.UsageOnError(),
 		kong.Help(helpPrinter),
+		kong.Writers(os.Stdout, colorWriter),
 	)
 	if err != nil {
 		panic(err)
@@ -237,6 +278,7 @@ func main() {
 		}
 
 		if err := xec.Command(ctx, logger, "sh", shArgs...).
+			WithStdin(os.Stdin).
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr).
 			AppendEnv(fmt.Sprintf("%v=%d", recursionDepthEnvVar, depth+1)).
@@ -288,6 +330,8 @@ type mainCmd struct {
 		IndexLockTimeout time.Duration `name:"git-index-lock-timeout" hidden:"" default:"5s" config:"git.indexLockTimeout" help:"Total time to spend retrying git commands that fail due to index.lock contention. Set to 0 to disable retries."`
 	} `embed:""`
 
+	Forge forgeOptions `embed:""`
+
 	Shell shellCmd `cmd:"" group:"Shell"`
 	Auth  authCmd  `cmd:"" group:"Authentication"`
 
@@ -300,6 +344,7 @@ type mainCmd struct {
 
 	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
+	Review reviewCmd `cmd:"" group:"Review" help:"Manage change request reviews"`
 
 	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
 
@@ -318,7 +363,20 @@ type mainCmd struct {
 	DumpMD dumpMarkdownCmd `name:"dumpmd" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`
 }
 
-func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *silog.Logger) error {
+// forgeOptions defines application-wide forge selection options.
+type forgeOptions struct {
+	// Kind names the forge to use when a Git remote URL does not identify one.
+	// It is hidden from command help because forge selection is a repository
+	// or environment setting rather than a per-invocation control.
+	Kind string `name:"forge-kind" hidden:"" config:"forge.kind" env:"GIT_SPICE_FORGE_KIND" configHelp:"-" help:"Forge kind to use when remote URLs do not identify a supported Git host."`
+}
+
+func (cmd *mainCmd) AfterApply(
+	ctx context.Context,
+	kctx *kong.Context,
+	logger *silog.Logger,
+	signals *sigstack.Stack,
+) error {
 	if cmd.Globals.Verbose {
 		logger.SetLevel(silog.LevelDebug)
 	}
@@ -334,7 +392,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}
 	}
 
-	view, err := _buildView(os.Stdin, kctx.Stderr, cmd.Globals.Prompt)
+	view, err := _buildView(os.Stdin, kctx.Stderr, cmd.Globals.Prompt, signals)
 	if err != nil {
 		return fmt.Errorf("build view: %w", err)
 	}
@@ -358,6 +416,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}
 	}
 	kctx.BindTo(secretStash, (*secret.Stash)(nil))
+	kctx.BindTo(&cmd.Forge, (*forgeOptions)(nil))
 
 	// TODO: bind interfaces, not values
 	// TODO:
@@ -366,6 +425,9 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 	// just to get the current branch name.
 
 	return errors.Join(
+		kctx.BindSingletonProvider(func(config *spice.Config) (*http.Client, error) {
+			return newHTTPClient(config, nil)
+		}),
 		kctx.BindSingletonProvider(func() (*git.Worktree, error) {
 			return git.OpenWorktree(ctx, ".", git.OpenOptions{
 				Log:              logger,
@@ -374,6 +436,18 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(wt *git.Worktree) (*git.Repository, error) {
 			return wt.Repository(), nil
+		}),
+		kctx.BindSingletonProvider(func(
+			repo *git.Repository,
+			forges *forge.Registry,
+			httpClient *http.Client,
+		) *remoteResolver {
+			return &remoteResolver{
+				Forges:     forges,
+				HTTPClient: httpClient,
+				Repository: repo,
+				ForgeKind:  cmd.Forge.Kind,
+			}
 		}),
 		kctx.BindSingletonProvider(func(repo *git.Repository, wt *git.Worktree) (*state.Store, error) {
 			return ensureStore(ctx, repo, wt, logger, view)
@@ -436,7 +510,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			wt *git.Worktree,
 			svc *spice.Service,
 			secretStash secret.Stash,
-			forges *forge.Registry,
+			remoteResolver *remoteResolver,
 		) (SubmitHandler, error) {
 			return &submit.Handler{
 				Log:        log,
@@ -450,7 +524,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 					return ensureRemote(ctx, wt.Repository(), store, log, view)
 				},
 				ResolveRepository: func(ctx context.Context, remote string) (forge.Forge, forge.RepositoryID, error) {
-					return resolveRemoteRepository(ctx, log, forges, wt.Repository(), remote)
+					return resolveRemoteRepository(ctx, log, remoteResolver, remote)
 				},
 				OpenRepository: func(ctx context.Context, f forge.Forge, repo forge.RepositoryID) (forge.Repository, error) {
 					return openRepository(ctx, log, secretStash, f, repo)
@@ -472,9 +546,23 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
+			wt *git.Worktree,
+			svc *spice.Service,
+			restackHandler RestackHandler,
+		) (OntoHandler, error) {
+			return &onto.Handler{
+				Log:      log,
+				Worktree: wt,
+				Service:  svc,
+				Restack:  restackHandler,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
 			store *state.Store,
 			wt *git.Worktree,
 			svc *spice.Service,
+			restackHandler RestackHandler,
 		) (DeleteHandler, error) {
 			return &delete.Handler{
 				Log:        log,
@@ -483,6 +571,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree:   wt,
 				Store:      store,
 				Service:    svc,
+				Restack:    restackHandler,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
@@ -509,14 +598,33 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			store *state.Store,
 			svc *spice.Service,
 			forges *forge.Registry,
+			httpClient *http.Client,
 		) (SplitHandler, error) {
 			return &split.Handler{
-				Log:            log,
-				View:           view,
-				Repository:     repo,
-				Store:          store,
-				Service:        svc,
-				FindForge:      forges.Lookup,
+				Log:        log,
+				View:       view,
+				Repository: repo,
+				Store:      store,
+				Service:    svc,
+				FindForge: func(ctx context.Context, id string) (forge.Forge, bool) {
+					remote, err := store.Remote()
+					if err != nil {
+						return nil, false
+					}
+
+					remoteURL, err := repo.RemoteURL(ctx, remote.Upstream)
+					if err != nil {
+						return nil, false
+					}
+
+					parsedRemoteURL, err := giturl.Parse(remoteURL)
+					if err != nil {
+						return nil, false
+					}
+
+					f, err := forges.New(id, parsedRemoteURL, &forge.NewOptions{HTTPClient: httpClient})
+					return f, err == nil
+				},
 				HighlightStyle: _highlightStyle,
 			}, nil
 		}),
@@ -543,7 +651,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			store *state.Store,
 			svc *spice.Service,
 			secretStash secret.Stash,
-			forges *forge.Registry,
+			remoteResolver *remoteResolver,
 			deleteHandler DeleteHandler,
 			restackHandler RestackHandler,
 			autostashHandler AutostashHandler,
@@ -554,10 +662,9 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				return nil, err
 			}
 
-			remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote.Upstream)
+			remoteRepo, err := remoteResolver.Open(ctx, secretStash, remote.Upstream)
 			if err != nil {
-				var unsupported *unsupportedForgeError
-				if !errors.As(err, &unsupported) {
+				if _, ok := errors.AsType[*unsupportedForgeError](err); !ok {
 					return nil, err
 				}
 				remoteRepo = nil
@@ -565,7 +672,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 
 			var pushRepository forge.RepositoryID
 			if remote.ForkMode() {
-				pushRepository, err = resolveRemoteRepositoryID(ctx, forges, repo, remote.Push)
+				pushRepository, err = remoteResolver.ResolveID(ctx, remote.Push)
 				if err != nil {
 					return nil, fmt.Errorf("resolve push repository: %w", err)
 				}
@@ -586,6 +693,79 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				PushRepository:   pushRepository,
 			}, nil
 		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			view ui.View,
+			store *state.Store,
+			svc *spice.Service,
+			repo *git.Repository,
+			remote state.Remote,
+			remoteRepo *remoteRepository,
+			restackHandler RestackHandler,
+			submitHandler SubmitHandler,
+			syncHandler SyncHandler,
+			scriptRunner *scriptrun.Runner,
+		) (MergeHandler, error) {
+			return &merge.Handler{
+				Log:                log,
+				View:               view,
+				Store:              store,
+				Service:            svc,
+				RemoteRepository:   remoteRepo.Repository,
+				RemoteRepositoryID: remoteRepo.ID,
+				Restack:            restackHandler,
+				Submit:             submitHandler,
+				Sync:               syncHandler,
+				Repository:         repo,
+				Remote:             remote.Upstream,
+				ScriptRunner:       scriptRunner,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			remoteRepo *remoteRepository,
+		) forge.Repository {
+			return remoteRepo.Repository
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			secretStash secret.Stash,
+			remoteResolver *remoteResolver,
+			remote state.Remote,
+		) (*remoteRepository, error) {
+			f, repoID, err := resolveRemoteRepository(
+				ctx, log, remoteResolver, remote.Upstream,
+			)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"resolve remote repository %q: %w",
+					remote.Upstream, err,
+				)
+			}
+			remoteRepo, err := openRepository(
+				ctx, log, secretStash, f, repoID,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("open remote repository: %w", err)
+			}
+			return &remoteRepository{
+				Repository: remoteRepo,
+				ID:         repoID,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			ctx context.Context,
+			repo *git.Repository,
+			store *state.Store,
+			log *silog.Logger,
+			view ui.View,
+		) (state.Remote, error) {
+			return ensureRemote(ctx, repo, store, log, view)
+		}),
+		kctx.BindSingletonProvider(func(log *silog.Logger) *scriptrun.Runner {
+			return &scriptrun.Runner{
+				Log: log,
+			}
+		}),
 	)
 }
 
@@ -596,9 +776,24 @@ type AutostashHandler interface {
 
 var _ AutostashHandler = (*autostash.Handler)(nil)
 
-var _buildView = func(stdin io.Reader, stderr io.Writer, interactive bool) (ui.View, error) {
+// remoteRepository keeps the opened forge repository together with the
+// repository ID that produced it.
+// The command wiring needs the opened repository for forge operations,
+// while merge planning uses the repository ID to format change URLs
+// without making another forge API request.
+type remoteRepository struct {
+	Repository forge.Repository
+	ID         forge.RepositoryID
+}
+
+var _buildView = func(
+	stdin io.Reader,
+	stderr io.Writer,
+	interactive bool,
+	signals *sigstack.Stack,
+) (ui.View, error) {
 	if interactive {
-		return ui.NewTerminalView(stdin, stderr), nil
+		return ui.NewTerminalView(stdin, stderr).WithSignals(signals), nil
 	}
 	return ui.NewFileView(stderr), nil
 }

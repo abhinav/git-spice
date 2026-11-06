@@ -10,7 +10,7 @@ git commit --allow-empty -m 'Initial commit'
 gs repo init
 
 # Initialize ShamHub with a test repository
-shamhub init
+shamhub-setup
 shamhub register alice
 shamhub new origin alice/example.git
 git push origin main
@@ -18,7 +18,7 @@ git push origin main
 env SHAMHUB_USERNAME=alice
 gs auth login
 
-git config spice.submit.label label1
+git config spice.submit.labels label1
 
 # Create and submit a branch with label1
 git add feature.txt

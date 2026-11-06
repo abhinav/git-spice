@@ -17,6 +17,18 @@ func TestGitEditor(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	// git var GIT_EDITOR checks GIT_EDITOR and VISUAL before core.editor,
+	// and t.Setenv("KEY", "") is not good enough, we need to unset.
+	// Use t.Setenv first to register the restore cleanup,
+	// then os.Unsetenv to actually unset for the duration of the test.
+	if prev, ok := os.LookupEnv("GIT_EDITOR"); ok {
+		t.Setenv("GIT_EDITOR", prev)
+		require.NoError(t, os.Unsetenv("GIT_EDITOR"))
+	}
+	if prev, ok := os.LookupEnv("VISUAL"); ok {
+		t.Setenv("VISUAL", prev)
+		require.NoError(t, os.Unsetenv("VISUAL"))
+	}
 
 	runGit := func(t *testing.T, dir string, args ...string) {
 		t.Helper()

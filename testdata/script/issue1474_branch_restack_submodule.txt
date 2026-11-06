@@ -1,0 +1,38 @@
+# Restacking in a submodule recognizes the current checkout.
+# https://github.com/abhinav/git-spice/issues/1474
+
+as 'Test <test@example.com>'
+at '2026-10-24T22:23:11Z'
+
+# Create a submodule whose Git directory is absorbed into its parent.
+mkdir sub
+cd sub
+git init -b main
+git commit --allow-empty -m initial
+cd ..
+mkdir super
+cd super
+git init -b main
+git -c protocol.file.allow=always submodule add ../sub sub
+git commit -m 'Add submodule'
+cd sub
+gs repo init --trunk main
+gs branch create feature -m feature
+
+# An up-to-date branch must not be mistaken for another worktree.
+gs branch restack
+! stderr 'checked out in another worktree'
+stderr 'feature: branch does not need to be restacked'
+
+# Advance trunk and verify that restack actually rebases the feature.
+gs trunk
+git commit --allow-empty -m 'Advance trunk'
+gs branch checkout feature
+gs branch restack
+! stderr 'checked out in another worktree'
+stderr 'feature: restacked'
+git merge-base --is-ancestor main feature
+git log --format=%s main..feature
+stdout '^feature$'
+git branch --show-current
+stdout '^feature$'

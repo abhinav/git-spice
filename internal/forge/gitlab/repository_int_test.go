@@ -18,20 +18,6 @@ func RepositoryProjectID(repo *Repository) int64 {
 	return repo.repoID
 }
 
-func MergeChange(ctx context.Context, repo *Repository, id *MR) error {
-	_, _, err := repo.client.MergeRequestAccept(
-		ctx,
-		repo.repoID,
-		id.Number,
-		&gitlab.AcceptMergeRequestOptions{},
-	)
-	if err != nil {
-		return fmt.Errorf("merge merge request: %w", err)
-	}
-	repo.log.Debug("Merged merge request", "mr", id.Number)
-	return nil
-}
-
 func CloseChange(ctx context.Context, repo *Repository, id *MR) error {
 	_, _, err := repo.client.MergeRequestUpdate(
 		ctx,

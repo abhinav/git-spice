@@ -1,0 +1,38 @@
+# branch edit --no-restack leaves upstack branches untouched.
+
+as 'Test <test@example.com>'
+at '2024-05-27T13:57:09Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+gs down
+
+# Rewrite feature1 so an automatic restack would necessarily rewrite feature2.
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/rebase-todo.txt
+gs branch edit --no-restack
+
+# The original feature2 head proves that the rewritten feature1 was not
+# propagated upstack.
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- input/rebase-todo.txt --
+pick 5c87b6d Add feature 1
+exec git commit --amend -m 'Edit feature 1'
+-- golden/feature2-before.txt --
+6afdaad

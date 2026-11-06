@@ -1,4 +1,5 @@
-# 'gs branch delete' removes the changes that were made on the branch.
+# 'gs branch delete' retargets upstacks by default.
+# The deleted branch's changes are removed after an explicit restack.
 
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
@@ -19,6 +20,10 @@ gs bc -m feature3
 
 gs branch delete feature2 --force
 gs branch checkout feature3
+
+exists feature1.txt feature2.txt feature3.txt
+
+gs branch restack
 
 exists feature1.txt feature3.txt
 ! exists feature2.txt

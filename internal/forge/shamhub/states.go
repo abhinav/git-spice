@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/xec"
 )
 
 type statesRequest struct {
@@ -126,10 +126,42 @@ type MergeChangeRequest struct {
 	// should be deleted after the merge.
 	DeleteBranch bool
 
+	// MergeMethod controls how the CR is merged.
+	// If empty, MergeChange uses the normal merge commit behavior.
+	MergeMethod MergeMethod
+
 	// Squash requests that the CR be merged
 	// as a single squashed commit with the PR subject/body
 	// instead of a merge commit.
 	Squash bool
+
+	// HeadHash, if non-empty, causes the merge to fail
+	// if the change's head doesn't match this hash.
+	HeadHash string
+}
+
+// MergeMethod names a server-side merge strategy.
+type MergeMethod string
+
+const (
+	// MergeMethodMerge creates a two-parent merge commit.
+	MergeMethodMerge MergeMethod = "merge"
+
+	// MergeMethodSquash creates a single-parent squashed commit.
+	MergeMethodSquash MergeMethod = "squash"
+)
+
+func parseMergeMethod(value string) (MergeMethod, error) {
+	switch MergeMethod(value) {
+	case MergeMethodMerge, MergeMethodSquash:
+		return MergeMethod(value), nil
+	default:
+		return "", fmt.Errorf("unsupported mergeMethod %q", value)
+	}
+}
+
+func (m MergeMethod) squash() bool {
+	return m == MergeMethodSquash
 }
 
 // MergeChange merges an open change against this forge.
@@ -144,18 +176,14 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	if req.CommitterEmail == "" {
 		req.CommitterEmail = "shamhub@example.com"
 	}
-
-	commitEnv := []string{
-		"GIT_COMMITTER_NAME=" + req.CommitterName,
-		"GIT_COMMITTER_EMAIL=" + req.CommitterEmail,
-		"GIT_AUTHOR_NAME=" + req.CommitterName,
-		"GIT_AUTHOR_EMAIL=" + req.CommitterEmail,
+	if req.MergeMethod == "" {
+		req.MergeMethod = MergeMethodMerge
 	}
-	if !req.Time.IsZero() {
-		commitEnv = append(commitEnv,
-			"GIT_COMMITTER_DATE="+req.Time.Format(time.RFC3339),
-			"GIT_AUTHOR_DATE="+req.Time.Format(time.RFC3339),
-		)
+	if req.Squash {
+		req.MergeMethod = MergeMethodSquash
+	}
+	if _, err := parseMergeMethod(string(req.MergeMethod)); err != nil {
+		return err
 	}
 
 	sh.mu.Lock()
@@ -179,22 +207,58 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		return fmt.Errorf("change %d (%v/%v) is not open", req.Number, req.Owner, req.Repo)
 	}
 
-	// Determine if this is a cross-fork merge by checking if the head branch
-	// exists in the target repository or needs to be fetched from a fork
-	targetRepoDir := sh.repoDir(req.Owner, req.Repo)
-
 	baseRef := change.Base
 	headRef := change.Head
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	if req.Time.IsZero() {
+		out, err := sh.gitCmd(
+			ctx, headRef.Owner, headRef.Repo,
+			"log", "-1", "--format=%cI", headRef.Name,
+		).Output()
+		if err != nil {
+			return fmt.Errorf("read head commit time: %w", err)
+		}
+
+		req.Time, err = time.Parse(time.RFC3339, strings.TrimSpace(string(out)))
+		if err != nil {
+			return fmt.Errorf("parse head commit time: %w", err)
+		}
+	}
+
+	commitEnv := []string{
+		"GIT_COMMITTER_NAME=" + req.CommitterName,
+		"GIT_COMMITTER_EMAIL=" + req.CommitterEmail,
+		"GIT_AUTHOR_NAME=" + req.CommitterName,
+		"GIT_AUTHOR_EMAIL=" + req.CommitterEmail,
+		"GIT_COMMITTER_DATE=" + req.Time.Format(time.RFC3339),
+		"GIT_AUTHOR_DATE=" + req.Time.Format(time.RFC3339),
+	}
+
+	// If a HeadHash is provided, verify the head matches.
+	if req.HeadHash != "" {
+		out, err := sh.gitCmd(ctx, headRef.Owner, headRef.Repo,
+			"rev-parse", headRef.Name).
+			Output()
+		if err != nil {
+			return fmt.Errorf("resolve head ref: %w", err)
+		}
+		actual := strings.TrimSpace(string(out))
+		if actual != req.HeadHash {
+			return fmt.Errorf(
+				"head hash mismatch: expected %s, got %s",
+				req.HeadHash, actual,
+			)
+		}
+	}
+
 	// If head is in a different repository (fork), fetch it.
 	if headRef.Owner != req.Owner || headRef.Repo != req.Repo {
 		// Fetch the head branch from the fork
 		forkRepoDir := sh.repoDir(headRef.Owner, headRef.Repo)
-		if err := xec.Command(ctx, sh.log, sh.gitExe, "fetch", forkRepoDir, headRef.Name+":"+headRef.Name).
-			WithDir(targetRepoDir).
+		if err := sh.gitCmd(ctx, req.Owner, req.Repo, "fetch", forkRepoDir, headRef.Name+":"+headRef.Name).
 			Run(); err != nil {
 			return fmt.Errorf("fetch from fork: %w", err)
 		}
@@ -210,8 +274,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	//
 	// This requires at least Git 2.38.
 	tree, err := func() (string, error) {
-		out, err := xec.Command(ctx, sh.log, sh.gitExe, "merge-tree", "--write-tree", baseRef.Name, headRef.Name).
-			WithDir(targetRepoDir).
+		out, err := sh.gitCmd(ctx, req.Owner, req.Repo, "merge-tree", "--write-tree", baseRef.Name, headRef.Name).
 			Output()
 		if err != nil {
 			return "", fmt.Errorf("merge-tree: %w", err)
@@ -228,7 +291,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 		var msg string
 		args := []string{"commit-tree", "-p", baseRef.Name}
-		if req.Squash {
+		if req.MergeMethod.squash() {
 			msg = fmt.Sprintf("%s (#%d)\n\n%s",
 				change.Subject,
 				req.Number,
@@ -239,8 +302,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		}
 		args = append(args, "-m", msg, tree)
 
-		out, err := xec.Command(ctx, sh.log, sh.gitExe, args...).
-			WithDir(sh.repoDir(req.Owner, req.Repo)).
+		out, err := sh.gitCmd(ctx, req.Owner, req.Repo, args...).
 			AppendEnv(commitEnv...).
 			Output()
 		if err != nil {
@@ -254,8 +316,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	}
 
 	headHash, err := func() (string, error) {
-		out, err := xec.Command(ctx, sh.log, sh.gitExe, "rev-parse", headRef.Name).
-			WithDir(sh.repoDir(headRef.Owner, headRef.Repo)).
+		out, err := sh.gitCmd(ctx, headRef.Owner, headRef.Repo, "rev-parse", headRef.Name).
 			Output()
 		if err != nil {
 			return "", fmt.Errorf("rev-parse head: %w", err)
@@ -270,8 +331,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	// Update the ref to point to the new commit.
 	err = func() error {
 		ref := "refs/heads/" + sh.changes[changeIdx].Base.Name
-		if err := xec.Command(ctx, sh.log, sh.gitExe, "update-ref", ref, commit).
-			WithDir(sh.repoDir(req.Owner, req.Repo)).
+		if err := sh.gitCmd(ctx, req.Owner, req.Repo, "update-ref", ref, commit).
 			Run(); err != nil {
 			return fmt.Errorf("update-ref: %w", err)
 		}
@@ -284,8 +344,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	if req.DeleteBranch {
 		err := func() error {
-			if err := xec.Command(ctx, sh.log, sh.gitExe, "branch", "-D", change.Head.Name).
-				WithDir(sh.repoDir(change.Head.Owner, change.Head.Repo)).
+			if err := sh.gitCmd(ctx, change.Head.Owner, change.Head.Repo, "branch", "-D", change.Head.Name).
 				Run(); err != nil {
 				return fmt.Errorf("delete branch: %w", err)
 			}
@@ -299,5 +358,80 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	sh.changes[changeIdx].State = shamChangeMerged
 	sh.changes[changeIdx].HeadHash = headHash
+	return nil
+}
+
+// REST endpoint: merge a change.
+
+type mergeChangeRequest struct {
+	Owner       string `path:"owner" json:"-"`
+	Repo        string `path:"repo" json:"-"`
+	Number      int    `path:"number" json:"-"`
+	HeadHash    string `json:"headHash,omitzero"`
+	MergeMethod string `json:"mergeMethod,omitzero"`
+}
+
+type mergeChangeResponse struct{}
+
+var _ = shamhubRESTHandler(
+	"POST /{owner}/{repo}/change/{number}/merge",
+	(*ShamHub).handleMergeChange,
+)
+
+func (sh *ShamHub) handleMergeChange(
+	_ context.Context, req *mergeChangeRequest,
+) (*mergeChangeResponse, error) {
+	mergeMethod := MergeMethod(req.MergeMethod)
+	if mergeMethod == "" {
+		sh.mu.RLock()
+		mergeMethod = sh.defaultMergeMethod
+		sh.mu.RUnlock()
+	} else if _, err := parseMergeMethod(string(mergeMethod)); err != nil {
+		return nil, badRequestErrorf("%s", err)
+	}
+
+	err := sh.MergeChange(MergeChangeRequest{
+		Owner:       req.Owner,
+		Repo:        req.Repo,
+		Number:      req.Number,
+		HeadHash:    req.HeadHash,
+		MergeMethod: mergeMethod,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &mergeChangeResponse{}, nil
+}
+
+// MergeChange merges a change via the ShamHub REST API.
+func (r *forgeRepository) MergeChange(
+	ctx context.Context, fid forge.ChangeID,
+	opts forge.MergeChangeOptions,
+) error {
+	id := fid.(ChangeID)
+	u := r.apiURL.JoinPath(
+		r.owner, r.repo,
+		"change", strconv.Itoa(int(id)), "merge",
+	)
+
+	body := mergeChangeRequest{
+		HeadHash: string(opts.HeadHash),
+	}
+	switch opts.Method {
+	case forge.MergeMethodMerge, forge.MergeMethodSquash:
+		body.MergeMethod = opts.Method.String()
+	case forge.MergeMethodDefault:
+	default:
+		r.log.Warn(
+			"Unsupported merge method; using forge default",
+			"method", opts.Method,
+		)
+	}
+
+	var res mergeChangeResponse
+	if err := r.client.Post(ctx, u.String(), body, &res); err != nil {
+		return fmt.Errorf("merge change: %w", err)
+	}
+
 	return nil
 }

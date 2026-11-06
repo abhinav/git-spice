@@ -3,7 +3,8 @@ package shamhub
 import (
 	"cmp"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"net/http"
@@ -16,6 +17,20 @@ import (
 type shamhubEndpoint struct {
 	Pattern string
 	Handler func(*ShamHub, http.ResponseWriter, *http.Request)
+}
+
+type shamHubUserContextKey struct{}
+
+func contextWithShamHubUser(ctx context.Context, username string) context.Context {
+	return context.WithValue(ctx, shamHubUserContextKey{}, username)
+}
+
+func shamHubUserFromContext(ctx context.Context) (string, error) {
+	username, _ := ctx.Value(shamHubUserContextKey{}).(string)
+	if username == "" {
+		return "", errors.New("authenticated ShamHub user is missing")
+	}
+	return username, nil
 }
 
 var _handlers []shamhubEndpoint
@@ -31,8 +46,8 @@ var _handlers []shamhubEndpoint
 //   - `form:"name"` or `query:"name"` to extract values from the form data.
 //     These fields are optional unless the tag is `form:"name,required"`.
 //
-// Fields can only be tagged with one of `path` and `form`,
-// and they MUST be tagged with `json:"-"`.
+// Fields can only be tagged with one of `path`, `form`, and `query`.
+// Non-JSON fields MUST be tagged with `json:"-"`.
 // They must be one of the following types:
 //
 //   - string
@@ -157,9 +172,11 @@ func buildRESTHandler[State, Req, Res any](state State, handler func(State, cont
 
 		// Decode the body only if it's not a GET or DELETE request.
 		if r.Method != http.MethodGet && r.Method != http.MethodDelete {
-			dec := json.NewDecoder(r.Body)
-			dec.DisallowUnknownFields()
-			if err := dec.Decode(reqv.Addr().Interface()); err != nil {
+			if err := json.UnmarshalRead(
+				r.Body,
+				reqv.Addr().Interface(),
+				json.RejectUnknownMembers(true),
+			); err != nil {
 				http.Error(w, fmt.Sprintf("decode request: %v", err), http.StatusBadRequest)
 				return
 			}
@@ -174,8 +191,7 @@ func buildRESTHandler[State, Req, Res any](state State, handler func(State, cont
 
 		res, err := handler(state, r.Context(), req.(Req))
 		if err != nil {
-			var httpErr *httpError
-			if errors.As(err, &httpErr) {
+			if httpErr, ok := errors.AsType[*httpError](err); ok {
 				http.Error(w, httpErr.Error(), httpErr.code)
 			} else {
 				http.Error(w, fmt.Sprintf("error: %v", err), http.StatusInternalServerError)
@@ -184,9 +200,7 @@ func buildRESTHandler[State, Req, Res any](state State, handler func(State, cont
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ") // pretty print JSON
-		if err := enc.Encode(res); err != nil {
+		if err := json.MarshalWrite(w, res, jsontext.WithIndent("  ")); err != nil {
 			http.Error(w, fmt.Sprintf("encode response: %v", err), http.StatusInternalServerError)
 			return
 		}
@@ -240,8 +254,14 @@ func (sh *ShamHub) apiHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sh.log.Infof("ShamHub: %s %s", r.Method, r.URL.String())
 
-		// Everything except /auth/login requires a token.
-		if r.URL.Path != "/login" {
+		if strings.HasPrefix(r.URL.Path, "/_shamhub/admin/") {
+			if token := r.Header.Get("ShamHub-Admin-Token"); token != sh.adminToken {
+				http.Error(w, "invalid admin token", http.StatusUnauthorized)
+				return
+			}
+		} else if r.URL.Path != "/login" {
+			// Everything except login and admin endpoints requires
+			// a user authentication token.
 			token := r.Header.Get("Authentication-Token")
 			if token == "" {
 				http.Error(w, "missing token", http.StatusUnauthorized)
@@ -249,12 +269,14 @@ func (sh *ShamHub) apiHandler() http.Handler {
 			}
 
 			sh.mu.RLock()
-			_, ok := sh.tokens[token]
+			username, ok := sh.tokens[token]
 			sh.mu.RUnlock()
 			if !ok {
 				http.Error(w, "invalid token", http.StatusUnauthorized)
 				return
 			}
+
+			r = r.WithContext(contextWithShamHubUser(r.Context(), username))
 		}
 
 		mux.ServeHTTP(w, r)

@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,4 +33,35 @@ func TestCLITokenSource(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
 	})
+}
+
+func TestCLITokenSource_tokenContext_perRequest(t *testing.T) {
+	execer := xectest.NewMockExecer(gomock.NewController(t))
+	execer.EXPECT().
+		Output(gomock.Any()).
+		Return([]byte("first\n"), nil)
+	execer.EXPECT().
+		Output(gomock.Any()).
+		Return([]byte("second\n"), nil)
+
+	source := &CLITokenSource{execer: execer}
+	first, err := source.tokenContext(t.Context())
+	require.NoError(t, err)
+	second, err := source.tokenContext(t.Context())
+	require.NoError(t, err)
+
+	assert.Equal(t, "first", first.AccessToken)
+	assert.Equal(t, "second", second.AccessToken)
+}
+
+func TestCLITokenSource_tokenContext_canceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	execer := xectest.NewMockExecer(gomock.NewController(t))
+	execer.EXPECT().
+		Output(gomock.Any()).
+		Return(nil, context.Canceled)
+
+	_, err := (&CLITokenSource{execer: execer}).tokenContext(ctx)
+	assert.ErrorIs(t, err, context.Canceled)
 }

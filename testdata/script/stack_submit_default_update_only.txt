@@ -10,7 +10,7 @@ git commit --allow-empty -m 'Initial commit'
 git config spice.submit.updateOnly true
 
 # set up a fake GitHub remote
-shamhub init
+shamhub-setup
 shamhub new origin alice/example.git
 shamhub register alice
 git push origin main
@@ -50,6 +50,6 @@ feature2
 feature update
 
 -- golden/ls.txt --
-  ┏━□ feature2
+  ┏━━□ feature2
 ┏━┻■ feature (#1) ◀
 main

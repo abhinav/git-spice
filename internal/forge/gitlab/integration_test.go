@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,10 +101,13 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL:     remoteURL,
-		PushRemoteURL: pushRemoteURL,
-		Forge:         &gitlabForge,
-		Sanitizers:    sanitizers,
+		RemoteURL:              remoteURL,
+		PushRemoteURL:          pushRemoteURL,
+		Forge:                  &gitlabForge,
+		Sanitizers:             sanitizers,
+		ReviewThreads:          true,
+		FileReviewThreads:      true,
+		ReviewThreadCommitHash: true,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			ghc := newGitLabClient(t, httpClient)
 			newRepo, err := gitlabforge.NewRepository(
@@ -113,17 +117,61 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t, err)
 			return newRepo
 		},
-		MergeChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, gitlabforge.MergeChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
-		},
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, gitlabforge.CloseChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
+			require.NoError(t, gitlabforge.CloseChange(
+				context.WithoutCancel(t.Context()),
+				repo.(*gitlabforge.Repository),
+				change.(*gitlabforge.MR),
+			))
+		},
+		SetChangeCheck: func(
+			t *testing.T,
+			httpClient *http.Client,
+			repo forge.Repository,
+			changeID forge.ChangeID,
+			headHash git.Hash,
+			check forge.ChangeCheck,
+		) {
+			client := newGitLabClient(t, httpClient)
+			mr, _, err := client.MergeRequestGet(
+				t.Context(),
+				gitlabforge.RepositoryProjectID(
+					repo.(*gitlabforge.Repository),
+				),
+				changeID.(*gitlabforge.MR).Number,
+				nil,
+			)
+			require.NoError(t, err)
+
+			description := "Synthetic status for git-spice integration tests"
+			status := gitLabStatusState(check.State)
+			_, _, err = client.CommitStatusSet(
+				t.Context(),
+				gitlabforge.RepositoryProjectID(
+					repo.(*gitlabforge.Repository),
+				),
+				headHash.String(),
+				&gitlab.SetCommitStatusOptions{
+					State:       &status,
+					Name:        &check.Name,
+					Description: &description,
+					Ref:         &mr.SourceBranch,
+				},
+			)
+			require.NoError(t, err)
+			if forgetest.Update() {
+				// GitLab accepts external commit statuses before the
+				// merge-request head_pipeline field reflects them.
+				time.Sleep(2 * time.Second)
+			}
 		},
 		SetCommentsPageSize:   gitlabforge.SetListChangeCommentsPageSize,
 		BaseBranchMayBeAbsent: true,
 		SkipMerge:             true, // Merge requires MR approval settings to be disabled
 		Reviewers:             []string{cfg.Reviewer},
 		Assignees:             []string{cfg.Assignee},
+		// TODO: Enable the combined metadata test after recording its fixtures.
+		SkipCombinedMetadata: true,
 	})
 }
 
@@ -249,4 +297,17 @@ func randomString(n int) string {
 		b[i] = _alnum[idx]
 	}
 	return string(b)
+}
+
+func gitLabStatusState(state forge.ChangeCheckState) string {
+	switch state {
+	case forge.ChangeCheckPending:
+		return gitlab.PipelineStatusPending
+	case forge.ChangeCheckPassed:
+		return gitlab.PipelineStatusSuccess
+	case forge.ChangeCheckFailed:
+		return gitlab.PipelineStatusFailed
+	default:
+		return gitlab.PipelineStatusFailed
+	}
 }

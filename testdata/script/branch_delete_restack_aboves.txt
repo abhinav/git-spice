@@ -1,0 +1,43 @@
+# 'gs branch delete --restack=aboves' restacks only direct upstacks.
+
+as 'Test <test@example.com>'
+at '2026-05-26T10:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m feature1
+
+git add feature2.txt
+gs bc -m feature2
+
+git add feature3.txt
+gs bc -m feature3
+
+gs branch delete --force --restack=aboves feature1
+gs branch checkout feature3
+
+exists feature1.txt feature2.txt feature3.txt
+
+gs branch restack
+
+exists feature2.txt feature3.txt
+! exists feature1.txt
+
+git graph --branches
+cmp stdout $WORK/golden/branches.txt
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature2.txt --
+feature 2
+-- repo/feature3.txt --
+feature 3
+
+-- golden/branches.txt --
+* 9f62b28 (HEAD -> feature3) feature3
+* 6ee6545 (feature2) feature2
+* 8709cff (main) initial commit

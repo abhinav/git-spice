@@ -91,7 +91,7 @@ func TestHelp(t *testing.T) {
 			filename := strings.ReplaceAll(tc.name, " ", "_") + ".txt"
 			goldenPath := filepath.Join("testdata", "help", filename)
 
-			if *_update {
+			if updateFlag() {
 				// Update mode: write actual output to golden file
 				err := os.MkdirAll(filepath.Dir(goldenPath), 0o755)
 				require.NoError(t, err)

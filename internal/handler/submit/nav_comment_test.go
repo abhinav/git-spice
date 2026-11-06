@@ -3,7 +3,9 @@ package submit
 import (
 	"cmp"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,8 +16,10 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/forge/shamhub"
+	"go.abhg.dev/gs/internal/forge/stacknav"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicetest"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/statetest"
 	gomock "go.uber.org/mock/gomock"
@@ -34,7 +38,8 @@ func TestUpdateNavigationComments(t *testing.T) {
 		trackedBranches []trackedBranch
 		when            NavCommentWhen
 		sync            NavCommentSync
-		downstack       NavCommentDownstack
+		downstack       string
+		layout          string
 
 		// branches from trackedBranches that were just submitted.
 		submit []string
@@ -320,7 +325,7 @@ func TestUpdateNavigationComments(t *testing.T) {
 				{Name: "feat3", Base: "feat2", ChangeID: 125},
 			},
 			sync:      NavCommentSyncDownstack,
-			downstack: NavCommentDownstackOpen,
+			downstack: "open",
 			submit:    []string{"feat3"},
 			// Merged CRs (#100, #101) should not appear
 			wantComments: map[int]string{
@@ -341,6 +346,96 @@ func TestUpdateNavigationComments(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "MergedDownstack/LimitOne",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+			},
+			submit:    []string{"feat2"},
+			sync:      NavCommentSyncDownstack,
+			downstack: "1",
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #101",
+					"    - #123 ◀",
+					"        - #124",
+				),
+				124: joinLines(
+					"- #123",
+					"    - #124 ◀",
+				),
+			},
+		},
+		{
+			name: "OpenDownstack/LimitOne",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat2", ChangeID: 125},
+			},
+			submit:    []string{"feat3"},
+			downstack: "1",
+			wantComments: map[int]string{
+				125: joinLines(
+					"- #124",
+					"    - #125 ◀",
+				),
+			},
+		},
+		{
+			name: "MergedDownstack/LimitExceedsHistory",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+			},
+			submit:    []string{"feat1"},
+			downstack: "10",
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #100",
+					"    - #101",
+					"        - #123 ◀",
+					"            - #124",
+				),
+			},
+		},
+		{
+			name: "MergedDownstack/LimitSimple",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+			},
+			submit:    []string{"feat1"},
+			downstack: "1",
+			layout:    "simple",
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #124",
+					"- #123 ◀",
+					"- #101",
+					"- `main`",
+				),
+			},
+		},
+		{
+			name: "MergedDownstack/LimitFork",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat1", ChangeID: 125},
+			},
+			submit:    []string{"feat1"},
+			downstack: "1",
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #101",
+					"    - #123 ◀",
+					"        - #124",
+					"        - #125",
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -349,46 +444,42 @@ func TestUpdateNavigationComments(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			store := statetest.NewMemoryStore(t, "main", "origin", log)
 
-			mockService := NewMockService(ctrl)
-			mockService.EXPECT().
-				LoadBranches(gomock.Any()).
-				DoAndReturn(func(context.Context) ([]spice.LoadBranchItem, error) {
-					items := make([]spice.LoadBranchItem, len(tt.trackedBranches))
-					for i, b := range tt.trackedBranches {
-						item := spice.LoadBranchItem{
-							Name:           b.Name,
-							Base:           cmp.Or(b.Base, "main"),
-							Head:           "abcd1234",
-							BaseHash:       "efgh5678",
-							UpstreamBranch: b.Name,
-						}
+			items := make([]spice.LoadBranchItem, len(tt.trackedBranches))
+			for i, b := range tt.trackedBranches {
+				item := spice.LoadBranchItem{
+					Name:           b.Name,
+					Base:           cmp.Or(b.Base, "main"),
+					Head:           "abcd1234",
+					BaseHash:       "efgh5678",
+					UpstreamBranch: b.Name,
+				}
 
-						if b.ChangeID > 0 {
-							item.Change = &shamhub.ChangeMetadata{
-								Number: b.ChangeID,
-							}
-						}
-
-						// Add merged downstack entries if any
-						for _, mergedID := range b.MergedDownstack {
-							mergedMeta := &shamhub.ChangeMetadata{Number: mergedID}
-							mergedJSON, err := json.Marshal(mergedMeta)
-							require.NoError(t, err)
-							item.MergedDownstack = append(item.MergedDownstack, mergedJSON)
-						}
-
-						items[i] = item
+				if b.ChangeID > 0 {
+					item.Change = &shamhub.ChangeMetadata{
+						Number: b.ChangeID,
 					}
+				}
 
-					return items, nil
-				}).
-				AnyTimes()
+				// Add merged downstack entries if any
+				for _, mergedID := range b.MergedDownstack {
+					mergedMeta := &shamhub.ChangeMetadata{Number: mergedID}
+					mergedJSON, err := json.Marshal(mergedMeta)
+					require.NoError(t, err)
+					item.MergedDownstack = append(item.MergedDownstack, mergedJSON)
+				}
+
+				items[i] = item
+			}
+			graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk:    "main",
+				Branches: items,
+			})
 
 			mockForge := forgetest.NewMockForge(ctrl)
 			mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
 			mockForge.EXPECT().
 				MarshalChangeMetadata(gomock.Any()).
-				DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+				DoAndReturn(func(m forge.ChangeMetadata) (jsontext.Value, error) {
 					md, ok := m.(*shamhub.ChangeMetadata)
 					require.True(t, ok, "unexpected change metadata type: %T", m)
 					return json.Marshal(md)
@@ -396,7 +487,7 @@ func TestUpdateNavigationComments(t *testing.T) {
 				AnyTimes()
 			mockForge.EXPECT().
 				UnmarshalChangeID(gomock.Any()).
-				DoAndReturn(func(data json.RawMessage) (forge.ChangeID, error) {
+				DoAndReturn(func(data jsontext.Value) (forge.ChangeID, error) {
 					var md shamhub.ChangeMetadata
 					if err := json.Unmarshal(data, &md); err != nil {
 						return nil, err
@@ -441,18 +532,21 @@ func TestUpdateNavigationComments(t *testing.T) {
 				}).
 				AnyTimes()
 
+			var downstack NavCommentDownstack
+			require.NoError(t, downstack.UnmarshalText([]byte(cmp.Or(tt.downstack, "all"))))
+
 			err := updateNavigationComments(
 				t.Context(),
-				store,
-				mockService,
-				log,
-				tt.when,
-				tt.sync,
-				tt.downstack,
-				"",
-				tt.submit,
-				func(context.Context) (forge.Repository, error) {
-					return mockRemoteRepo, nil
+				navigationCommentUpdate{
+					store:             store,
+					graph:             graph,
+					log:               log,
+					remoteRepository:  mockRemoteRepo,
+					when:              tt.when,
+					sync:              tt.sync,
+					downstack:         downstack,
+					layout:            tt.layout,
+					submittedBranches: tt.submit,
 				},
 			)
 			require.NoError(t, err)
@@ -511,10 +605,9 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		mockService := NewMockService(ctrl)
-		mockService.EXPECT().
-			LoadBranches(gomock.Any()).
-			Return([]spice.LoadBranchItem{
+		graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+			Trunk: "main",
+			Branches: []spice.LoadBranchItem{
 				{
 					Name:           "feat1",
 					Base:           "main",
@@ -523,13 +616,14 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 					UpstreamBranch: "feat1",
 					Change:         existingMeta,
 				},
-			}, nil)
+			},
+		})
 
 		mockForge := forgetest.NewMockForge(ctrl)
 		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
 		mockForge.EXPECT().
 			MarshalChangeMetadata(gomock.Any()).
-			DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+			DoAndReturn(func(m forge.ChangeMetadata) (jsontext.Value, error) {
 				md, ok := m.(*shamhub.ChangeMetadata)
 				require.True(t, ok, "unexpected change metadata type: %T", m)
 				return json.Marshal(md)
@@ -556,15 +650,15 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 
 		err = updateNavigationComments(
 			t.Context(),
-			store,
-			mockService, log,
-			NavCommentAlways,
-			NavCommentSyncBranch,
-			NavCommentDownstackAll,
-			"",
-			[]string{"feat1"},
-			func(context.Context) (forge.Repository, error) {
-				return mockRemoteRepo, nil
+			navigationCommentUpdate{
+				store:             store,
+				graph:             graph,
+				log:               log,
+				remoteRepository:  mockRemoteRepo,
+				when:              NavCommentAlways,
+				sync:              NavCommentSyncBranch,
+				downstack:         NavCommentDownstack{},
+				submittedBranches: []string{"feat1"},
 			},
 		)
 		require.NoError(t, err)
@@ -602,10 +696,9 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		mockService := NewMockService(ctrl)
-		mockService.EXPECT().
-			LoadBranches(gomock.Any()).
-			Return([]spice.LoadBranchItem{
+		graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+			Trunk: "main",
+			Branches: []spice.LoadBranchItem{
 				{
 					Name:           "feat1",
 					Base:           "main",
@@ -630,13 +723,14 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 					UpstreamBranch: "feat3",
 					Change:         existingMetas[2],
 				},
-			}, nil)
+			},
+		})
 
 		mockForge := forgetest.NewMockForge(ctrl)
 		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
 		mockForge.EXPECT().
 			MarshalChangeMetadata(gomock.Any()).
-			DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+			DoAndReturn(func(m forge.ChangeMetadata) (jsontext.Value, error) {
 				md, ok := m.(*shamhub.ChangeMetadata)
 				require.True(t, ok, "unexpected change metadata type: %T", m)
 				return json.Marshal(md)
@@ -670,20 +764,197 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 
 		err = updateNavigationComments(
 			t.Context(),
-			store,
-			mockService,
-			log,
-			NavCommentAlways,
-			NavCommentSyncDownstack,
-			NavCommentDownstackAll,
-			"",
-			[]string{"feat3"},
-			func(context.Context) (forge.Repository, error) {
-				return mockRemoteRepo, nil
+			navigationCommentUpdate{
+				store:             store,
+				graph:             graph,
+				log:               log,
+				remoteRepository:  mockRemoteRepo,
+				when:              NavCommentAlways,
+				sync:              NavCommentSyncDownstack,
+				downstack:         NavCommentDownstack{},
+				submittedBranches: []string{"feat3"},
 			},
 		)
 		require.NoError(t, err)
 	})
+}
+
+func TestUpdateNavigationComments_trunkComparisonLink(t *testing.T) {
+	// Two-branch stack: feat1 (on main) <- feat2 (on feat1),
+	// with feat2 pushed under a different upstream name.
+	//
+	// feat1 is based directly on trunk, so it is never eligible for a
+	// trunk comparison link. feat2 is stacked (eligible, but not a tip)
+	// and feat3 is the tip.
+	//
+	// The change metadata is rebuilt for each fixture because posting a
+	// comment mutates it with the new comment ID.
+	newBranches := func() []spice.LoadBranchItem {
+		return []spice.LoadBranchItem{
+			{
+				Name:           "feat1",
+				Base:           "main",
+				Head:           "abcd1234",
+				BaseHash:       "efgh5678",
+				UpstreamBranch: "feat1",
+				Change:         &shamhub.ChangeMetadata{Number: 123},
+			},
+			{
+				Name:           "feat2",
+				Base:           "feat1",
+				Head:           "ijkl9012",
+				BaseHash:       "abcd1234",
+				UpstreamBranch: "remote-feat2",
+				Change:         &shamhub.ChangeMetadata{Number: 124},
+			},
+			{
+				Name:           "feat3",
+				Base:           "feat2",
+				Head:           "mnop3456",
+				BaseHash:       "ijkl9012",
+				UpstreamBranch: "feat3",
+				Change:         &shamhub.ChangeMetadata{Number: 125},
+			},
+		}
+	}
+
+	// newFixture builds the mocks shared by the sub-tests.
+	// getRepo turns the base mock into the repository handed to
+	// updateNavigationComments, so a test can decide whether the
+	// repository supports comparison URLs.
+	newFixture := func(
+		t *testing.T,
+		mode NavCommentTrunkLink,
+		getRepo func(*forgetest.MockRepository) forge.Repository,
+		pushRepository forge.RepositoryID,
+	) map[int]string {
+		log := silogtest.New(t)
+		ctrl := gomock.NewController(t)
+		store := statetest.NewMemoryStore(t, "main", "origin", log)
+
+		graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+			Trunk:    "main",
+			Branches: newBranches(),
+		})
+
+		mockForge := forgetest.NewMockForge(ctrl)
+		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
+		mockForge.EXPECT().
+			MarshalChangeMetadata(gomock.Any()).
+			DoAndReturn(func(m forge.ChangeMetadata) (jsontext.Value, error) {
+				return json.Marshal(m)
+			}).
+			AnyTimes()
+
+		mockRepo := forgetest.NewMockRepository(ctrl)
+		mockRepo.EXPECT().Forge().Return(mockForge).AnyTimes()
+
+		var mu sync.Mutex
+		bodies := make(map[int]string) // change number -> comment body
+		mockRepo.EXPECT().
+			PostChangeComment(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, cid forge.ChangeID, body string) (forge.ChangeCommentID, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				bodies[int(cid.(shamhub.ChangeID))] = body
+				return shamhub.ChangeCommentID(len(bodies)), nil
+			}).
+			AnyTimes()
+
+		var getPushRepositoryID func(context.Context) (forge.RepositoryID, error)
+		if pushRepository != nil {
+			getPushRepositoryID = func(context.Context) (forge.RepositoryID, error) {
+				return pushRepository, nil
+			}
+		}
+
+		err := updateNavigationComments(
+			t.Context(),
+			navigationCommentUpdate{
+				store:             store,
+				graph:             graph,
+				log:               log,
+				remoteRepository:  getRepo(mockRepo),
+				when:              NavCommentAlways,
+				sync:              NavCommentSyncDownstack,
+				downstack:         NavCommentDownstack{},
+				trunkLink:         mode,
+				submittedBranches: []string{"feat3"},
+				pushRepositoryID:  getPushRepositoryID,
+			},
+		)
+		require.NoError(t, err)
+		return bodies
+	}
+
+	comparing := func(m *forgetest.MockRepository) forge.Repository {
+		return comparingRepo{MockRepository: m}
+	}
+
+	t.Run("Top", func(t *testing.T) {
+		bodies := newFixture(t, NavCommentTrunkLinkTop, comparing, nil)
+
+		// feat1 is based on trunk: never eligible.
+		assert.NotContains(t, bodies[123], "Compare against trunk")
+		// feat2 is stacked but not the tip: skipped in "top" scope.
+		assert.NotContains(t, bodies[124], "Compare against trunk")
+		// feat3 is the tip: it links, showing the whole stack vs trunk.
+		assert.Contains(t, bodies[125],
+			"[Compare against trunk](https://example.com/compare/main...feat3)")
+	})
+
+	t.Run("All", func(t *testing.T) {
+		bodies := newFixture(t, NavCommentTrunkLinkAll, comparing, nil)
+
+		// feat1 is based on trunk: still never eligible.
+		assert.NotContains(t, bodies[123], "Compare against trunk")
+		// feat2 links using its upstream branch name, not the local name.
+		assert.Contains(t, bodies[124],
+			"[Compare against trunk](https://example.com/compare/main...remote-feat2)")
+		assert.Contains(t, bodies[125],
+			"[Compare against trunk](https://example.com/compare/main...feat3)")
+	})
+
+	t.Run("Unsupported", func(t *testing.T) {
+		// A forge that doesn't implement WithComparisonURL
+		// never gets a comparison link, even when enabled.
+		bodies := newFixture(t, NavCommentTrunkLinkAll, func(m *forgetest.MockRepository) forge.Repository {
+			return m
+		}, nil)
+
+		for _, body := range bodies {
+			assert.NotContains(t, body, "Compare against trunk")
+		}
+	})
+
+	t.Run("Fork", func(t *testing.T) {
+		bodies := newFixture(
+			t,
+			NavCommentTrunkLinkTop,
+			comparing,
+			_repositoryID("fork/repo"),
+		)
+
+		assert.Contains(t, bodies[125],
+			"[Compare against trunk](https://example.com/compare/main...fork/repo:feat3)")
+	})
+}
+
+// comparingRepo wraps a mock repository to also satisfy
+// [forge.WithComparisonURL].
+type comparingRepo struct {
+	*forgetest.MockRepository
+}
+
+var _ forge.WithComparisonURL = comparingRepo{}
+
+func (comparingRepo) ComparisonURL(req forge.ComparisonRequest) string {
+	head := req.HeadURLEncoded()
+	if req.HeadRepository != nil {
+		head = req.HeadRepository.String() + ":" + head
+	}
+	return fmt.Sprintf("https://example.com/compare/%s...%s",
+		req.BaseURLEncoded(), head)
 }
 
 func TestGenerateStackNavigationComment(t *testing.T) {
@@ -784,7 +1055,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 				tt.want + "\n" +
 				_commentFooter + "\n" +
 				_commentMarker + "\n"
-			got := generateStackNavigationComment(tt.graph, tt.current, "", nil)
+			got := generateStackNavigationComment(tt.graph, tt.current, nil, nil, "")
 			assert.Equal(t, want, got)
 
 			// Sanity check: All generated comments must match
@@ -804,7 +1075,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 		}
 		graph[0].Aboves = []int{1}
 
-		got := generateStackNavigationComment(graph, 1, "<-- you are here", nil)
+		got := generateStackNavigationComment(graph, 1, &stacknav.PrintOptions{Marker: "<-- you are here"}, nil, "")
 		want := _commentHeader + "\n\n" +
 			joinLines(
 				"- #123",
@@ -827,7 +1098,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 		}
 		graph[0].Aboves = []int{1}
 
-		got := generateStackNavigationComment(graph, 1, "", nil)
+		got := generateStackNavigationComment(graph, 1, nil, nil, "")
 		want := _commentHeader + "\n\n" +
 			joinLines(
 				"- #123+",
@@ -836,6 +1107,33 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 			_commentFooter + "\n" +
 			_commentMarker + "\n"
 		assert.Equal(t, want, got)
+	})
+
+	t.Run("TrunkComparisonLink", func(t *testing.T) {
+		// The comparison link renders in its own paragraph
+		// between the stack listing and the footer.
+		graph := []*stackedChange{
+			{Change: _changeID("123"), Base: -1},
+			{Change: _changeID("124"), Base: 0},
+		}
+		graph[0].Aboves = []int{1}
+
+		trunkLink := "[Compare against trunk](https://example.com/o/r/compare/main...feat2)"
+		got := generateStackNavigationComment(graph, 1, nil, nil, trunkLink)
+		want := _commentHeader + "\n\n" +
+			joinLines(
+				"- #123",
+				"    - #124 ◀",
+			) + "\n" +
+			trunkLink + "\n\n" +
+			_commentFooter + "\n" +
+			_commentMarker + "\n"
+		assert.Equal(t, want, got)
+
+		// The navigation regexes must still match with the link present.
+		for _, re := range _navCommentRegexes {
+			assert.True(t, re.MatchString(got), "regexp %q failed", re)
+		}
 	})
 }
 
@@ -942,8 +1240,8 @@ func TestNavCommentDownstack_UnmarshalText(t *testing.T) {
 		give string
 		want NavCommentDownstack
 	}{
-		{"all", NavCommentDownstackAll},
-		{"open", NavCommentDownstackOpen},
+		{"all", NavCommentDownstack{}},
+		{"open", NavCommentDownstack{mode: navCommentDownstackOpen}},
 	}
 
 	for _, tt := range tests {
@@ -958,7 +1256,55 @@ func TestNavCommentDownstack_UnmarshalText(t *testing.T) {
 	t.Run("unknown", func(t *testing.T) {
 		var d NavCommentDownstack
 		require.Error(t, d.UnmarshalText([]byte("unknown")))
-		assert.Equal(t, "unknown", NavCommentDownstack(42).String())
+		assert.Equal(t, "unknown", NavCommentDownstack{mode: 42}.String())
+	})
+}
+
+func TestNavCommentDownstack_limits(t *testing.T) {
+	for _, value := range []string{"1", "3", "100"} {
+		t.Run(value, func(t *testing.T) {
+			var got NavCommentDownstack
+			require.NoError(t, got.UnmarshalText([]byte(value)))
+			assert.Equal(t, value, got.String())
+		})
+	}
+	for _, value := range []string{"", "0", "-1", "+1", "1.5", "many", "999999999999999999999999999"} {
+		t.Run(value, func(t *testing.T) {
+			var got NavCommentDownstack
+			require.NoError(t, got.UnmarshalText([]byte("3")))
+			require.Error(t, got.UnmarshalText([]byte(value)))
+			assert.Equal(t, "3", got.String())
+		})
+	}
+}
+
+func TestNavCommentTrunkLink_UnmarshalText(t *testing.T) {
+	tests := []struct {
+		give string
+		want NavCommentTrunkLink
+		str  string // expected String() output ("" = same as give)
+	}{
+		{give: "false", want: NavCommentTrunkLinkOff, str: "false"},
+		{give: "0", want: NavCommentTrunkLinkOff, str: "false"},
+		{give: "no", want: NavCommentTrunkLinkOff, str: "false"},
+		{give: "top", want: NavCommentTrunkLinkTop, str: "top"},
+		{give: "true", want: NavCommentTrunkLinkTop, str: "top"}, // alias
+		{give: "all", want: NavCommentTrunkLinkAll, str: "all"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			var got NavCommentTrunkLink
+			require.NoError(t, got.UnmarshalText([]byte(tt.give)))
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.str, got.String())
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		var l NavCommentTrunkLink
+		require.Error(t, l.UnmarshalText([]byte("unknown")))
+		assert.Equal(t, "unknown", NavCommentTrunkLink(42).String())
 	})
 }
 
@@ -966,6 +1312,16 @@ type _changeID string
 
 func (s _changeID) String() string {
 	return "#" + string(s)
+}
+
+type _repositoryID string
+
+func (r _repositoryID) String() string {
+	return string(r)
+}
+
+func (_repositoryID) ChangeURL(forge.ChangeID) string {
+	return ""
 }
 
 func joinLines(lines ...string) string {

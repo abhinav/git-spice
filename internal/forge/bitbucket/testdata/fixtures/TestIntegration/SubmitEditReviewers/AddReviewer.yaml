@@ -113,7 +113,7 @@ interactions:
         proto_minor: 1
         content_length: 92
         host: api.bitbucket.org
-        body: '{"title":"Testing 0Wp8VkKw","reviewers":[{"uuid":"{81c5ba60-73a4-4acf-b981-a11872ebd0a2}"}]}'
+        body: '{"title":"Testing 0Wp8VkKw","description":"Test PR without reviewers","reviewers":[{"uuid":"{81c5ba60-73a4-4acf-b981-a11872ebd0a2}"}]}'
         headers:
             Content-Type:
                 - application/json

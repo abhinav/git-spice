@@ -1,0 +1,3 @@
+kind: Fixed
+body: Cleanup of branches deleted outside git-spice is accelerated for large repositories.
+time: 2026-10-31T11:18:38.758863-07:00

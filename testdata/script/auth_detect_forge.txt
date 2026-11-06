@@ -7,7 +7,7 @@ mkdir repo
 cd repo
 git init
 git commit --allow-empty -m 'Initial commit'
-shamhub init
+shamhub-setup
 shamhub register alice
 env SHAMHUB_USERNAME=alice
 

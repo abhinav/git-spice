@@ -1,0 +1,108 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 142
+        host: api.github.com
+        body: |
+            {"query":"query($owner:String!$repo:String!){repository(owner: $owner, name: $repo){id}}","variables":{"owner":"test-owner","repo":"test-repo"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"repository":{"id":"R_kgDOMVd0xg"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 228.631792ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 268
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"GyGYIYtN","title":"Checks GyGYIYtN","body":"Checks state test"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7osNh5","number":94,"url":"https://github.com/test-owner/test-repo/pull/94"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 936.305583ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 125
+        host: api.github.com
+        body: '{"state":"success","context":"git-spice integration passed","description":"Synthetic status for git-spice integration tests"}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/repos/test-owner/test-repo/statuses/59ff4af79404382666e49baa3073d51c905a9bc8
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1365
+        body: '{"url":"https://api.github.com/repos/test-owner/test-repo/statuses/59ff4af79404382666e49baa3073d51c905a9bc8","avatar_url":"https://avatars.githubusercontent.com/oa/1157143?v=4","id":49257781234,"node_id":"SC_kwDOMVd0xs8AAAALd_4X8g","state":"success","description":"Synthetic status for git-spice integration tests","target_url":null,"context":"git-spice integration passed","created_at":"2026-06-20T14:14:56Z","updated_at":"2026-06-20T14:14:56Z","creator":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}}'
+        headers:
+            Content-Length:
+                - "1365"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 435.171375ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 412
+        host: api.github.com
+        body: |
+            {"query":"query($after:String$id:ID!){node(id: $id){... on PullRequest{commits(last: 1){nodes{commit{statusCheckRollup{contexts(first: 100, after: $after){nodes{... on StatusContext{context,state,createdAt},... on CheckRun{name,checkSuite{workflowRun{event,workflow{name}}},status,conclusion,startedAt,completedAt}},pageInfo{endCursor,hasNextPage}}}}}}}}}","variables":{"after":null,"id":"PR_kwDOMVd0xs7osNh5"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"node":{"commits":{"nodes":[{"commit":{"statusCheckRollup":{"contexts":{"nodes":[{"context":"git-spice integration passed","state":"SUCCESS","createdAt":"2026-06-20T14:14:56Z"}],"pageInfo":{"endCursor":"MQ","hasNextPage":false}}}}}]}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 331.531083ms

@@ -1,0 +1,64 @@
+# An external merge during readiness polling must synchronize trunk and allow
+# the next change to merge, even when the readiness command keeps waiting.
+# https://github.com/abhinav/git-spice/issues/1357
+
+as 'Test <test@example.com>'
+at '2026-10-26T03:42:44Z'
+
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+gs stack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# The readiness command merges #1 externally on its first invocation, after
+# preflight has selected both changes. It never reports #1 ready afterward.
+chmod 755 $WORK/ready-command.sh
+git config spice.merge.ready.command $WORK/ready-command.sh
+gs stack merge --ready-timeout=11s --no-prompt
+stderr 'external merge completed'
+stderr 'feature1: waiting for merge readiness'
+! stderr 'feature1: merging #1:'
+stderr 'feature2: merging #2:'
+stderr 'All 2 change.s. merged.'
+
+# Both commits reach local trunk through the normal synchronization barrier.
+git show main:feature1.txt
+stdout 'feature 1'
+git show main:feature2.txt
+stdout 'feature 2'
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature2.txt --
+feature 2
+-- ready-command.sh --
+#!/bin/sh
+set -eu
+
+if [ "$GIT_SPICE_BRANCH" != feature1 ]; then
+  exit 0
+fi
+if [ ! -f "$WORK/external-merge-completed" ]; then
+  curl -fsS -X POST \
+    -H 'Content-Type: application/json' \
+    -H "Authentication-Token: $GIT_SPICE_SHAMHUB_TOKEN" \
+    -d '{}' \
+    "$GIT_SPICE_SHAMHUB_API_URL/alice/example/change/1/merge"
+  touch "$WORK/external-merge-completed"
+  echo external merge completed
+fi
+exit 1

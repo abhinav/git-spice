@@ -1,0 +1,67 @@
+Usage: gs downstack (ds) merge (m) [flags]
+
+Merge a branch and those below it
+
+Merges CRs for the current branch and all branches below it into trunk.
+Use --branch to merge the downstack of a different branch. Use --branch multiple
+times to merge downstacks of multiple branches. Selected branches and their
+downstack branches down to trunk are merged.
+
+For example, for the following stack:
+
+       ┌── D
+       │ ┌── C
+       ├─┴ B
+     ┌─┴ A
+    trunk
+
+The following commands have the following effects:
+
+    gs downstack merge --branch D # merge A, D
+    gs downstack merge --branch B # merge A, B
+    gs downstack merge --branch C # merge A, B, C
+    gs downstack merge \          # merge A, B, C, D
+                          --branch C --branch D
+
+Use 'gs stack merge' to merge a branch and its upstack branches in one
+operation.
+
+Branches merge bottom-up starting with those stacked on trunk. After a branch
+merges, its upstack branches are restacked and resubmitted. When those are ready
+to merge, they are merged in turn, and the process repeats.
+
+A branch is considered ready to merge when the forge reports it as mergeable,
+based on the forge and the repository configuration. Override this with the
+'spice.merge.ready.command' configuration option.
+
+Branches are merged using the forge's merge API. Override this with the
+'spice.merge.command' configuration option.
+
+If a branch becomes blocked and will not become ready without intervention,
+or it takes too long to become ready, or otherwise fails to merge, it is
+skipped and any branches stacked on it are also skipped. Use --fail-fast to stop
+scheduling remaining merge queue work after the first branch failure.
+
+Flags:
+  --method=METHOD        Preferred merge method. One of 'merge', 'squash',
+                         and 'rebase'. (🔧 spice.merge.method)
+  --ready-timeout=30m    Max time to wait for merge readiness before each merge.
+                         0 means check once. (🔧 spice.merge.ready.timeout)
+  --merge-timeout=2m     Max time to wait for merge completion after requesting
+                         merge. (🔧 spice.merge.timeout)
+  --fail-fast            Stop scheduling remaining merge queue work after the
+                         first branch failure.
+  --branch=NAME,...      Branches to start merging from. May be repeated.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.merge.command          Command to request merge instead of using the
+                               forge merge API.
+  spice.merge.ready.command    Command to check merge readiness instead of using
+                               the forge.

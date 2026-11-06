@@ -1,10 +1,15 @@
 package git
 
 import (
+	"errors"
+	"io"
+	"os/exec"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 // SetConflictStyle exports test-only functionality
@@ -12,6 +17,47 @@ import (
 // for a merge-tree operation.
 func SetConflictStyle(req *MergeTreeRequest, style string) {
 	req.conflictStyle = style
+}
+
+func TestRepository_MergeTree_waitError(t *testing.T) {
+	ctx := t.Context()
+	mockExecer := NewMockExecer(gomock.NewController(t))
+	repo, _ := NewFakeRepository(t, "", mockExecer)
+	waitErr := errors.New("wait failed")
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	mockExecer.EXPECT().
+		Start(gomock.Any()).
+		Do(func(cmd *exec.Cmd) error {
+			assert.Equal(t, []string{
+				"merge-tree",
+				"--write-tree",
+				"--stdin",
+				"-z",
+			}, cmd.Args[1:])
+
+			wg.Go(func() {
+				_, err := io.WriteString(cmd.Stdout,
+					"1\x001234567890abcdef1234567890abcdef12345678\x00\x00")
+				assert.NoError(t, err)
+				assert.NoError(t, cmd.Stdout.(io.Closer).Close())
+			})
+			return nil
+		})
+	mockExecer.EXPECT().
+		Wait(gomock.Any()).
+		Return(waitErr)
+
+	got, err := repo.MergeTree(ctx, MergeTreeRequest{
+		Branch1: "branch1",
+		Branch2: "branch2",
+	})
+	require.Error(t, err)
+	assert.Equal(t, Hash("1234567890abcdef1234567890abcdef12345678"), got)
+	assert.ErrorContains(t, err, "git merge-tree: wait failed")
+	assert.ErrorIs(t, err, waitErr)
 }
 
 func TestParseConflictStage(t *testing.T) {

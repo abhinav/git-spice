@@ -49,7 +49,7 @@ if one was not provided with the `-m`/`--message` flag.
     If you prefer a workflow where you create branches first
     and then work on them,
     you can configure git-spice to never commit by default.
-    See [Create branches without committing](../community/recipes.md#create-branches-without-committing).
+    See [Create branches without committing](../resources/recipes.md#create-branches-without-committing).
 
 ### Manual stacking
 
@@ -589,6 +589,12 @@ and move it to a different base branch,
 while leaving the upstack branches where they are.
 
 Use $$gs branch onto$$ for this purpose.
+Branches above the moved branch are retargeted in git-spice state
+and can be restacked later with $$gs branch restack$$,
+$$gs upstack restack$$,
+or another restack command.
+Use `gs branch onto --restack`
+to rebase those branches and their upstacks during the move.
 
 <div class="grid" markdown>
 
@@ -637,12 +643,19 @@ of other changes in the stack.
 Use $$gs branch delete$$ to remove a branch from the stack
 and delete it from the repository.
 Branches that are upstack from the deleted branch
-will be restacked on top of the deleted branch's original base branch.
+are retargeted onto the deleted branch's original base branch.
+
+<!-- gs:version v0.29.0 -->,
+Branches upstack from deleted branches are not rebased by default,
+so you must run $$gs branch restack$$ later to replay the surviving branches,
+or use `gs branch delete --restack` to rebase them as part of the operation.
+Set $$spice.branchDelete.restack$$ to change the default mode.
 
 <div class="grid" markdown>
 
 ```freeze language="terminal"
 {green}${reset} gs branch delete feat2
+{green}INF{reset} feat3: retargeted upstack onto feat1
 {green}INF{reset} feat2: deleted (was 644a286)
 ```
 

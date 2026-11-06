@@ -9,7 +9,7 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake remote
-shamhub init
+shamhub-setup
 shamhub register alice
 shamhub new origin alice/example.git
 git push origin main
@@ -43,15 +43,15 @@ gs ll
 cmpenv stderr $WORK/golden/ll-after-crformat-url.txt
 
 -- golden/ls-after-crformat-url.txt --
-    ┏━■ feat3 ◀
+    ┏━━■ feat3 ◀
   ┏━┻□ feat2
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 main
 -- golden/ll-after-crformat-url.txt --
-    ┏━■ feat3 ◀
-    ┃   7b5eba4 feat3 (now)
+    ┏━━■ feat3 ◀
+    ┃    7b5eba4 feat3 (now)
   ┏━┻□ feat2
   ┃    562c8c6 feat2 (now)
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 ┃    ecc906e feat1 (now)
 main

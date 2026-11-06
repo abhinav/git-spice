@@ -76,14 +76,14 @@ whatever
 > bcd
 > ccc
 > ddd
-> ┏━□ aaa
-> ┣━□ bbb
+> ┏━━□ aaa
+> ┣━━□ bbb
 > main ◀
 "bbb"
 ===
 > Select a branch to checkout: 
-> ┏━□ aaa
-> ┣━□ bbb
+> ┏━━□ aaa
+> ┣━━□ bbb
 > main ◀
 > ccc
 > ddd
@@ -94,7 +94,7 @@ whatever
 > bcd
 > ddd
 > ccc
-> ┏━□ bbb
-> ┣━□ aaa
+> ┏━━□ bbb
+> ┣━━□ aaa
 > main ◀
 "bbb"

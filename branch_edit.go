@@ -6,12 +6,15 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
 
-type branchEditCmd struct{}
+type branchEditCmd struct {
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"branchEdit.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
+}
 
 func (*branchEditCmd) Help() string {
 	return text.Dedent(`
@@ -21,10 +24,13 @@ func (*branchEditCmd) Help() string {
 
 		After the rebase,
 		branches upstack from this branch will be restacked.
+		Use --no-restack to disable that,
+		or the 'spice.branchEdit.restack' configuration option
+		to change the default.
 	`)
 }
 
-func (*branchEditCmd) Run(
+func (cmd *branchEditCmd) Run(
 	ctx context.Context,
 	wt *git.Worktree,
 	svc *spice.Service,
@@ -59,5 +65,11 @@ func (*branchEditCmd) Run(
 		})
 	}
 
-	return restackHandler.RestackUpstack(ctx, currentBranch, nil)
+	if cmd.Restack.None() {
+		return nil
+	}
+
+	return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: currentBranch,
+	})
 }

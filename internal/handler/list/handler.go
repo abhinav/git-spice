@@ -42,18 +42,24 @@ var _ Store = (*state.Store)(nil)
 // Service provides access to git-spice's higher-level operations.
 type Service interface {
 	BranchGraph(context.Context, *spice.BranchGraphOptions) (*spice.BranchGraph, error)
-	CheckRestacked(context.Context, string) (git.Hash, error)
+	CheckLoadedBranchRestacked(context.Context, spice.LoadBranchItem) (git.Hash, error)
 }
 
 var _ Service = (*spice.Service)(nil)
 
 // Handler implements the business logic for git-spice's log commands.
 type Handler struct {
-	Log        *silog.Logger   // required
-	Repository GitRepository   // required
-	Store      Store           // required
-	Service    Service         // required
-	Forges     *forge.Registry // required
+	Log        *silog.Logger // required
+	Repository GitRepository // required
+	Store      Store         // required
+	Service    Service       // required
+
+	// ResolveRepository resolves an upstream remote
+	// to its forge repository identity.
+	ResolveRepository func(
+		context.Context,
+		string,
+	) (forge.Forge, forge.RepositoryID, error) // required
 
 	// OpenRemoteRepository opens the remote repository
 	// for the given remote URL.
@@ -175,7 +181,11 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 
 	getRemote := sync.OnceValue(func() state.Remote {
 		remote, err := h.Store.Remote()
+		if errors.Is(err, state.ErrNotExist) {
+			return state.Remote{}
+		}
 		if err != nil {
+			log.Warn("Could not load remote configuration", "error", err)
 			return state.Remote{}
 		}
 		return remote
@@ -189,21 +199,12 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		err := func() error {
 			remote := getRemote()
 			if remote == (state.Remote{}) {
-				return state.ErrNotExist
+				return nil
 			}
 
-			remoteURL, err := h.Repository.RemoteURL(ctx, remote.Upstream)
-			if err != nil {
-				return fmt.Errorf("get remote URL: %w", err)
-			}
-
-			var ok bool
-			remoteForge, remoteRepoID, ok = forge.MatchRemoteURL(h.Forges, remoteURL)
-			if !ok {
-				return fmt.Errorf("no forge matches remote URL %q", remoteURL)
-			}
-
-			return nil
+			var err error
+			remoteForge, remoteRepoID, err = h.ResolveRepository(ctx, remote.Upstream)
+			return err
 		}()
 		if err != nil {
 			log.Warn("Could not find information about the remote", "error", err)
@@ -255,22 +256,14 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				// which will panic down below when consuming
 				// the result.
 
-				// Check restack status /before/ looking up
-				// the branch in git because VerifyRestacked
-				// might update the branch's base hash
-				// if the branch was manually restacked.
-				//
-				// TODO: This is a hack.
-				// The isn't a good abstraction.
-				baseHash, err := h.Service.CheckRestacked(ctx, branch.Name)
+				// BranchGraph was loaded before restack reconciliation.
+				// When CheckRestacked heals a boundary, its error returns the
+				// reconciled value so this invocation does not render stale commits.
+				baseHash, err := h.Service.CheckLoadedBranchRestacked(ctx, branch)
 				if err != nil {
-					var needsRestack *spice.BranchNeedsRestackError
-					if errors.As(err, &needsRestack) {
-						// if the branch needs to be restacked,
-						// use the base hash stored in state
-						// so that the log doesn't show duplicated commits.
+					if needsRestack, ok := errors.AsType[*spice.BranchNeedsRestackError](err); ok {
 						item.NeedsRestack = true
-						baseHash = branch.BaseHash
+						baseHash = needsRestack.Upstream
 					} else {
 						baseHash = git.ZeroHash
 					}

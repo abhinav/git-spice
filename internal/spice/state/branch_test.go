@@ -2,7 +2,8 @@ package state_test
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"errors"
 	"maps"
 	"slices"
 	"testing"
@@ -24,28 +25,6 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 		Trunk: "main",
 	})
 	require.NoError(t, err)
-
-	t.Run("MissingBranch", func(t *testing.T) {
-		ctx := t.Context()
-		tx := store.BeginBranchTx()
-		err := tx.Upsert(ctx, state.UpsertRequest{})
-		assert.ErrorContains(t, err, "branch name is required")
-		require.NoError(t, tx.Commit(ctx, "no op"))
-	})
-
-	t.Run("TrunkNotAllowed", func(t *testing.T) {
-		ctx := t.Context()
-		tx := store.BeginBranchTx()
-		err := tx.Upsert(ctx, state.UpsertRequest{
-			Name: "main",
-			Base: "whatever",
-		})
-		assert.ErrorIs(t, err, state.ErrTrunk)
-		require.NoError(t, tx.Commit(ctx, "no op"))
-
-		_, err = store.LookupBranch(ctx, "main")
-		require.ErrorIs(t, err, state.ErrNotExist)
-	})
 
 	t.Run("NewBranchNoBase", func(t *testing.T) {
 		ctx := t.Context()
@@ -130,6 +109,58 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	})
 }
 
+func TestBranchTx_Upsert_retryAfterReadError(t *testing.T) {
+	ctx := t.Context()
+	mem := make(storage.MapBackend)
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: storage.NewDB(mem), Trunk: "main"})
+	require.NoError(t, err)
+	mem["branches/feature"] = []byte(`{`)
+
+	tx := store.BeginBranchTx()
+	err = tx.Upsert(ctx, state.UpsertRequest{Name: "feature", BaseHash: "updated"})
+	require.Error(t, err)
+
+	mem["branches/feature"] = []byte(`{"base":{"name":"main","hash":"initial"},"change":{"shamhub":{"number":42}}}`)
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "feature", BaseHash: "updated"}))
+	require.NoError(t, tx.Commit(ctx, "update repaired branch"))
+	branch, err := store.LookupBranch(ctx, "feature")
+	require.NoError(t, err)
+	assert.Equal(t, "main", branch.Base)
+	assert.Equal(t, "updated", branch.BaseHash.String())
+	assert.Equal(t, "shamhub", branch.ChangeForge)
+	assert.JSONEq(t, `{"number":42}`, branch.ChangeMetadata.String())
+}
+
+func TestBranchTx_LookupBranches_pendingView(t *testing.T) {
+	ctx := t.Context()
+	store := statetest.NewMemoryStore(t, "main", "", nil)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{Name: "base", Base: "main"},
+			{Name: "child", Base: "base"},
+			{Name: "deleted", Base: "main"},
+		}, Message: "seed graph",
+	}))
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Rename(ctx, "base", "renamed"))
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "child", Base: "renamed"}))
+	require.NoError(t, tx.Delete(ctx, "deleted"))
+	results, err := tx.LookupBranches(ctx, []string{"renamed", "child", "absent", "renamed", "base", "deleted"})
+	missing, ok := errors.AsType[*storage.MissingKeysError](err)
+	require.True(t, ok)
+	assert.Equal(t, []int{2, 4, 5}, missing.Indexes)
+	assert.Equal(t, []string{"branches/absent", "branches/base", "branches/deleted"}, missing.Keys)
+	assert.Equal(t, "main", results[0].Base)
+	assert.Equal(t, "renamed", results[1].Base)
+	assert.Equal(t, results[0], results[3])
+	assert.Nil(t, results[2])
+	assert.Nil(t, results[4])
+	assert.Nil(t, results[5])
+	persisted, err := store.LookupBranch(ctx, "child")
+	require.NoError(t, err)
+	assert.Equal(t, "base", persisted.Base)
+}
+
 func TestBranchTxDelete(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
@@ -202,6 +233,151 @@ func TestBranchTxDelete(t *testing.T) {
 	})
 }
 
+func TestBranchTx_Delete_pendingGraph(t *testing.T) {
+	ctx := t.Context()
+	store := statetest.NewMemoryStore(t, "main", "", nil)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{Name: "foo", Base: "main"},
+			{Name: "bar", Base: "foo"},
+			{Name: "baz", Base: "main"},
+		},
+		Message: "seed graph",
+	}))
+
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Rename(ctx, "baz", "renamed"))
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "bar", Base: "renamed"}))
+	require.NoError(t, tx.Delete(ctx, "foo"))
+	assert.ErrorContains(t, tx.Delete(ctx, "renamed"), "needed by bar")
+	require.NoError(t, tx.Delete(ctx, "bar"))
+	require.NoError(t, tx.Delete(ctx, "renamed"))
+	require.NoError(t, tx.Commit(ctx, "remove graph"))
+
+	names, err := sliceutil.CollectErr(store.ListBranches(ctx))
+	require.NoError(t, err)
+	assert.Empty(t, names)
+}
+
+func TestBranchTx_DeleteMany(t *testing.T) {
+	ctx := t.Context()
+	store := statetest.NewMemoryStore(t, "main", "", nil)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.UpsertMany(ctx, []state.UpsertRequest{
+		{Name: "base", Base: "main"},
+		{Name: "child", Base: "base"},
+		{Name: "leaf", Base: "child"},
+		{Name: "isolated", Base: "main"},
+	}))
+	require.NoError(t, tx.Rename(ctx, "isolated", "renamed"))
+	err := tx.DeleteMany(ctx, []string{"base", "leaf", "child", "base", "renamed", "missing", "base", "main", ""})
+	rejected, ok := errors.AsType[*state.DeleteManyError](err)
+	require.True(t, ok)
+	assert.Equal(t, []int{0, 5, 6, 7, 8}, rejected.Indexes)
+	require.Len(t, rejected.Errors, 5)
+	assert.ErrorContains(t, rejected.Errors[0], "needed by child")
+	assert.ErrorIs(t, rejected.Errors[1], state.ErrNotExist)
+	assert.ErrorIs(t, rejected.Errors[2], state.ErrNotExist)
+	assert.ErrorIs(t, rejected.Errors[3], state.ErrTrunk)
+	assert.ErrorContains(t, rejected.Errors[4], "branch name is required")
+	require.NoError(t, tx.Commit(ctx, "delete accepted requests"))
+	names, err := sliceutil.CollectErr(store.ListBranches(ctx))
+	require.NoError(t, err)
+	assert.Empty(t, names)
+}
+
+func TestBranchTx_DeleteMany_operationalFailure(t *testing.T) {
+	ctx := t.Context()
+	mem := make(storage.MapBackend)
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: storage.NewDB(mem), Trunk: "main"})
+	require.NoError(t, err)
+	mem["branches/leaf"] = []byte(`{"base":{"name":"main","hash":"initial"}}`)
+	mem["branches/corrupt"] = []byte(`{`)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "leaf", BaseHash: "prior"}))
+	err = tx.DeleteMany(ctx, []string{"leaf"})
+	require.Error(t, err)
+	_, partial := errors.AsType[*state.DeleteManyError](err)
+	assert.False(t, partial)
+	require.NoError(t, tx.Commit(ctx, "keep earlier update"))
+	leaf, err := store.LookupBranch(ctx, "leaf")
+	require.NoError(t, err)
+	assert.Equal(t, "prior", leaf.BaseHash.String())
+}
+
+func TestBranchTx_UpsertMany_orderedChanges(t *testing.T) {
+	ctx := t.Context()
+	store := statetest.NewMemoryStore(t, "main", "", nil)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.UpsertMany(ctx, []state.UpsertRequest{
+		{Name: "base", Base: "main", BaseHash: "initial"},
+		{Name: "child", Base: "base"},
+		{Name: "base", BaseHash: "updated"},
+	}))
+	require.NoError(t, tx.Commit(ctx, "track stack"))
+	base, err := store.LookupBranch(ctx, "base")
+	require.NoError(t, err)
+	assert.Equal(t, "main", base.Base)
+	assert.Equal(t, "updated", base.BaseHash.String())
+	child, err := store.LookupBranch(ctx, "child")
+	require.NoError(t, err)
+	assert.Equal(t, "base", child.Base)
+
+	tx = store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "child", BaseHash: "prior"}))
+	err = tx.UpsertMany(ctx, []state.UpsertRequest{
+		{Name: "child", BaseHash: "retained"},
+		{Name: "created-before-failure", Base: "main"},
+		{Name: "base", Base: "child"},
+		{Name: "after-failure", Base: "main"},
+		{Name: "untracked", Base: "missing"},
+		{Name: "dependent", Base: "untracked"},
+		{Name: "without-base"},
+	})
+	require.ErrorContains(t, err, "would create a cycle")
+	failed, ok := errors.AsType[*state.UpsertManyError](err)
+	require.True(t, ok)
+	assert.Equal(t, []int{2, 4, 5, 6}, failed.Indexes)
+	require.Len(t, failed.Errors, 4)
+	assert.ErrorContains(t, failed.Errors[0], "would create a cycle")
+	assert.ErrorContains(t, failed.Errors[1], "branch missing is not tracked")
+	assert.ErrorContains(t, failed.Errors[2], "branch untracked is not tracked")
+	assert.ErrorContains(t, failed.Errors[3], "new branch must have a base")
+	require.NoError(t, tx.Commit(ctx, "keep accepted requests"))
+	child, err = store.LookupBranch(ctx, "child")
+	require.NoError(t, err)
+	assert.Equal(t, "retained", child.BaseHash.String())
+	_, err = store.LookupBranch(ctx, "created-before-failure")
+	assert.NoError(t, err)
+	_, err = store.LookupBranch(ctx, "after-failure")
+	assert.NoError(t, err)
+}
+
+func TestBranchTx_UpsertMany_operationalFailure(t *testing.T) {
+	ctx := t.Context()
+	mem := make(storage.MapBackend)
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: storage.NewDB(mem), Trunk: "main"})
+	require.NoError(t, err)
+	mem["branches/base"] = []byte(`{"base":{"name":"main","hash":"initial"}}`)
+	mem["branches/tip"] = []byte(`{"base":{"name":"corrupt"}}`)
+	mem["branches/corrupt"] = []byte(`{`)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{Name: "base", BaseHash: "prior"}))
+	err = tx.UpsertMany(ctx, []state.UpsertRequest{
+		{Name: "base", BaseHash: "discarded"},
+		{Name: "new", Base: "tip"},
+	})
+	require.Error(t, err)
+	_, partial := errors.AsType[*state.UpsertManyError](err)
+	assert.False(t, partial)
+	require.NoError(t, tx.Commit(ctx, "keep earlier invocation"))
+	base, err := store.LookupBranch(ctx, "base")
+	require.NoError(t, err)
+	assert.Equal(t, "prior", base.BaseHash.String())
+	_, err = store.LookupBranch(ctx, "new")
+	assert.ErrorIs(t, err, state.ErrNotExist)
+}
+
 func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
@@ -216,7 +392,7 @@ func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 			{
 				Name:           "foo",
 				Base:           "main",
-				ChangeMetadata: json.RawMessage(`{"number": 123}`),
+				ChangeMetadata: jsontext.Value(`{"number": 123}`),
 				ChangeForge:    "github",
 			},
 		},
@@ -287,6 +463,89 @@ func TestBranchTxUpsert_canClearUpstream(t *testing.T) {
 	assert.Equal(t, "", foo.UpstreamBranch)
 }
 
+func TestStore_LookupBranches(t *testing.T) {
+	ctx := t.Context()
+	db := &getManyDB{
+		DB: storage.NewDB(make(storage.MapBackend)),
+	}
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	upstream := "origin/foo"
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{
+				Name:           "foo",
+				Base:           "main",
+				BaseHash:       "abc123",
+				ChangeMetadata: jsontext.Value(`{"number": 123}`),
+				ChangeForge:    "github",
+				UpstreamBranch: &upstream,
+			},
+			{
+				Name: "bar",
+				Base: "foo",
+			},
+		},
+		Message: "add branches",
+	}))
+
+	db.getManyCalls = 0
+	branches, err := store.LookupBranches(ctx, []string{"foo", "bar"})
+	require.NoError(t, err)
+
+	require.Len(t, branches, 2)
+	assert.Equal(t, "main", branches[0].Base)
+	assert.Equal(t, "abc123", branches[0].BaseHash.String())
+	assert.Equal(t, "github", branches[0].ChangeForge)
+	assert.JSONEq(t, `{"number": 123}`, string(branches[0].ChangeMetadata))
+	assert.Equal(t, "origin/foo", branches[0].UpstreamBranch)
+	assert.Equal(t, "foo", branches[1].Base)
+	assert.Equal(t, []string{"branches/foo", "branches/bar"}, db.getManyKeys)
+	assert.Equal(t, 1, db.getManyCalls)
+}
+
+func TestStore_LookupBranch_usesGetMany(t *testing.T) {
+	ctx := t.Context()
+	db := &getManyDB{DB: storage.NewDB(make(storage.MapBackend))}
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: db, Trunk: "main"})
+	require.NoError(t, err)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{{Name: "feature", Base: "main"}},
+	}))
+	db.getManyCalls = 0
+	_, err = store.LookupBranch(ctx, "feature")
+	require.NoError(t, err)
+	assert.Equal(t, 1, db.getManyCalls)
+	assert.Equal(t, []string{"branches/feature"}, db.getManyKeys)
+}
+
+func TestStore_LookupBranches_missing(t *testing.T) {
+	ctx := t.Context()
+	db := &getManyDB{DB: storage.NewDB(make(storage.MapBackend))}
+	store, err := state.InitStore(ctx, state.InitStoreRequest{DB: db, Trunk: "main"})
+	require.NoError(t, err)
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{{Name: "feature", Base: "main", BaseHash: "abc123"}},
+	}))
+	db.getManyCalls = 0
+
+	responses, err := store.LookupBranches(ctx, []string{"missing", "feature", "missing", "feature"})
+	missing, ok := errors.AsType[*storage.MissingKeysError](err)
+	require.True(t, ok, "expected missing keys, got %v", err)
+	assert.Equal(t, []int{0, 2}, missing.Indexes)
+	assert.Equal(t, []string{"branches/missing", "branches/missing"}, missing.Keys)
+	require.Len(t, responses, 4)
+	assert.Nil(t, responses[0])
+	assert.Equal(t, "main", responses[1].Base)
+	assert.Nil(t, responses[2])
+	assert.Equal(t, responses[1], responses[3])
+	assert.Equal(t, 1, db.getManyCalls)
+}
+
 // Uses rapid to run randomized scenarios on the branch state
 // to ensure we never leave it in a corrupted state.
 func TestBranchStateUncorruptible(t *testing.T) {
@@ -317,8 +576,8 @@ func testBranchStateUncorruptible(t *rapid.T) {
 		store:         store,
 		trunk:         trunk,
 		knownBranches: make(map[string]struct{}),
-		branchNameGen: branchNameGen,
 	}
+	sm.branchNameGen = branchNameGen.Filter(func(name string) bool { return name != sm.trunk })
 
 	sm.knownBranchGen = rapid.Custom(func(t *rapid.T) string {
 		if len(sm.knownBranches) == 0 {
@@ -564,4 +823,23 @@ func (sm *branchStateUncorruptible) ChangeTrunk(t *rapid.T) {
 	sm.store = store
 	sm.trunk = newTrunk
 	t.Logf("changed trunk to %q", newTrunk)
+}
+
+type getManyDB struct {
+	*storage.DB
+
+	getManyCalls int
+	getManyKeys  []string
+}
+
+func (db *getManyDB) GetMany(
+	ctx context.Context,
+	reqs []storage.GetRequest,
+) error {
+	db.getManyCalls++
+	db.getManyKeys = make([]string, 0, len(reqs))
+	for _, req := range reqs {
+		db.getManyKeys = append(db.getManyKeys, req.Key)
+	}
+	return db.DB.GetMany(ctx, reqs)
 }

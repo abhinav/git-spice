@@ -13,7 +13,7 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-shamhub init
+shamhub-setup
 shamhub new origin alice/example.git
 shamhub register alice
 git push origin main
@@ -50,7 +50,7 @@ gs branch submit --fill
 stderr 'Created #1'
 
 shamhub merge -squash -prune alice/example 1
-gs repo sync
+gs repo sync --restack=aboves
 stderr 'base: #1 was merged'
 
 # The downstack branch was deleted,

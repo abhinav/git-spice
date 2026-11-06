@@ -24,8 +24,8 @@ feed <Enter>
 ]
 -- prompt --
 Select a branch:
-┏━■ feat1 [wt: /home/user/other-wt] ◀
-┣━□ feat2
+┏━━■ feat1 [wt: /home/user/other-wt] ◀
+┣━━□ feat2
 main
 -- filter --
 Select a branch:

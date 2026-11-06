@@ -283,15 +283,15 @@ func (m *MockRestackHandler) EXPECT() *MockRestackHandlerMockRecorder {
 }
 
 // RestackUpstack mocks base method.
-func (m *MockRestackHandler) RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error {
+func (m *MockRestackHandler) RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestackUpstack", ctx, branch, opts)
+	ret := m.ctrl.Call(m, "RestackUpstack", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RestackUpstack indicates an expected call of RestackUpstack.
-func (mr *MockRestackHandlerMockRecorder) RestackUpstack(ctx, branch, opts any) *gomock.Call {
+func (mr *MockRestackHandlerMockRecorder) RestackUpstack(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackUpstack", reflect.TypeOf((*MockRestackHandler)(nil).RestackUpstack), ctx, branch, opts)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackUpstack", reflect.TypeOf((*MockRestackHandler)(nil).RestackUpstack), ctx, req)
 }

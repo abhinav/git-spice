@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/cmputil"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
 
 // EditChange edits an existing change in a repository.
@@ -27,20 +27,12 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 	}
 
 	if opts.Base != "" {
-		var m struct {
-			UpdatePullRequest struct {
-				// We don't need any information back,
-				// so just anything non-empty will suffice as a query.
-				ClientMutationID string `graphql:"clientMutationId"`
-			} `graphql:"updatePullRequest(input: $input)"`
-		}
-
-		input := githubv4.UpdatePullRequestInput{
+		input := github.UpdatePullRequestInput{
 			PullRequestID: graphQLID,
-			BaseRefName:   (*githubv4.String)(&opts.Base),
+			BaseRefName:   &opts.Base,
 		}
 
-		if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+		if err := r.gateway.UpdatePullRequest(ctx, &input); err != nil {
 			return fmt.Errorf("edit pull request: %w", err)
 		}
 		r.log.Debug("Changed base branch for PR", "new.base", opts.Base)
@@ -50,59 +42,33 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 	if opts.Draft != nil {
 		// And for some reason, it's a different mutation based on
 		// whether it's true or false.
-		var (
-			m, input any
-			logMsg   string
-		)
+		var logMsg string
 		if *opts.Draft {
-			m = &struct {
-				ConvertPullRequestToDraft struct {
-					PullRequest struct {
-						ID githubv4.ID `graphql:"id"`
-					} `graphql:"pullRequest"`
-				} `graphql:"convertPullRequestToDraft(input: $input)"`
-			}{}
-
-			input = githubv4.ConvertPullRequestToDraftInput{
-				PullRequestID: graphQLID,
-			}
+			err = r.gateway.ConvertPullRequestToDraft(ctx, graphQLID)
 			logMsg = "Converted PR to draft"
 		} else {
-			m = &struct {
-				MarkPullRequestReadyForReview struct {
-					PullRequest struct {
-						ID githubv4.ID `graphql:"id"`
-					} `graphql:"pullRequest"`
-				} `graphql:"markPullRequestReadyForReview(input: $input)"`
-			}{}
-
-			input = githubv4.MarkPullRequestReadyForReviewInput{
-				PullRequestID: graphQLID,
-			}
+			err = r.gateway.MarkPullRequestReadyForReview(ctx, graphQLID)
 			logMsg = "Marked PR as ready for review"
 		}
 
-		if err := r.client.Mutate(ctx, m, input, nil); err != nil {
+		if err != nil {
 			return fmt.Errorf("update draft status: %w", err)
 		}
 
 		r.log.Debug(logMsg, "pr", pr.Number)
 	}
 
-	// TODO:
-	// perform in parallel, share resolved user IDs, etc.
-	// maybe even cache and persist resolved IDs in store.
-
-	if err := r.addLabelsToPullRequest(ctx, opts.AddLabels, graphQLID); err != nil {
-		return fmt.Errorf("add labels to PR: %w", err)
-	}
-
-	if err := r.addReviewersToPullRequest(ctx, opts.AddReviewers, graphQLID); err != nil {
-		return fmt.Errorf("add reviewers to PR: %w", err)
-	}
-
-	if err := r.addAssigneesToPullRequest(ctx, opts.AddAssignees, graphQLID); err != nil {
-		return fmt.Errorf("add assignees to PR: %w", err)
+	// Keep base and draft transitions separate from the additive metadata
+	// mutation. GitHub may continue nullable sibling mutations after one fails;
+	// combining them could add metadata after a requested workflow transition
+	// did not take effect.
+	if err := r.addPullRequestMetadata(ctx, pullRequestMetadataRequest{
+		PullRequestID: graphQLID,
+		Labels:        opts.AddLabels,
+		Reviewers:     opts.AddReviewers,
+		Assignees:     opts.AddAssignees,
+	}); err != nil {
+		return err
 	}
 
 	return nil

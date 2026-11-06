@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,11 +45,17 @@ type publishRequest struct {
 	// Ref is the Git object exported as upstream source.
 	Ref string
 
+	// SourceDateEpoch is the Unix timestamp used for reproducible outputs.
+	SourceDateEpoch int64
+
 	// Series lists the Ubuntu series that should receive source uploads.
 	Series seriesFlag
 
 	// PPARevision is the Debian package revision suffix for Launchpad retries.
 	PPARevision int
+
+	// OmitOrig excludes the upstream orig tarball from every source upload.
+	OmitOrig bool
 
 	// Sign controls whether source packages are signed before upload.
 	Sign bool
@@ -86,8 +93,12 @@ func main() {
 	var req publishRequest
 	flag.StringVar(&req.Version, "version", "", "Version to package")
 	flag.StringVar(&req.Ref, "ref", "", "Git ref to export")
+	flag.Int64Var(&req.SourceDateEpoch, "source-date-epoch", 0,
+		"Unix timestamp to use for reproducible package outputs")
 	flag.Var(&req.Series, "series", "Ubuntu series to target")
 	flag.IntVar(&req.PPARevision, "ppa-revision", 1, "PPA revision number")
+	flag.BoolVar(&req.OmitOrig, "omit-orig", false,
+		"Omit the upstream orig tarball from every source upload")
 	flag.BoolVar(&req.Sign, "sign", false, "Sign packages with Launchpad GPG environment variables")
 	flag.BoolVar(&req.Dput, "dput", false, "Upload signed packages with dput")
 	flag.StringVar(&req.DputTarget, "dput-target", _defaultDputTarget, "dput upload target")
@@ -111,11 +122,17 @@ func run(log *silog.Logger, req publishRequest) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	var sourceDateEpoch string
+	if !plan.SourceModTime.IsZero() {
+		sourceDateEpoch = strconv.FormatInt(plan.SourceModTime.Unix(), 10)
+	}
 	log.Info("Resolved package request",
 		"version", plan.Version,
 		"ref", plan.Ref,
+		"sourceDateEpoch", sourceDateEpoch,
 		"series", strings.Join(plan.Series, ","),
 		"ppaRevision", plan.PPARevision,
+		"omitOrig", plan.OmitOrig,
 		"dput", plan.Dput,
 		"dputTarget", plan.DputTarget)
 
@@ -160,7 +177,15 @@ func run(log *silog.Logger, req publishRequest) error {
 		workDir,
 		fmt.Sprintf("%s_%s.orig.tar.gz", _packageName, plan.UpstreamVersion),
 	)
-	if err := writeOrigTar(log, sourceDir, origTar); err != nil {
+	mtime := plan.SourceModTime
+	if mtime.IsZero() {
+		var err error
+		mtime, err = sourceModTime(ctx, log, root, plan.Ref)
+		if err != nil {
+			return fmt.Errorf("resolve source modification time: %w", err)
+		}
+	}
+	if err := writeOrigTar(log, sourceDir, origTar, mtime); err != nil {
 		return fmt.Errorf("write orig tarball: %w", err)
 	}
 
@@ -171,8 +196,11 @@ func run(log *silog.Logger, req publishRequest) error {
 	}
 
 	var dputCommands []string
-	for _, series := range plan.Series {
-		changes, err := buildSeries(ctx, log, root, sourceDir, workDir, origTar, plan, series)
+	for i, series := range plan.Series {
+		changes, err := buildSeries(
+			ctx, log,
+			root, sourceDir, workDir, origTar,
+			plan, series, plan.sourceUploadMode(i), mtime)
 		if err != nil {
 			return fmt.Errorf("build %s: %w", series, err)
 		}
@@ -185,8 +213,12 @@ func run(log *silog.Logger, req publishRequest) error {
 
 		if plan.Dput {
 			log.Info("Uploading source package", "series", series, "changes", changes)
-			if err := xec.Command(ctx, log, "dput", plan.DputTarget, changes).
-				Run(); err != nil {
+			if err := uploadSourcePackage(
+				ctx,
+				log,
+				plan.DputTarget,
+				changes,
+			); err != nil {
 				return fmt.Errorf("dput %s: %w", series, err)
 			}
 		} else {
@@ -202,6 +234,43 @@ func run(log *silog.Logger, req publishRequest) error {
 	}
 
 	return nil
+}
+
+// uploadSourcePackage runs dput up to three times with exponential backoff.
+func uploadSourcePackage(
+	ctx context.Context,
+	log *silog.Logger,
+	target string,
+	changes string,
+) error {
+	const maxAttempts = 3
+	for attempt := 1; ; attempt++ {
+		output, flushOutput := silog.Writer(log.WithPrefix("dput"), silog.LevelInfo)
+		err := xec.Command(ctx, log, "dput", "--unchecked", target, changes).
+			WithStdout(output).
+			WithStderr(output).
+			Run()
+		flushOutput()
+		if err == nil {
+			return nil
+		}
+		if attempt >= maxAttempts {
+			return err
+		}
+
+		delay := 15 * time.Second << (attempt - 1)
+		log.Warn("dput failed; retrying",
+			"attempt", attempt,
+			"maxAttempts", maxAttempts,
+			"delay", delay,
+			"error", err)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+	}
 }
 
 func writeDebianPackaging(log *silog.Logger, sourceDir string) error {
@@ -265,11 +334,17 @@ type packagePlan struct {
 	// UpstreamVersion is the Debian upstream version without a leading "v".
 	UpstreamVersion string
 
-	// DebianVersion is the full Debian source package version.
-	DebianVersion string
+	// BaseDebianVersion is the Debian version before the Ubuntu series suffix.
+	BaseDebianVersion string
+
+	// SourceModTime is used for reproducible archive and package mtimes.
+	SourceModTime time.Time
 
 	// PPARevision is the Launchpad PPA source package revision.
 	PPARevision int
+
+	// OmitOrig excludes the upstream orig tarball from every source upload.
+	OmitOrig bool
 
 	// Ref is the Git object exported as upstream source.
 	Ref string
@@ -287,6 +362,49 @@ type packagePlan struct {
 	DputTarget string
 }
 
+func (p packagePlan) sourceUploadMode(seriesIndex int) sourceUploadMode {
+	if p.OmitOrig || seriesIndex > 0 {
+		return sourceUploadWithoutOrig
+	}
+	return sourceUploadWithOrig
+}
+
+// sourceUploadMode controls whether the generated .changes upload manifest
+// includes the upstream orig tarball.
+type sourceUploadMode int
+
+const (
+	sourceUploadWithOrig sourceUploadMode = iota
+	sourceUploadWithoutOrig
+)
+
+func (m sourceUploadMode) String() string {
+	switch m {
+	case sourceUploadWithOrig:
+		return "with-orig"
+	case sourceUploadWithoutOrig:
+		return "without-orig"
+	default:
+		return fmt.Sprintf("sourceUploadMode(%d)", m)
+	}
+}
+
+func (m sourceUploadMode) dpkgBuildpackageArgs() []string {
+	args := []string{
+		"-S", // build source package only
+	}
+	if m == sourceUploadWithoutOrig {
+		args = append(args,
+			"-sd", // omit the upstream orig tarball from .changes
+		)
+	}
+	return append(args,
+		"-us", // leave the .dsc unsigned
+		"-uc", // leave .buildinfo and .changes unsigned
+		"-d",  // skip build dependency checks on CI runners
+	)
+}
+
 func newPackagePlan(req publishRequest) (packagePlan, error) {
 	var err error
 
@@ -301,6 +419,15 @@ func newPackagePlan(req publishRequest) (packagePlan, error) {
 
 	if req.Ref == "" {
 		req.Ref = req.Version
+	}
+
+	var sourceModTime time.Time
+	if req.SourceDateEpoch < 0 {
+		err = errors.Join(err,
+			fmt.Errorf("-source-date-epoch must be positive: %d",
+				req.SourceDateEpoch))
+	} else if req.SourceDateEpoch > 0 {
+		sourceModTime = time.Unix(req.SourceDateEpoch, 0).UTC()
 	}
 
 	series := slices.Clone(req.Series)
@@ -322,17 +449,19 @@ func newPackagePlan(req publishRequest) (packagePlan, error) {
 	return packagePlan{
 		Version:         req.Version,
 		UpstreamVersion: upstreamVersion,
-		DebianVersion: fmt.Sprintf(
+		BaseDebianVersion: fmt.Sprintf(
 			"%s-1~ppa%d",
 			upstreamVersion,
 			req.PPARevision,
 		),
-		PPARevision: req.PPARevision,
-		Ref:         req.Ref,
-		Series:      series,
-		Sign:        sign,
-		Dput:        req.Dput,
-		DputTarget:  req.DputTarget,
+		SourceModTime: sourceModTime,
+		PPARevision:   req.PPARevision,
+		OmitOrig:      req.OmitOrig,
+		Ref:           req.Ref,
+		Series:        series,
+		Sign:          sign,
+		Dput:          req.Dput,
+		DputTarget:    req.DputTarget,
 	}, err
 }
 
@@ -379,7 +508,41 @@ func exportSource(
 	return nil
 }
 
-func writeOrigTar(log *silog.Logger, sourceDir string, dest string) error {
+func sourceModTime(
+	ctx context.Context,
+	log *silog.Logger,
+	root string,
+	ref string,
+) (time.Time, error) {
+	out, err := xec.Command(
+		ctx,
+		log,
+		"git",
+		"log",
+		"-1",
+		"--format=%ct",
+		ref,
+	).
+		WithDir(root).
+		OutputChomp()
+	if err != nil {
+		return time.Time{}, fmt.Errorf("read commit timestamp: %w", err)
+	}
+
+	sec, err := strconv.ParseInt(out, 10, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("parse commit timestamp %q: %w", out, err)
+	}
+
+	return time.Unix(sec, 0).UTC(), nil
+}
+
+func writeOrigTar(
+	log *silog.Logger,
+	sourceDir string,
+	dest string,
+	mtime time.Time,
+) error {
 	log.Info("Writing deterministic orig tarball", "path", dest)
 
 	f, err := os.Create(dest)
@@ -393,10 +556,10 @@ func writeOrigTar(log *silog.Logger, sourceDir string, dest string) error {
 		return fmt.Errorf("create gzip writer: %w", err)
 	}
 	gz.Name = ""
-	gz.ModTime = time.Unix(0, 0).UTC()
+	gz.ModTime = mtime
 
 	tw := tar.NewWriter(gz)
-	if err := writeTarTree(tw, sourceDir); err != nil {
+	if err := writeTarTree(tw, sourceDir, mtime); err != nil {
 		_ = tw.Close()
 		_ = gz.Close()
 		return err
@@ -412,7 +575,7 @@ func writeOrigTar(log *silog.Logger, sourceDir string, dest string) error {
 	return nil
 }
 
-func writeTarTree(tw *tar.Writer, sourceDir string) error {
+func writeTarTree(tw *tar.Writer, sourceDir string, mtime time.Time) error {
 	return filepath.WalkDir(sourceDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -452,9 +615,9 @@ func writeTarTree(tw *tar.Writer, sourceDir string) error {
 			return fmt.Errorf("create tar header for %s: %w", path, err)
 		}
 		header.Name = name
-		header.ModTime = time.Unix(0, 0).UTC()
-		header.AccessTime = time.Unix(0, 0).UTC()
-		header.ChangeTime = time.Unix(0, 0).UTC()
+		header.ModTime = mtime
+		header.AccessTime = mtime
+		header.ChangeTime = mtime
 		header.Uid = 0
 		header.Gid = 0
 		header.Uname = ""
@@ -495,19 +658,29 @@ func buildSeries(
 	origTar string,
 	plan packagePlan,
 	series string,
+	uploadMode sourceUploadMode,
+	mtime time.Time,
 ) (string, error) {
-	log.Info("Building source package", "series", series)
+	log.Info("Building source package", "series", series, "uploadMode", uploadMode)
 
-	if err := writeDebianChangelog(sourceDir, plan, series); err != nil {
+	ubuntuVersion, err := ubuntuVersionForSeries(ctx, log, series)
+	if err != nil {
+		return "", fmt.Errorf("resolve Ubuntu version: %w", err)
+	}
+	debianVersion := plan.BaseDebianVersion + "~ubuntu" + ubuntuVersion + ".1"
+
+	if err := writeDebianChangelog(
+		sourceDir, plan, debianVersion, series, mtime); err != nil {
 		return "", err
 	}
 
-	if err := cleanupBuildProducts(workDir, plan); err != nil {
+	if err := cleanupBuildProducts(workDir, debianVersion); err != nil {
 		return "", fmt.Errorf("clean previous build products: %w", err)
 	}
 
-	if err := xec.Command(ctx, log, "dpkg-buildpackage", "-S", "-us", "-uc", "-d").
+	if err := xec.Command(ctx, log, "dpkg-buildpackage", uploadMode.dpkgBuildpackageArgs()...).
 		WithDir(sourceDir).
+		AppendEnv("SOURCE_DATE_EPOCH=" + strconv.FormatInt(mtime.Unix(), 10)).
 		Run(); err != nil {
 		return "", fmt.Errorf("dpkg-buildpackage: %w", err)
 	}
@@ -519,11 +692,22 @@ func buildSeries(
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return "", fmt.Errorf("create output directory: %w", err)
 	}
-	if err := copyFile(origTar, filepath.Join(outDir, filepath.Base(origTar))); err != nil {
-		return "", fmt.Errorf("copy orig tarball: %w", err)
+	if uploadMode == sourceUploadWithOrig {
+		// The first series upload must carry the upstream orig tarball.
+		// Later source uploads can refer to the tarball Launchpad already has.
+		if err := copyFile(origTar, filepath.Join(outDir, filepath.Base(origTar))); err != nil {
+			return "", fmt.Errorf("copy orig tarball: %w", err)
+		}
+	} else {
+		// With -sd, dpkg-buildpackage omits the orig tarball from .changes.
+		// Do not copy it next to the upload manifest,
+		// so the dry-run output matches what dput will upload.
+		log.Info("Omitting orig tarball from source upload",
+			"series", series,
+			"origTar", filepath.Base(origTar))
 	}
 
-	pattern := filepath.Join(workDir, _packageName+"_"+plan.DebianVersion+"*")
+	pattern := filepath.Join(workDir, _packageName+"_"+debianVersion+"*")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return "", fmt.Errorf("glob build products: %w", err)
@@ -550,13 +734,42 @@ func buildSeries(
 	return changes, nil
 }
 
-func writeDebianChangelog(sourceDir string, plan packagePlan, series string) error {
+func ubuntuVersionForSeries(
+	ctx context.Context,
+	log *silog.Logger,
+	series string,
+) (string, error) {
+	out, err := xec.Command(ctx, log,
+		"ubuntu-distro-info",
+		"--series="+series,
+		"--release",
+	).OutputChomp()
+	if err != nil {
+		return "", fmt.Errorf("ubuntu-distro-info: %w", err)
+	}
+
+	out = strings.TrimSpace(out)
+	if out == "" {
+		return "", errors.New("empty Ubuntu version")
+	}
+
+	out, _, _ = strings.Cut(out, " ")
+	return out, nil
+}
+
+func writeDebianChangelog(
+	sourceDir string,
+	plan packagePlan,
+	debianVersion string,
+	series string,
+	mtime time.Time,
+) error {
 	changelog := fmt.Sprintf(`%s (%s) %s; urgency=medium
 
   * Release git-spice %s.
 
  -- Abhinav Gupta <mail@abhinavg.net>  %s
-`, _packageName, plan.DebianVersion, series, plan.UpstreamVersion, time.Now().UTC().Format(time.RFC1123Z))
+`, _packageName, debianVersion, series, plan.UpstreamVersion, mtime.Format(time.RFC1123Z))
 
 	if err := os.WriteFile(filepath.Join(sourceDir, "debian", "changelog"), []byte(changelog), 0o644); err != nil {
 		return fmt.Errorf("write debian/changelog: %w", err)
@@ -564,8 +777,8 @@ func writeDebianChangelog(sourceDir string, plan packagePlan, series string) err
 	return nil
 }
 
-func cleanupBuildProducts(workDir string, plan packagePlan) error {
-	matches, err := filepath.Glob(filepath.Join(workDir, _packageName+"_"+plan.DebianVersion+"*"))
+func cleanupBuildProducts(workDir string, debianVersion string) error {
+	matches, err := filepath.Glob(filepath.Join(workDir, _packageName+"_"+debianVersion+"*"))
 	if err != nil {
 		return err
 	}

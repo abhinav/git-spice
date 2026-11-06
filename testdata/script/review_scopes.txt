@@ -1,0 +1,129 @@
+# Verifies line, line-range, and file review-comment anchors.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+gs repo init
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# Line scope: existing form.
+gs review comment main.go:4 -m 'Line-scope comment.' --no-draft
+stderr 'Posted comment'
+
+# Line-range scope: inclusive start and end lines.
+gs review comment main.go:4-5 -m 'Range-scope comment.' --no-draft
+stderr 'Posted comment'
+
+# File scope: path with no ':'.
+gs review comment main.go -m 'File-scope comment.' --no-draft
+stderr 'Posted comment'
+
+# Text output lists the line and file-level anchors.
+gs review list
+cmp stdout $WORK/golden/list.txt
+
+# ShamHub's stable YAML dump preserves the complete inclusive range.
+shamhub dump reviews 1
+cmp stdout $WORK/golden/reviews.yaml
+
+# Missing anchor is rejected.
+! gs review comment -m 'oops' --no-draft
+stderr 'expected "<file\[:line\[-end\]\]>"'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+	println("world")
+}
+-- golden/list.txt --
+Review threads
+
+  thread-2  main.go:4
+      1 | package main
+      2 |
+      3 | func main() {
+    > 4 | 	println("hello")
+      5 | 	println("world")
+      6 | }
+    alice:
+      Line-scope comment.
+
+  thread-3  main.go:4-5
+      1 | package main
+      2 |
+      3 | func main() {
+    > 4 | 	println("hello")
+    > 5 | 	println("world")
+      6 | }
+    alice:
+      Range-scope comment.
+
+  thread-4  main.go
+    alice:
+      File-scope comment.
+-- golden/reviews.yaml --
+changes:
+  - change: 1
+    submissions:
+      - submitter: alice
+        disposition: comment
+        commentIDs:
+          - 2
+      - submitter: alice
+        disposition: comment
+        commentIDs:
+          - 3
+      - submitter: alice
+        disposition: comment
+        commentIDs:
+          - 4
+    threads:
+      - id: thread-2
+        path: main.go
+        range:
+          start: 4
+          end: 4
+        side: right
+        resolved: false
+        outdated: false
+        comments:
+          - id: 2
+            author: alice
+            body: Line-scope comment.
+      - id: thread-3
+        path: main.go
+        range:
+          start: 4
+          end: 5
+        side: right
+        resolved: false
+        outdated: false
+        comments:
+          - id: 3
+            author: alice
+            body: Range-scope comment.
+      - id: thread-4
+        path: main.go
+        resolved: false
+        outdated: false
+        comments:
+          - id: 4
+            author: alice
+            body: File-scope comment.

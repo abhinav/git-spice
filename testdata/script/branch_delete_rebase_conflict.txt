@@ -18,7 +18,7 @@ gs bc -m feature2
 
 # attempt to delete feature1
 gs trunk
-! gs branch delete --force feature1
+! gs branch delete --force --restack=aboves feature1
 
 # feature2 conflict
 stderr -count=1 'There was a conflict while rebasing'

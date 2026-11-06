@@ -1,11 +1,13 @@
 package graph_test
 
 import (
+	"errors"
 	"maps"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/graph"
 )
 
@@ -59,12 +61,35 @@ func TestToposort(t *testing.T) {
 			}
 
 			nodes := slices.Sorted(maps.Keys(nodeSet))
-			got := graph.Toposort(nodes, func(n string) (string, bool) {
+			got, err := graph.Toposort(nodes, func(n string) (string, bool) {
 				parent, ok := parents[n]
 				return parent, ok
 			})
+			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestToposort_cycle(t *testing.T) {
+	_, err := graph.Toposort([]string{"a", "b", "c"},
+		func(n string) (string, bool) {
+			switch n {
+			case "a":
+				return "c", true
+			case "b":
+				return "a", true
+			case "c":
+				return "b", true
+			default:
+				return "", false
+			}
+		})
+	require.Error(t, err)
+
+	var cycleErr *graph.CycleError[string]
+	require.True(t, errors.As(err, &cycleErr))
+	assert.Equal(t, []string{"a", "c", "b", "a"}, cycleErr.Path)
+	assert.Equal(t, "cycle: a -> c -> b -> a", err.Error())
 }

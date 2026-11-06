@@ -1,0 +1,159 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 139
+        host: 127.0.0.1:53776
+        body: '{"subject":"Native stack bottom stack-bottom-bBw8oBR3","body":"Native stack integration test","base":"main","head":"stack-bottom-bBw8oBR3"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 79
+        body: |-
+            {
+              "number": 9,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/9"
+            }
+        headers:
+            Content-Length:
+                - "79"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 23.250417ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 156
+        host: 127.0.0.1:53776
+        body: '{"subject":"Native stack middle stack-middle-sCn4BOqO","body":"Native stack integration test","base":"stack-bottom-bBw8oBR3","head":"stack-middle-sCn4BOqO"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 81
+        body: |-
+            {
+              "number": 10,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/10"
+            }
+        headers:
+            Content-Length:
+                - "81"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 24.829791ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 108
+        host: 127.0.0.1:53776
+        body: '{"changes":[{"number":9,"base_branch":"main"},{"number":10,"base":9,"base_branch":"stack-bottom-bBw8oBR3"}]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/stack/update
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 2
+        body: '{}'
+        headers:
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 241.75µs
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 147
+        host: 127.0.0.1:53776
+        body: '{"subject":"Native stack top stack-top-f8nl0lOU","body":"Native stack integration test","base":"stack-middle-sCn4BOqO","head":"stack-top-f8nl0lOU"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 81
+        body: |-
+            {
+              "number": 11,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/11"
+            }
+        headers:
+            Content-Length:
+                - "81"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 35.110083ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 170
+        host: 127.0.0.1:53776
+        body: '{"changes":[{"number":9,"base_branch":"main"},{"number":10,"base":9,"base_branch":"stack-bottom-bBw8oBR3"},{"number":11,"base":10,"base_branch":"stack-middle-sCn4BOqO"}]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/stack/update
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 2
+        body: '{}'
+        headers:
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 836.75µs
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 170
+        host: 127.0.0.1:53776
+        body: '{"changes":[{"number":9,"base_branch":"main"},{"number":10,"base":9,"base_branch":"stack-bottom-bBw8oBR3"},{"number":11,"base":10,"base_branch":"stack-middle-sCn4BOqO"}]}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/stack/update
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 2
+        body: '{}'
+        headers:
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 216.583µs

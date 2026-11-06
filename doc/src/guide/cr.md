@@ -15,6 +15,9 @@ description: >-
     - <!-- gs:github -->
     - <!-- gs:gitlab --> (<!-- gs:version v0.9.0 -->)
     - <!-- gs:bitbucket --> (<!-- gs:version v0.25.0 -->)
+    - <!-- gs:gitea --> (<!-- gs:version v0.30.0 -->)
+    - <!-- gs:forgejo --> (<!-- gs:version v0.30.0 -->)
+    - <!-- gs:azuredevops --> (<!-- gs:version v0.32.0 -->)
 
     If you're using a different service,
     you can still use git-spice,
@@ -22,15 +25,16 @@ description: >-
 
     See:
 
-    - [:material-tooltip-check: Recipes > Working with unsupported remotes](../community/recipes.md#working-with-unsupported-remotes)
-    - [:material-frequently-asked-questions: FAQ > Will git-spice add support for other Git hosting services](../community/faq.md#will-git-spice-add-support-for-other-git-hosting-services)
+    - [:material-tooltip-check: Recipes > Working with unsupported remotes](../resources/recipes.md#working-with-unsupported-remotes)
+    - [:material-frequently-asked-questions: FAQ > Will git-spice add support for other Git hosting services](../resources/faq.md#will-git-spice-add-support-for-other-git-hosting-services)
 
 ## Submitting change requests
 
 !!! info
 
     git-spice uses the term *Change Request* to refer to submitted branches.
-    These correspond to Pull Requests on GitHub and Bitbucket,
+    These correspond to Pull Requests on GitHub, Bitbucket, Gitea, Forgejo,
+    and Azure DevOps,
     and to Merge Requests on GitLab.
 
 When your local changes are ready,
@@ -238,6 +242,22 @@ that have already been submitted.
         With this flag, the command prints the hash of the target branch
         without checking it out.
 
+### Native stacks
+
+<!-- gs:version v0.33.0 -->
+<!-- gs:badge:github -->
+
+On supported forges such as GitHub,
+submit commands automatically register your CRs as a native stack.
+This includes submitted branches and their already-submitted downstack.
+Resubmit after changing your local stack to update its native representation.
+
+Forges without native stacks use ordinary submission.
+
+See [GitHub native-stack limitations](limits.md#github-native-stack-limitations)
+for restrictions.
+Set $$spice.forge.github.stacks$$ to `false` to opt out on GitHub.
+
 ## Syncing with upstream
 
 To sync with the upstream repository,
@@ -253,6 +273,21 @@ use $$gs repo sync$$ (or $$gs repo sync|gs rs$$).
 This will update the trunk branch (e.g. `main`)
 with the latest changes from the upstream repository,
 and delete any local branches whose PRs have been merged.
+
+If merged branches had other branches stacked on top of them,
+$$gs repo sync$$ will retarget those surviving branches
+onto the next available branch downstack,
+or onto trunk.
+It does not rebase them by default,
+so those branches may need an explicit $$gs branch restack$$
+before they can be submitted.
+
+To sync and restack all surviving branches above deleted merged branches
+in one step, use the `--restack` flag:
+
+```freeze language="terminal"
+{green}${reset} gs repo sync --restack
+```
 
 ### Handling closed Change Requests
 
@@ -282,16 +317,18 @@ with the `-l`/`--label` flag.
 ```
 
 You can also configure default labels
-with the $$spice.submit.label$$ configuration option.
+with the $$spice.submit.labels$$ configuration option.
 Labels specified with the `--label` flag
 will be combined with configured labels.
 
 ```freeze language="terminal"
-{green}${reset} git config {red}spice.submit.label{reset} {mag}'needs-review'{reset}
+{green}${reset} git config {red}spice.submit.labels{reset} {mag}'needs-review'{reset}
 ```
 
 When updating existing change requests,
 new labels are added to any existing labels on the CR.
+Use $$spice.submit.labels.addWhen$$
+to add configured labels only when creating a change request.
 
 ## Requesting reviews
 
@@ -417,4 +454,4 @@ and use $$gs downstack track$$ to track them all at once.
 {green}${reset} gs downstack track
 ```
 
-See also [:material-tooltip-check: Recipes > Track an existing stack](../community/recipes.md#track-an-existing-stack).
+See also [:material-tooltip-check: Recipes > Track an existing stack](../resources/recipes.md#track-an-existing-stack).

@@ -2,6 +2,7 @@ package git_test
 
 import (
 	"bytes"
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -111,6 +112,47 @@ func TestIntegrationBranches(t *testing.T) {
 		assert.ErrorIs(t, err, git.ErrDetachedHead)
 	})
 
+	t.Run("BranchesAtCommitish", func(t *testing.T) {
+		branches, err := sliceutil.CollectErr(
+			repo.BranchesAtCommitish(t.Context(), "feature1"))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"feature1"}, branches)
+	})
+
+	t.Run("BranchesAtHead", func(t *testing.T) {
+		t.Cleanup(func() {
+			assert.NoError(t,
+				wt.CheckoutBranch(context.WithoutCancel(t.Context()), "main"))
+		})
+
+		require.NoError(t, wt.DetachHead(t.Context(), "feature1"))
+
+		branches, err := sliceutil.CollectErr(wt.BranchesAtHead(t.Context()))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"feature1"}, branches)
+	})
+
+	t.Run("BranchesAtHead_ambiguous", func(t *testing.T) {
+		require.NoError(t, repo.CreateBranch(t.Context(), git.CreateBranchRequest{
+			Name: "feature1-copy",
+			Head: "feature1",
+		}))
+		t.Cleanup(func() {
+			ctx := context.WithoutCancel(t.Context())
+			assert.NoError(t, wt.CheckoutBranch(ctx, "main"))
+			assert.NoError(t,
+				repo.DeleteBranch(ctx, "feature1-copy", git.BranchDeleteOptions{
+					Force: true,
+				}))
+		})
+
+		require.NoError(t, wt.DetachHead(t.Context(), "feature1"))
+
+		branches, err := sliceutil.CollectErr(wt.BranchesAtHead(t.Context()))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"feature1", "feature1-copy"}, branches)
+	})
+
 	t.Run("CreateBranch", func(t *testing.T) {
 		require.NoError(t, repo.CreateBranch(t.Context(), git.CreateBranchRequest{
 			Name: "feature3",
@@ -206,14 +248,14 @@ func TestIntegrationBranches(t *testing.T) {
 			}, bs)
 		})
 
-		t.Run("GlobPattern", func(t *testing.T) {
+		t.Run("PrefixWithoutSlash", func(t *testing.T) {
 			bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), &git.LocalBranchesOptions{
-				Patterns: []string{"feature*"},
+				Patterns: []string{"feature"},
 			}))
 			require.NoError(t, err)
 			assert.Equal(t, []git.LocalBranch{
-				{Name: "feature1", Hash: "0a08a7c2b265465f4ae02291fad1d5723877a20e"},
-				{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
+				{Name: "feature/branch1", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62"},
+				{Name: "feature/branch2", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62"},
 			}, bs)
 		})
 
@@ -264,6 +306,9 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 
 		git worktree add ../wt1 feature1
 
+		cd ..
+		git clone --bare repo bare
+
 		-- repo/init.txt --
 		Initial
 
@@ -291,6 +336,22 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 		{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
 		{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir(), "repo")},
 	}, bs)
+
+	t.Run("Bare", func(t *testing.T) {
+		repo, err := git.Open(ctx,
+			filepath.Join(fixture.Dir(), "bare"),
+			git.OpenOptions{Log: silogtest.New(t)},
+		)
+		require.NoError(t, err)
+
+		branches, err := sliceutil.CollectErr(repo.LocalBranches(ctx, nil))
+		require.NoError(t, err)
+		assert.Equal(t, []git.LocalBranch{
+			{Name: "feature1", Hash: "0a08a7c2b265465f4ae02291fad1d5723877a20e"},
+			{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
+			{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir(), "bare")},
+		}, branches)
+	})
 }
 
 func TestIntegrationRemoteBranches(t *testing.T) {

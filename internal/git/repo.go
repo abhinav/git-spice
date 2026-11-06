@@ -57,9 +57,6 @@ func InitWorktree(ctx context.Context, dir string, opts InitOptions) (*Worktree,
 		exec:             opts.exec,
 		indexLockTimeout: _defaultIndexLockTimeout,
 	}
-	if opts.IndexLockTimeout != nil {
-		commonOpts.indexLockTimeout = max(*opts.IndexLockTimeout, 0)
-	}
 
 	if opts.Log != nil {
 		opts.Log.Debug("Initializing repository", "path", dir)
@@ -225,6 +222,12 @@ func (r *Repository) WithLogger(log *silog.Logger) *Repository {
 	newR := *r
 	newR.log = log
 	return &newR
+}
+
+// GitDir returns the absolute path
+// to the repository's git directory.
+func (r *Repository) GitDir() string {
+	return r.gitDir
 }
 
 // gitCmd returns a Git command wrapper

@@ -159,6 +159,35 @@ func TestHandler_AutoStash_reset(t *testing.T) {
 }
 
 func TestHandler_AutoStash_options(t *testing.T) {
+	t.Run("NonRebaseFailureRestoresImmediately", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+
+		mockWorktree := NewMockGitWorktree(mockCtrl)
+		stashHash := git.Hash("stashhash")
+		mockWorktree.EXPECT().
+			StashCreate(gomock.Any(), gomock.Any()).
+			Return(stashHash, nil)
+
+		cleanup, err := (&Handler{
+			Log:      silogtest.New(t),
+			Worktree: mockWorktree,
+			Service:  NewMockService(mockCtrl),
+		}).BeginAutostash(t.Context(), &Options{
+			Branch:    "feature",
+			ResetMode: ResetNone,
+		})
+		require.NoError(t, err)
+
+		wantErr := errors.New("sadness")
+		operationErr := wantErr
+		mockWorktree.EXPECT().
+			StashApply(gomock.Any(), stashHash.String()).
+			Return(nil)
+		cleanup(&operationErr, nil)
+
+		assert.ErrorIs(t, operationErr, wantErr)
+	})
+
 	t.Run("BranchFallback", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
@@ -179,7 +208,10 @@ func TestHandler_AutoStash_options(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		conflictErr := errors.New("sadness")
+		conflictErr := error(&git.RebaseInterruptError{
+			Kind:  git.RebaseInterruptConflict,
+			State: &git.RebaseState{Branch: "feature"},
+		})
 		mockService.EXPECT().
 			RebaseRescue(gomock.Any(), rebaseRescueMatcher{
 				Err:    conflictErr,
@@ -208,7 +240,10 @@ func TestHandler_AutoStash_options(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		conflictErr := errors.New("sadness")
+		conflictErr := error(&git.RebaseInterruptError{
+			Kind:  git.RebaseInterruptConflict,
+			State: &git.RebaseState{Branch: "feature"},
+		})
 		mockService.EXPECT().
 			RebaseRescue(gomock.Any(), rebaseRescueMatcher{
 				Err:    conflictErr,

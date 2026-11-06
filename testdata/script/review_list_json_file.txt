@@ -1,0 +1,35 @@
+# Reports file-level threads without line-only JSON fields.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+gs repo init
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+shamhub review comment post --id 200 --author alice --path main.go alice/example 1 'File comment.'
+stdout '200'
+
+gs review list --json
+cmpenvJSON stdout $WORK/golden/file.json
+
+-- repo/main.go --
+package main
+
+func main() {}
+-- golden/file.json --
+{"kind":"forge","id":"200","scope":"file","path":"main.go","commitSHA":"7e287bba2ffb67941482f25ec290a94becd22ea7","body":"File comment.","threadID":"thread-200","author":"alice","resolved":false,"stale":false,"status":"open","createdAt":"2024-04-05T16:40:32Z"}

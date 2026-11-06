@@ -20,3 +20,8 @@ doc/ export-ignore
 # mise files that don't need to be seen in diffs by default.
 mise.lock linguist-generated
 /bin/mise lingust-generated
+
+# Mocks are almost never useful to see in diffs.
+mock_*_test.go -diff linguist-generated=true
+mocks_test.go -diff linguist-generated=true
+mocks.go -diff linguist-generated=true

@@ -13,7 +13,7 @@ git commit -m 'Initial commit'
 git config spice.submit.template 'CHANGE_TEMPLATE.md'
 
 # set up a fake remote
-shamhub init
+shamhub-setup
 shamhub new origin alice/example.git
 shamhub register alice
 git push origin main

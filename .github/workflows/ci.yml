@@ -85,12 +85,11 @@ jobs:
         mise run
         ${{ matrix.cover && 'cover:default' || 'test:default' }}
         ${{ matrix.race && '--race' || '' }}
+        --format github-actions-fails
       # NB:
       # Windows tests are already slow.
       # Run them without race detection to avoid slowing them further.
       shell: bash
-      env:
-        GOTESTSUM_FORMAT: github-actions
 
     - name: Script tests
       if: ${{ matrix.suite == 'script' }}
@@ -98,11 +97,10 @@ jobs:
         mise run \
           ${{ matrix.cover && 'cover:script' || 'test:script' }} \
           ${{ matrix.race && '--race' || '' }} \
+          --format github-actions-fails \
           --shard-index "${{ matrix.shard-index || '0' }}" \
           --shard-count "${{ matrix.shard-count || '1' }}"
       shell: bash
-      env:
-        GOTESTSUM_FORMAT: github-actions
 
     - name: Upload coverage
       uses: codecov/codecov-action@v6.0.0

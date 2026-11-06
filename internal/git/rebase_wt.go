@@ -378,6 +378,70 @@ func (w *Worktree) RebaseState(context.Context) (*RebaseState, error) {
 	return nil, ErrNoRebase
 }
 
+// RebaseStopReason reports why the current rebase stopped at the current step.
+//
+// It uses the last non-empty line of the rebase state's "done" file
+// to classify the stop:
+// "pick", "revert", "fixup", "squash", and "merge" apply commits,
+// so stops there are treated as conflicts;
+// "edit" and "reword" instructions are deliberate only if the commit
+// applied cleanly,
+// and other known instructions are non-conflict interruptions.
+//
+// The "edit" and "reword" cases need extra care: those instructions can
+// also conflict while being applied,
+// leaving their command as the last done line even though the stop was not
+// deliberate. Git distinguishes the two by writing an "amend" file only when
+// the commit was applied successfully and HEAD already holds it.
+// A missing "amend" file therefore means the commit failed to apply,
+// i.e. a conflict.
+//
+// It errs toward RebaseInterruptConflict (warn) when the signal is
+// ambiguous, including when the done file is missing (e.g. the apply
+// backend), since a spurious warning is recoverable but a silent bad
+// amend is not.
+func (w *Worktree) RebaseStopReason(ctx context.Context) (RebaseInterruptKind, error) {
+	state, err := w.RebaseState(ctx)
+	if err != nil {
+		return RebaseInterruptConflict, err
+	}
+
+	stateDir := filepath.Join(w.gitDir, state.Backend.stateDir())
+	done, err := os.ReadFile(filepath.Join(stateDir, "done"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return RebaseInterruptConflict, nil
+		}
+		return RebaseInterruptConflict, fmt.Errorf("read rebase done: %w", err)
+	}
+
+	var lastCommand string
+	for line := range strings.SplitSeq(string(done), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		lastCommand = strings.Fields(line)[0]
+	}
+
+	switch strings.ToLower(lastCommand) {
+	case "pick", "revert", "fixup", "squash", "merge":
+		return RebaseInterruptConflict, nil
+	case "break", "exec", "label", "reset", "update-ref", "noop", "drop":
+		return RebaseInterruptDeliberate, nil
+	case "edit", "reword":
+		// A deliberate "edit" or "reword" stop applies the commit first
+		// and leaves an "amend" file behind. Its absence means the
+		// commit conflicted while being applied.
+		if _, err := os.Stat(filepath.Join(stateDir, "amend")); err == nil {
+			return RebaseInterruptDeliberate, nil
+		}
+		return RebaseInterruptConflict, nil
+	default:
+		return RebaseInterruptConflict, nil
+	}
+}
+
 // stateDir reports the directory inside the .git directory
 // where rebase state is stored.
 //

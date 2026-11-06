@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"slices"
+	"strings"
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -29,59 +33,88 @@ func (e *notLoggedInError) Error() string {
 	return "not logged in to " + e.Forge.ID()
 }
 
-// Attempts to open the forge.Repository associated with the given Git remote.
-//
-// Does not print any error messages to the user.
-// Instead, returns one of the following errors:
-//
-//   - unsupportedForgeError if the remote URL does not match
-//     any any known forges.
-//   - notLoggedInError if the user is not authenticated with the forge.
-func openRemoteRepositorySilent(
-	ctx context.Context,
-	stash secret.Stash,
-	forges *forge.Registry,
-	gitRepo *git.Repository,
-	remote string,
-) (forge.Repository, error) {
-	f, repoID, err := resolveRemoteRepositorySilent(ctx, forges, gitRepo, remote)
-	if err != nil {
-		return nil, err
-	}
+// remoteURLer reads configured and transport-resolved remote URLs.
+type remoteURLer interface {
+	// RemoteConfigURL accepts a Git remote name and returns the configured
+	// `remote.<name>.url` value before applying `url.*.insteadOf` rewriting.
+	RemoteConfigURL(context.Context, string) (string, error)
 
-	return openForgeRepository(ctx, stash, f, repoID)
+	// RemoteURL accepts a Git remote name and returns the URL Git uses for
+	// transport after applying `url.*.insteadOf` rewriting.
+	RemoteURL(context.Context, string) (string, error)
 }
 
-func resolveRemoteRepositoryID(
-	ctx context.Context,
-	forges *forge.Registry,
-	gitRepo *git.Repository,
-	remote string,
-) (forge.RepositoryID, error) {
-	remoteURL, err := gitRepo.RemoteURL(ctx, remote)
-	if err != nil {
-		return nil, fmt.Errorf("get remote URL: %w", err)
-	}
+var _ remoteURLer = (*git.Repository)(nil)
 
-	_, repoID, ok := forge.MatchRemoteURL(forges, remoteURL)
-	if !ok {
-		return nil, fmt.Errorf("no forge matches remote URL %q", remoteURL)
-	}
-	return repoID, nil
+// remoteResolver resolves git-spice remotes to forge repository identities.
+type remoteResolver struct {
+	// HTTPClient sends forge requests; nil uses each forge's default client.
+	HTTPClient *http.Client
+
+	// Forges is the registry of forge implementations that may own a remote.
+	Forges *forge.Registry // required
+
+	// Repository is the Git repository whose remotes should be resolved.
+	Repository remoteURLer // required
+
+	// ForgeKind names the forge selected by configuration.
+	//
+	// If unset, remote URLs must identify their forge by host.
+	ForgeKind string // required
 }
 
-func resolveRemoteRepositorySilent(
+// Resolve identifies the forge and repository for a configured Git remote.
+func (r *remoteResolver) Resolve(
 	ctx context.Context,
-	forges *forge.Registry,
-	gitRepo *git.Repository,
 	remote string,
 ) (forge.Forge, forge.RepositoryID, error) {
-	remoteURL, err := gitRepo.RemoteURL(ctx, remote)
+	remoteURL, err := r.Repository.RemoteConfigURL(ctx, remote)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	f, repoID, ok := forge.MatchRemoteURL(forges, remoteURL)
+	parsedRemoteURL, err := giturl.Parse(remoteURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse remote URL: %w", err)
+	}
+
+	if r.ForgeKind != "" {
+		resolvedRemoteURL, err := r.Repository.RemoteURL(ctx, remote)
+		if err != nil {
+			return nil, nil, fmt.Errorf("get resolved remote URL: %w", err)
+		}
+
+		parsedResolvedRemoteURL, err := giturl.Parse(resolvedRemoteURL)
+		if err != nil {
+			return nil, nil, fmt.Errorf("parse resolved remote URL: %w", err)
+		}
+
+		f, err := r.Forges.New(r.ForgeKind, parsedResolvedRemoteURL, &forge.NewOptions{HTTPClient: r.HTTPClient})
+		if err != nil {
+			if errors.Is(err, forge.ErrUnknown) {
+				var available []string
+				for d := range r.Forges.All() {
+					available = append(available, d.ID())
+				}
+				slices.Sort(available)
+
+				return nil, nil, fmt.Errorf(
+					"unknown forge kind %q: expected one of: %s",
+					r.ForgeKind,
+					strings.Join(available, ", "),
+				)
+			}
+			return nil, nil, fmt.Errorf("construct forge %q: %w", r.ForgeKind, err)
+		}
+
+		repoID, err := f.ParseRepositoryPath(parsedRemoteURL.Path)
+		if err != nil {
+			return nil, nil, fmt.Errorf("parse remote path as %s: %w", f.ID(), err)
+		}
+		return f, repoID, nil
+	}
+
+	f, repoID, ok := forge.InferFromRemoteURL(r.Forges, parsedRemoteURL, &forge.NewOptions{HTTPClient: r.HTTPClient})
 	if !ok {
 		return nil, nil, &unsupportedForgeError{
 			Remote:    remote,
@@ -89,6 +122,29 @@ func resolveRemoteRepositorySilent(
 		}
 	}
 	return f, repoID, nil
+}
+
+// ResolveID identifies the repository for a configured Git remote.
+func (r *remoteResolver) ResolveID(
+	ctx context.Context,
+	remote string,
+) (forge.RepositoryID, error) {
+	_, repoID, err := r.Resolve(ctx, remote)
+	return repoID, err
+}
+
+// Open opens the forge repository associated with a configured Git remote.
+func (r *remoteResolver) Open(
+	ctx context.Context,
+	stash secret.Stash,
+	remote string,
+) (forge.Repository, error) {
+	f, repoID, err := r.Resolve(ctx, remote)
+	if err != nil {
+		return nil, err
+	}
+
+	return openForgeRepository(ctx, stash, f, repoID)
 }
 
 func openForgeRepository(
@@ -111,15 +167,15 @@ func openForgeRepository(
 func resolveRemoteRepository(
 	ctx context.Context,
 	log *silog.Logger,
-	forges *forge.Registry,
-	gitRepo *git.Repository,
+	resolver *remoteResolver,
 	remote string,
 ) (forge.Forge, forge.RepositoryID, error) {
-	f, repoID, err := resolveRemoteRepositorySilent(ctx, forges, gitRepo, remote)
+	f, repoID, err := resolver.Resolve(ctx, remote)
 
 	if unsupportedErr, ok := errors.AsType[*unsupportedForgeError](err); ok {
 		log.Error("Could not guess repository from remote URL", "url", unsupportedErr.RemoteURL)
 		log.Error("Are you sure the remote identifies a supported Git host?")
+		log.Error("If this remote uses a Git host alias, run `git config spice.forge.kind <forge>`.")
 	}
 
 	return f, repoID, err

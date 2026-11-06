@@ -64,14 +64,14 @@ whatever
 ===
 > Select a branch to delete: 
 > ccc ◀
-> ┏━□ aaa
-> ┣━□ bbb
+> ┏━━□ aaa
+> ┣━━□ bbb
 > main
 "ccc"
 ===
 > Select a branch to delete: 
-> ┏━■ bbb ◀
-> ┣━□ aaa
+> ┏━━■ bbb ◀
+> ┣━━□ aaa
 > main
 > ccc
 "bbb"

@@ -19,7 +19,10 @@ type CLITokenSource struct {
 
 // Token returns an oauth2 token using the GitHub CLI.
 func (ts *CLITokenSource) Token() (*oauth2.Token, error) {
-	ctx := context.Background()
+	return ts.tokenContext(context.Background())
+}
+
+func (ts *CLITokenSource) tokenContext(ctx context.Context) (*oauth2.Token, error) {
 	cmd := xec.Command(ctx, nil, "gh", "auth", "token").WithExecer(ts.execer)
 	bs, err := cmd.Output()
 	if err != nil {

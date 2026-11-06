@@ -14,8 +14,8 @@ type editChangeRequest struct {
 	Repo   string `path:"repo" json:"-"`
 	Number int    `path:"number" json:"-"`
 
-	Base      *string  `json:"base,omitempty"`
-	Draft     *bool    `json:"draft,omitempty"`
+	Base      *string  `json:"base,omitzero"`
+	Draft     *bool    `json:"draft,omitzero"`
 	Labels    []string `json:"labels,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
 	Assignees []string `json:"assignees,omitempty"`

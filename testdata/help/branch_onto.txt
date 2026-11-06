@@ -4,8 +4,11 @@ Move a branch onto another branch
 
 Commits of the current branch are transplanted onto another branch while leaving
 the rest of the stack intact. That is, branches above the current branch are
-first rebased onto its original base, and then the current branch is moved onto
-the new base.
+retargeted onto its original base, and then the current branch is moved onto the
+new base.
+
+Use --restack to rebase those branches and their upstacks immediately after
+retargeting.
 
 A prompt will allow selecting the new base for the branch. Provide an argument
 to skip the prompt. Use the --branch flag to target a different branch for the
@@ -28,6 +31,8 @@ Arguments:
 
 Flags:
   --branch=NAME    Branch to move
+  --restack        How to restack branches above the moved branch. One of
+                   'none', 'aboves', and 'upstack'. (🔧 spice.branchOnto.restack)
 
 Global Flags:
   -h, --help           Show help for the command

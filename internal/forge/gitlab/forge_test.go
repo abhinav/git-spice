@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/git/giturl"
 )
 
 func TestURLs(t *testing.T) {
@@ -137,60 +138,62 @@ func TestExtractRepoInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := Forge{Options: Options{URL: tt.gitlabURL}}
-			owner, repo, err := extractRepoInfo(f.URL(), tt.give)
+			remoteURL, err := giturl.Parse(tt.give)
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.wantOwner, owner, "owner")
-			assert.Equal(t, tt.wantRepo, repo, "repo")
+			rid, err := f.ParseRepositoryPath(remoteURL.Path)
+			require.NoError(t, err)
+
+			assert.Equal(t,
+				tt.wantOwner+"/"+tt.wantRepo,
+				rid.String(),
+				"repository ID")
 		})
 	}
 }
 
 func TestExtractRepoInfoErrors(t *testing.T) {
 	tests := []struct {
-		name      string
-		give      string
-		gitLabURL string
-
-		wantErr []string
+		name string
+		give string
 	}{
 		{
-			name:      "bad gitlab URL",
-			give:      "https://gitlab.com/example/repo",
-			gitLabURL: "NOT\tA\nVALID URL",
-			wantErr:   []string{"bad base URL"},
+			name: "no owner",
+			give: "/repo",
 		},
 		{
-			name:    "bad remote URL",
-			give:    "NOT\tA\nVALID URL",
-			wantErr: []string{"parse remote URL"},
-		},
-		{
-			name: "host mismatch",
-			give: "https://example.com/example/repo",
-			wantErr: []string{
-				"not a GitLab URL",
-				`expected host "gitlab.com"`,
-			},
-		},
-		{
-			name:    "no owner",
-			give:    "https://gitlab.com/repo",
-			wantErr: []string{"does not contain a GitLab repository"},
+			name: "empty",
+			give: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := Forge{Options: Options{URL: tt.gitLabURL}}
-			_, _, err := extractRepoInfo(f.URL(), tt.give)
+			f := Forge{}
+			_, err := f.ParseRepositoryPath(tt.give)
 			require.Error(t, err)
-
-			for _, want := range tt.wantErr {
-				assert.ErrorContains(t, err, want)
-			}
 		})
 	}
+}
+
+func TestExtractRepoInfoErrors_badRemoteURL(t *testing.T) {
+	_, err := giturl.Parse("NOT\tA\nVALID URL")
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "parse remote URL")
+}
+
+func TestForge_ParseRepositoryPath_knownForge(t *testing.T) {
+	f := Forge{}
+	remoteURL, err := giturl.Parse("git@gitlab-ssh-alias:example/repo.git")
+	require.NoError(t, err)
+
+	rid, err := f.ParseRepositoryPath(remoteURL.Path)
+	require.NoError(t, err)
+
+	assert.Equal(t, "example/repo", rid.String())
+	assert.Equal(t,
+		"https://gitlab.com/example/repo/-/merge_requests/42",
+		rid.ChangeURL(&MR{Number: 42}))
 }
 
 func TestChangeURL(t *testing.T) {

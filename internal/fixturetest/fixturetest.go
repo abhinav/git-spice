@@ -27,7 +27,8 @@
 package fixturetest
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"os"
 	"path/filepath"
 	"sync"
@@ -115,7 +116,7 @@ func (f Fixture[T]) Get(t TestingT) T {
 		v := f.gen()
 
 		require.NoError(t, os.MkdirAll(filepath.Dir(fpath), 0o755))
-		bs, err := json.MarshalIndent(v, "", "  ")
+		bs, err := json.Marshal(v, jsontext.WithIndent("  "))
 		require.NoError(t, err)
 
 		require.NoError(t, os.WriteFile(fpath, bs, 0o644))

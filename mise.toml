@@ -2,34 +2,26 @@
 experimental = true
 
 [env]
-GOTESTSUM_FORMAT = "testname"
 GOBIN = "{{ config_root }}/bin"
 PROJECT_ROOT = "{{ config_root }}"
 _.path = ["{{ config_root }}/bin"]
-
-[tool_alias]
-# Specify sources for all tools so we can refer to them directly.
-golangci-lint = "aqua:golangci/golangci-lint"
-changie = "github:miniscruff/changie"
-requiredfield = "github:abhinav/requiredfield"
-gofumpt = "aqua:mvdan/gofumpt"
 
 [tools]
 # Self-explanatory.
 go = "latest"
 
+"github:abhinav/requiredfield" = "latest"
+
 # Test runner with prettier output.
-gotestsum = "latest"
+# https://github.com/gotestyourself/gotestsum/pull/568
+"github:abhinav/gotestsum" = "v1.14.0-beta.1+github-actions-fails"
+"aqua:golangci/golangci-lint" = "latest"
 
-# Stricter code formatting.
-gofumpt = "latest"
-
-# Collection of linters.
-golangci-lint = "latest"
+"github:joshka/betamax" = { version = "latest", os = ["linux", "macos"] }
 
 # Changelog manager.
 changie = "latest"
-requiredfield = "0.9.0"
+cosign = "latest"
 
 [tasks.generate]
 depends = ["tools"]
@@ -45,7 +37,11 @@ depends = ["test:*"]
 [tasks."test:default"]
 wait_for = ["generate"]
 description = "Run default tests"
-run = "gotestsum -- ./... -race={{flag(name='race')}}"
+usage = '''
+flag "--race" default="false" help="Enable data race detection"
+flag "--format <format>" default="standard-verbose" help="gotestsum output format"
+'''
+run = "gotestsum --format={{usage.format}} -- ./... -race={{usage.race}}"
 
 [tasks."test:script"]
 wait_for = ["generate"]
@@ -55,24 +51,23 @@ flag "-v --verbose" default="false" help="Enable verbose output"
 flag "--race" default="false" help="Enable data race detection"
 flag "--update" default="false" help="Update expected results"
 flag "--count <count>" default="1" help="Number of times to run tests"
+flag "--format <format>" default="standard-verbose" help="gotestsum output format"
 
 flag "--shard-index <shard_index>" default="0" help="Shard index to run"
 flag "--shard-count <shard_count>" default="1" help="Total number of shards"
 
-flag "--run <script>" help="Regex to select which script tests to run"
+flag "--run <script>" default="" help="Regex to select which script tests to run"
 complete "script" run="ls testdata/script/*.txt | cut -d/ -f3 | sed 's/.txt$//'"
 '''
 run = """
-gotestsum
-  {%- if flag(name='verbose') == 'true' %} --format=standard-verbose
-  {%- endif %} -- {# -#}
+gotestsum --format={{usage.format}} -- {# -#}
   -tags=script {# enable script tests -#}
-  -run TestScript/{{option(name='run')}} {# run only script tests -#}
-  -count {{option(name='count')}} {# number of times to run tests -#}
-  -race={{flag(name='race')}} {# race detection -#}
-  -shard-index={{option(name='shard-index')}} {# shard index -#}
-  -shard-count={{option(name='shard-count')}} {# shard count -#}
-  -update={{flag(name='update')}} {# update expected results -#}
+  -run TestScript/{{usage.run|quote}} {# run only script tests -#}
+  -count {{usage.count}} {# number of times to run tests -#}
+  -race={{usage.race}} {# race detection -#}
+  -shard-index={{usage.shard_index}} {# shard index -#}
+  -shard-count={{usage.shard_count}} {# shard count -#}
+  -update={{usage.update}} {# update expected results -#}
 """
 
 [tasks."_cover_report"]
@@ -82,10 +77,14 @@ run = "go tool cover -html=cover.out -o cover.html"
 wait_for = ["generate"]
 depends_post = ["_cover_report"]
 description = "Run default tests with coverage"
+usage = '''
+flag "--race" default="false" help="Enable data race detection"
+flag "--format <format>" default="standard-verbose" help="gotestsum output format"
+'''
 run = """
-gotestsum -- {# -#}
+gotestsum --format={{usage.format}} -- {# -#}
   ./... {# run all tests -#}
-  -race={{flag(name='race')}} {# race detection -#}
+  -race={{usage.race}} {# race detection -#}
   -coverpkg=./... {# cover all packages -#}
   -coverprofile=cover.out {# -#}
 """
@@ -94,15 +93,22 @@ gotestsum -- {# -#}
 wait_for = ["generate"]
 depends_post = ["_cover_report"]
 description = "Run script tests with coverage"
+usage = '''
+flag "--race" default="false" help="Enable data race detection"
+flag "--format <format>" default="standard-verbose" help="gotestsum output format"
+
+flag "--shard-index <shard_index>" default="0" help="Shard index to run"
+flag "--shard-count <shard_count>" default="1" help="Total number of shards"
+'''
 run = """
-gotestsum -- {# -#}
+gotestsum --format={{usage.format}} -- {# -#}
   -tags=script {# enable script tests -#}
   -run '^TestScript$' {# run only script tests -#}
-  -race={{flag(name='race')}} {# race detection -#}
+  -race={{usage.race}} {# race detection -#}
   -coverpkg=./... {# cover all packages -#}
   -coverprofile=cover.out {# -#}
-  -shard-index={{option(name='shard-index', default='0')}} {# shard index -#}
-  -shard-count={{option(name='shard-count', default='1')}} {# shard count -#}
+  -shard-index={{usage.shard_index}} {# shard index -#}
+  -shard-count={{usage.shard_count}} {# shard count -#}
 """
 
 [tasks.tidy]
@@ -110,13 +116,17 @@ run = "go mod tidy"
 description = "Update go.mod and go.sum files"
 
 [tasks.fmt]
-run = "gofumpt -w ."
+run = "golangci-lint fmt"
 description = "Format all go files"
 
 [tasks.lint]
 depends = ["lint:*"]
 wait_for = ["generate"]
 description = "Run all lint checks"
+
+[tasks."lint:design-readme"]
+run = "./tools/update-adr-table.sh --diff"
+description = "Ensure the design decision table is up to date"
 
 [tasks."lint:golangci-lint"]
 run = "golangci-lint run"
@@ -144,7 +154,7 @@ flag "--pprof" help="Build with pofiling flags"
 """
 run = """
 go build -o bin/git-spice -tags="
-  {%- if flag(name='pprof') == 'true' -%}
+  {%- if usage.pprof -%}
     profile
   {%- endif -%}
 " go.abhg.dev/gs
@@ -173,4 +183,7 @@ run = "cd doc && mise run build"
 
 [tasks."release:prepare"]
 description = "Prepare a release for publishing"
-run = "go run ./tools/ci/prepare-release -version {{arg(name='version')}}"
+usage = '''
+arg "<version>" help="Version to prepare"
+'''
+run = "go run ./tools/ci/prepare-release -version {{usage.version}}"

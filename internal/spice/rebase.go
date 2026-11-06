@@ -44,6 +44,13 @@ func (r *rescuedRebaseError) Error() string {
 	return r.err.Error()
 }
 
+// IsRebaseRescue reports whether the error has already been handled by
+// RebaseRescue.
+func IsRebaseRescue(err error) bool {
+	var rescuedErr *rescuedRebaseError
+	return errors.As(err, &rescuedErr)
+}
+
 // RebaseRescue helps operations continue from rebase conflicts.
 // To use it, call RebaseRescue with the error that caused the rebase
 // operation to be interrupted.

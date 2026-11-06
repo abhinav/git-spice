@@ -17,6 +17,7 @@ import (
 	git "go.abhg.dev/gs/internal/git"
 	autostash "go.abhg.dev/gs/internal/handler/autostash"
 	delete "go.abhg.dev/gs/internal/handler/delete"
+	restack "go.abhg.dev/gs/internal/handler/restack"
 	spice "go.abhg.dev/gs/internal/spice"
 	state "go.abhg.dev/gs/internal/spice/state"
 	gomock "go.uber.org/mock/gomock"
@@ -195,6 +196,44 @@ func (c *MockGitRepositoryIsAncestorCall) Do(f func(context.Context, git.Hash, g
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGitRepositoryIsAncestorCall) DoAndReturn(f func(context.Context, git.Hash, git.Hash) bool) *MockGitRepositoryIsAncestorCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// ListCommitsDetails mocks base method.
+func (m *MockGitRepository) ListCommitsDetails(ctx context.Context, commitRange git.CommitRange) iter.Seq2[git.CommitDetail, error] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCommitsDetails", ctx, commitRange)
+	ret0, _ := ret[0].(iter.Seq2[git.CommitDetail, error])
+	return ret0
+}
+
+// ListCommitsDetails indicates an expected call of ListCommitsDetails.
+func (mr *MockGitRepositoryMockRecorder) ListCommitsDetails(ctx, commitRange any) *MockGitRepositoryListCommitsDetailsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCommitsDetails", reflect.TypeOf((*MockGitRepository)(nil).ListCommitsDetails), ctx, commitRange)
+	return &MockGitRepositoryListCommitsDetailsCall{Call: call}
+}
+
+// MockGitRepositoryListCommitsDetailsCall wrap *gomock.Call
+type MockGitRepositoryListCommitsDetailsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryListCommitsDetailsCall) Return(arg0 iter.Seq2[git.CommitDetail, error]) *MockGitRepositoryListCommitsDetailsCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryListCommitsDetailsCall) Do(f func(context.Context, git.CommitRange) iter.Seq2[git.CommitDetail, error]) *MockGitRepositoryListCommitsDetailsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryListCommitsDetailsCall) DoAndReturn(f func(context.Context, git.CommitRange) iter.Seq2[git.CommitDetail, error]) *MockGitRepositoryListCommitsDetailsCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -655,80 +694,41 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 	return m.recorder
 }
 
-// ListAbove mocks base method.
-func (m *MockService) ListAbove(ctx context.Context, name string) ([]string, error) {
+// BranchGraph mocks base method.
+func (m *MockService) BranchGraph(ctx context.Context, opts *spice.BranchGraphOptions) (*spice.BranchGraph, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAbove", ctx, name)
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "BranchGraph", ctx, opts)
+	ret0, _ := ret[0].(*spice.BranchGraph)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListAbove indicates an expected call of ListAbove.
-func (mr *MockServiceMockRecorder) ListAbove(ctx, name any) *MockServiceListAboveCall {
+// BranchGraph indicates an expected call of BranchGraph.
+func (mr *MockServiceMockRecorder) BranchGraph(ctx, opts any) *MockServiceBranchGraphCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAbove", reflect.TypeOf((*MockService)(nil).ListAbove), ctx, name)
-	return &MockServiceListAboveCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BranchGraph", reflect.TypeOf((*MockService)(nil).BranchGraph), ctx, opts)
+	return &MockServiceBranchGraphCall{Call: call}
 }
 
-// MockServiceListAboveCall wrap *gomock.Call
-type MockServiceListAboveCall struct {
+// MockServiceBranchGraphCall wrap *gomock.Call
+type MockServiceBranchGraphCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockServiceListAboveCall) Return(arg0 []string, arg1 error) *MockServiceListAboveCall {
+func (c *MockServiceBranchGraphCall) Return(arg0 *spice.BranchGraph, arg1 error) *MockServiceBranchGraphCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockServiceListAboveCall) Do(f func(context.Context, string) ([]string, error)) *MockServiceListAboveCall {
+func (c *MockServiceBranchGraphCall) Do(f func(context.Context, *spice.BranchGraphOptions) (*spice.BranchGraph, error)) *MockServiceBranchGraphCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockServiceListAboveCall) DoAndReturn(f func(context.Context, string) ([]string, error)) *MockServiceListAboveCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// LoadBranches mocks base method.
-func (m *MockService) LoadBranches(ctx context.Context) ([]spice.LoadBranchItem, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoadBranches", ctx)
-	ret0, _ := ret[0].([]spice.LoadBranchItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LoadBranches indicates an expected call of LoadBranches.
-func (mr *MockServiceMockRecorder) LoadBranches(ctx any) *MockServiceLoadBranchesCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadBranches", reflect.TypeOf((*MockService)(nil).LoadBranches), ctx)
-	return &MockServiceLoadBranchesCall{Call: call}
-}
-
-// MockServiceLoadBranchesCall wrap *gomock.Call
-type MockServiceLoadBranchesCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockServiceLoadBranchesCall) Return(arg0 []spice.LoadBranchItem, arg1 error) *MockServiceLoadBranchesCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockServiceLoadBranchesCall) Do(f func(context.Context) ([]spice.LoadBranchItem, error)) *MockServiceLoadBranchesCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockServiceLoadBranchesCall) DoAndReturn(f func(context.Context) ([]spice.LoadBranchItem, error)) *MockServiceLoadBranchesCall {
+func (c *MockServiceBranchGraphCall) DoAndReturn(f func(context.Context, *spice.BranchGraphOptions) (*spice.BranchGraph, error)) *MockServiceBranchGraphCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -819,40 +819,78 @@ func (m *MockRestackHandler) EXPECT() *MockRestackHandlerMockRecorder {
 	return m.recorder
 }
 
-// RestackStack mocks base method.
-func (m *MockRestackHandler) RestackStack(ctx context.Context, branch string) error {
+// RestackBranch mocks base method.
+func (m *MockRestackHandler) RestackBranch(ctx context.Context, req *restack.BranchRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestackStack", ctx, branch)
+	ret := m.ctrl.Call(m, "RestackBranch", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RestackStack indicates an expected call of RestackStack.
-func (mr *MockRestackHandlerMockRecorder) RestackStack(ctx, branch any) *MockRestackHandlerRestackStackCall {
+// RestackBranch indicates an expected call of RestackBranch.
+func (mr *MockRestackHandlerMockRecorder) RestackBranch(ctx, req any) *MockRestackHandlerRestackBranchCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackStack", reflect.TypeOf((*MockRestackHandler)(nil).RestackStack), ctx, branch)
-	return &MockRestackHandlerRestackStackCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackBranch", reflect.TypeOf((*MockRestackHandler)(nil).RestackBranch), ctx, req)
+	return &MockRestackHandlerRestackBranchCall{Call: call}
 }
 
-// MockRestackHandlerRestackStackCall wrap *gomock.Call
-type MockRestackHandlerRestackStackCall struct {
+// MockRestackHandlerRestackBranchCall wrap *gomock.Call
+type MockRestackHandlerRestackBranchCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockRestackHandlerRestackStackCall) Return(arg0 error) *MockRestackHandlerRestackStackCall {
+func (c *MockRestackHandlerRestackBranchCall) Return(arg0 error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.Return(arg0)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockRestackHandlerRestackStackCall) Do(f func(context.Context, string) error) *MockRestackHandlerRestackStackCall {
+func (c *MockRestackHandlerRestackBranchCall) Do(f func(context.Context, *restack.BranchRequest) error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRestackHandlerRestackStackCall) DoAndReturn(f func(context.Context, string) error) *MockRestackHandlerRestackStackCall {
+func (c *MockRestackHandlerRestackBranchCall) DoAndReturn(f func(context.Context, *restack.BranchRequest) error) *MockRestackHandlerRestackBranchCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// RestackUpstack mocks base method.
+func (m *MockRestackHandler) RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestackUpstack", ctx, req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestackUpstack indicates an expected call of RestackUpstack.
+func (mr *MockRestackHandlerMockRecorder) RestackUpstack(ctx, req any) *MockRestackHandlerRestackUpstackCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackUpstack", reflect.TypeOf((*MockRestackHandler)(nil).RestackUpstack), ctx, req)
+	return &MockRestackHandlerRestackUpstackCall{Call: call}
+}
+
+// MockRestackHandlerRestackUpstackCall wrap *gomock.Call
+type MockRestackHandlerRestackUpstackCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRestackHandlerRestackUpstackCall) Return(arg0 error) *MockRestackHandlerRestackUpstackCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRestackHandlerRestackUpstackCall) Do(f func(context.Context, *restack.UpstackRequest) error) *MockRestackHandlerRestackUpstackCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRestackHandlerRestackUpstackCall) DoAndReturn(f func(context.Context, *restack.UpstackRequest) error) *MockRestackHandlerRestackUpstackCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

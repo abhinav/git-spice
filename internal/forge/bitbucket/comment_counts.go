@@ -3,11 +3,13 @@ package bitbucket
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// CommentCountsByChange retrieves comment resolution counts for multiple PRs.
+// CommentCountsByChange retrieves comment resolution counts
+// for multiple pull requests, in the same order as ids.
 func (r *Repository) CommentCountsByChange(
 	ctx context.Context,
 	ids []forge.ChangeID,
@@ -28,22 +30,27 @@ func (r *Repository) CommentCountsByChange(
 	return results, nil
 }
 
+// commentCounts computes the resolvable-comment counts
+// for a single pull request.
+//
+// Unpublished drafts and git-spice's own navigation comment
+// don't participate in resolution counts.
 func (r *Repository) commentCounts(
 	ctx context.Context,
 	prID int64,
 ) (*forge.CommentCounts, error) {
 	var total, resolved int
-	for c, err := range r.listPullRequestComments(ctx, prID) {
+	for c, err := range r.gw.ResolvableComments(ctx, prID) {
 		if err != nil {
 			return nil, err
 		}
 
-		// Only inline code review comments are resolvable.
-		if c.Inline == nil {
+		if c.Pending || strings.Contains(c.Body, _navigationCommentMarker) {
 			continue
 		}
+
 		total++
-		if c.Resolution != nil {
+		if c.Resolved {
 			resolved++
 		}
 	}

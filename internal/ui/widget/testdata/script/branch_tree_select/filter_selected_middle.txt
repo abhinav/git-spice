@@ -27,7 +27,7 @@ feed <Enter>
 -- selected --
 delta
 -- want --
-delta
+alpha
 -- prompt --
 Select a branch:
 echo
@@ -38,9 +38,9 @@ delta ◀
 ▼▼▼
 -- filter --
 Select a branch:
-alpha
+alpha ◀
 bravo
 charlie
-delta ◀
+delta
 gamma
 ▼▼▼

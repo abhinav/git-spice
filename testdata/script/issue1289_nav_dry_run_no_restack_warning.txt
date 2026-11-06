@@ -1,0 +1,23 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/1289.
+#
+# Navigation dry runs print only the target branch name,
+# even when the target branch needs to be restacked.
+
+as 'Test <test@example.com>'
+at '2026-06-20T16:26:04Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+gs bc -m feature1
+gs bc -m feature2
+gs trunk
+git commit --allow-empty -m 'Move trunk'
+gs bco feature2
+
+gs down -n
+stdout feature1
+! stderr 'needs to be restacked'

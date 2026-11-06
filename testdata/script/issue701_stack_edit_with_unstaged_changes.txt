@@ -63,7 +63,7 @@ Feature 3
 -- other/feat2-new.txt --
 Feature 2 (modified)
 -- golden/ls-before.txt --
-  ┏━■ feat1 ◀
+  ┏━━■ feat1 ◀
 ┏━┻□ feat2
 main
 -- edit/give.txt --
@@ -88,8 +88,8 @@ ERR Resolve the conflict and run 'git stash drop' to remove the stash entry.
 ERR Or change to a branch where the stash can apply, and run 'git stash pop'.
 FTL gs: edit downstack: branch feat1 onto main: rebase: feat1: dirty changes could not be re-applied
 -- golden/ls-after-fail.txt --
-  ┏━■ feat1 (needs restack) ◀
-  ┃   94ce439 Add feature 1 (now)
+  ┏━━■ feat1 (needs restack) ◀
+  ┃    94ce439 Add feature 1 (now)
 ┏━┻□ feat2
 ┃    d9e6a97 Add feature 2 (now)
 main
@@ -99,8 +99,8 @@ main
 |/  
 * 632b702 (main) Initial commit
 -- golden/ls-after.txt --
-  ┏━■ feat2 ◀
-  ┃   c709a8d Add feature 2 (now)
+  ┏━━■ feat2 ◀
+  ┃    c709a8d Add feature 2 (now)
 ┏━┻□ feat1
 ┃    94ce439 Add feature 1 (now)
 main

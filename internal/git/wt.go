@@ -48,6 +48,17 @@ func (w *Worktree) RootDir() string {
 	return w.rootDir
 }
 
+// IndexFile returns the path to the index Git would use
+// for commands run in this worktree.
+func (w *Worktree) IndexFile(ctx context.Context) (string, error) {
+	return w.gitCmd(
+		ctx,
+		"rev-parse",
+		"--path-format=absolute",
+		"--git-path", "index",
+	).OutputChomp()
+}
+
 // Repository returns the Git repository that this worktree belongs to.
 func (w *Worktree) Repository() *Repository {
 	return w.repo

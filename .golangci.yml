@@ -72,6 +72,9 @@ linters:
         - (*go.abhg.dev/gs/internal/log.Logger).Log
         - (*go.abhg.dev/gs/internal/log.Logger).With
 
+    usetesting:
+      context-background: true
+
   exclusions:
     generated: lax
     rules:
@@ -92,12 +95,12 @@ linters:
 
       - linters: [depguard]
         text: "import 'os/exec' is not allowed"
-        path: ^internal/xec/
+        path: (^|.*/)internal/xec/
 
       # termtest needs the raw os/exec to spawn PTYs for testing.
       - linters: [depguard]
         text: "import 'os/exec' is not allowed"
-        path: ^internal/termtest/
+        path: (^|.*/)internal/termtest/
 
 formatters:
   enable:

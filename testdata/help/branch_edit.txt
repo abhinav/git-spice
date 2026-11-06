@@ -1,10 +1,16 @@
-Usage: gs branch (b) edit (e)
+Usage: gs branch (b) edit (e) [flags]
 
 Edit the commits in a branch
 
 Starts an interactive rebase with only the commits from this branch.
 
-After the rebase, branches upstack from this branch will be restacked.
+After the rebase, branches upstack from this branch will be restacked. Use
+--no-restack to disable that, or the 'spice.branchEdit.restack' configuration
+option to change the default.
+
+Flags:
+  --[no-]restack    Whether to restack upstack branches. (🔧
+                    spice.branchEdit.restack)
 
 Global Flags:
   -h, --help           Show help for the command

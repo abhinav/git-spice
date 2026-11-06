@@ -5,13 +5,13 @@ import (
 	"cmp"
 	"context"
 	"encoding"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"iter"
-	"runtime"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 
 	"go.abhg.dev/gs/internal/cli"
@@ -20,8 +20,10 @@ import (
 	"go.abhg.dev/gs/internal/graph"
 	"go.abhg.dev/gs/internal/handler/autostash"
 	branchdel "go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -37,6 +39,10 @@ type GitRepository interface {
 	IsAncestor(ctx context.Context, ancestor, descendant git.Hash) bool
 	Fetch(ctx context.Context, opts git.FetchOptions) error
 	CountCommits(ctx context.Context, commitRange git.CommitRange) (int, error)
+	ListCommitsDetails(
+		ctx context.Context,
+		commitRange git.CommitRange,
+	) iter.Seq2[git.CommitDetail, error]
 	DeleteBranch(ctx context.Context, name string, opts git.BranchDeleteOptions) error // TODO:specialize to delete remote branch?
 	RemoteURL(ctx context.Context, remote string) (string, error)
 }
@@ -63,8 +69,7 @@ var _ Store = (*state.Store)(nil)
 
 // Service is a subset of the spice.Service interface.
 type Service interface {
-	LoadBranches(ctx context.Context) ([]spice.LoadBranchItem, error)
-	ListAbove(ctx context.Context, name string) ([]string, error)
+	BranchGraph(ctx context.Context, opts *spice.BranchGraphOptions) (*spice.BranchGraph, error)
 }
 
 var _ Service = (*spice.Service)(nil)
@@ -74,9 +79,11 @@ type DeleteHandler interface {
 	DeleteBranches(context.Context, *branchdel.Request) error
 }
 
-// RestackHandler allows restacking the current stack.
+// RestackHandler allows restacking branches after sync
+// has removed their downstack branches.
 type RestackHandler interface {
-	RestackStack(ctx context.Context, branch string) error
+	RestackBranch(ctx context.Context, req *restack.BranchRequest) error
+	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
 }
 
 // AutostashHandler is a subset of the autostash.Handler interface.
@@ -165,8 +172,12 @@ func (c ClosedChanges) String() string {
 type TrunkOptions struct {
 	// TODO: flag to not delete merged branches?
 
-	Restack       bool          `help:"Restack the current stack after syncing"`
-	ClosedChanges ClosedChanges `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests. One of 'ask' and 'ignore'." hidden:""`
+	Restack       spice.RestackMode `default:"none" config:"repoSync.restack" enum:"none,aboves,upstack" help:"How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'."`
+	ClosedChanges ClosedChanges     `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests. One of 'ask' and 'ignore'." hidden:""`
+
+	// DetachWorktrees allows SyncTrunk to detach another worktree
+	// before deleting its merged branch.
+	DetachWorktrees bool `default:"false" config:"repoSync.detachWorktrees" help:"Detach other worktrees before deleting their merged branches." hidden:""`
 }
 
 // SyncTrunk syncs the trunk branch with the remote repository,
@@ -185,13 +196,13 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		currentBranch = "" // detached head
 	}
 
-	autostashCleanupOptions := autostash.CleanupOptions{
-		RescueBranch: currentBranch,
-	}
+	autostashRescueBranch := currentBranch
 	var autostashCleanup func(*error, *autostash.CleanupOptions)
 	defer func() {
 		if autostashCleanup != nil {
-			autostashCleanup(&retErr, &autostashCleanupOptions)
+			autostashCleanup(&retErr, &autostash.CleanupOptions{
+				RescueBranch: autostashRescueBranch,
+			})
 		}
 	}()
 
@@ -366,10 +377,11 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		}
 	}
 
-	candidates, err := h.Service.LoadBranches(ctx)
+	branchGraph, err := h.Service.BranchGraph(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("list tracked branches: %w", err)
+		return fmt.Errorf("get branch graph: %w", err)
 	}
+	candidates := slices.Collect(branchGraph.All())
 
 	var branchesToDelete []branchDeletion
 	if h.RemoteRepository == nil {
@@ -396,61 +408,75 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		}
 	} else {
 		// Supported forge. Check for merged CRs and upstream branches.
-		branchesToDelete, err = h.findForgeFinishedBranches(ctx, candidates, opts.ClosedChanges)
+		branchesToDelete, err = h.findForgeFinishedBranches(ctx, branchGraph, candidates, trunkEndHash, opts.ClosedChanges)
 		if err != nil {
 			return fmt.Errorf("find finished CRs: %w", err)
 		}
 	}
 
-	if len(branchesToDelete) > 0 {
-		if err := beginAutostash(); err != nil {
-			return err
-		}
-
-		// If sync deletes the branch we started on,
-		// a later rescued rebase cannot resume on that branch.
-		// Point autostash rescue
-		// at the branch sync intends to leave us on after deletion instead:
-		// trunk in the usual case,
-		// or no branch at all if trunk is checked out
-		// in another worktree
-		// and deletion leaves this worktree detached.
-		//
-		// If the current branch is not being deleted,
-		// keep rescuing onto that branch.
-		deletingCurrentBranch := slices.ContainsFunc(branchesToDelete, func(b branchDeletion) bool {
-			return b.BranchName == currentBranch
-		})
-		if deletingCurrentBranch {
-			if trunkCheckedOutElsewhere {
-				autostashCleanupOptions.RescueBranch = ""
-			} else {
-				autostashCleanupOptions.RescueBranch = trunk
-			}
-		} else {
-			autostashCleanupOptions.RescueBranch = currentBranch
-		}
-
-		if err := h.deleteBranches(ctx, branchesToDelete); err != nil {
-			return err
-		}
+	if len(branchesToDelete) == 0 {
+		return nil
 	}
 
-	if opts.Restack {
-		if err := beginAutostash(); err != nil {
-			return err
-		}
+	// Build the restack plan before deletion,
+	// while the branch graph still contains the soon-to-be-deleted bases.
+	// The plan is filtered after deletion
+	// because branches checked out in other worktrees are skipped.
+	restackPlan := planDeletedBranchRestacks(opts.Restack, branchesToDelete, branchGraph)
 
-		// current branch may have changed after deletion
-		// of merged branches.
-		currentBranch, err := h.Worktree.CurrentBranch(ctx)
-		if err != nil {
-			log.Warn("Failed to get current branch, skipping restack", "error", err)
+	if err := beginAutostash(); err != nil {
+		return err
+	}
+
+	// If sync deletes the branch we started on,
+	// a later rescued operation cannot resume there.
+	// Rescue onto the branch sync intends to leave checked out instead:
+	// trunk in the usual case,
+	// or no branch if trunk is checked out elsewhere.
+	// Otherwise, keep rescuing onto the original current branch.
+	branchAfterDelete := currentBranch
+	deletingCurrentBranch := slices.ContainsFunc(branchesToDelete, func(b branchDeletion) bool {
+		return b.BranchName == currentBranch
+	})
+	if deletingCurrentBranch {
+		if trunkCheckedOutElsewhere {
+			branchAfterDelete = ""
 		} else {
-			autostashCleanupOptions.RescueBranch = currentBranch
-			// TODO: if the merged branch leaves us on trunk
-			// --restack will end up restacking all known branches.
-			return h.Restack.RestackStack(ctx, currentBranch)
+			branchAfterDelete = trunk
+		}
+	}
+	autostashRescueBranch = branchAfterDelete
+
+	deletedBranchNames, err := h.deleteBranches(ctx, branchesToDelete, opts.DetachWorktrees)
+	if err != nil {
+		return err
+	}
+
+	// Retarget surviving upstack PRs on the forge
+	// around branches that are finished there.
+	if h.RemoteRepository != nil {
+		h.retargetUpstackChanges(ctx,
+			collectRetargetCandidates(branchesToDelete, branchGraph))
+	}
+
+	if targets := restackPlan.targets(deletedBranchNames); len(targets) > 0 {
+		for _, target := range targets {
+			// Autostash cleanup records the rescue branch
+			// if this restack is interrupted.
+			// Keep it aligned with the restack target currently in flight,
+			// not merely the first target in the plan.
+			autostashRescueBranch = target
+			if err := h.restackDeletedBranchUpstack(ctx, opts.Restack, target); err != nil {
+				return err
+			}
+		}
+		// Successful restacks may leave us on the final target.
+		// Return to the branch that sync would have selected after deletion.
+		if branchAfterDelete != "" && branchAfterDelete != targets[len(targets)-1] {
+			autostashRescueBranch = branchAfterDelete
+			if err := h.Worktree.CheckoutBranch(ctx, branchAfterDelete); err != nil {
+				return fmt.Errorf("checkout branch %v: %w", branchAfterDelete, err)
+			}
 		}
 	}
 
@@ -467,32 +493,49 @@ func (h *Handler) findLocalMergedBranches(
 	knownBranches []spice.LoadBranchItem,
 	trunkHash git.Hash,
 ) ([]branchDeletion, error) {
-	// Find branches that have been merged by checking
-	// if they are reachable from the trunk.
-	var branchesToDelete []branchDeletion
-	for _, b := range knownBranches {
-		if h.Repository.IsAncestor(ctx, b.Head, trunkHash) {
-			h.Log.Infof("%v was merged", b.Name)
-			branchesToDelete = append(branchesToDelete, branchDeletion{
-				BranchName:   b.Name,
-				UpstreamName: b.UpstreamBranch,
-			})
-		}
+	merged := h.locallyMergedBranches(ctx, knownBranches, trunkHash)
+	if len(merged) == 0 {
+		return nil, nil
 	}
 
+	branchesToDelete := make([]branchDeletion, 0, len(merged))
+	for _, b := range merged {
+		h.Log.Infof("%v was merged", b.Name)
+		branchesToDelete = append(branchesToDelete, branchDeletion{
+			BranchName:   b.Name,
+			UpstreamName: b.UpstreamBranch,
+		})
+	}
 	return branchesToDelete, nil
+}
+
+// locallyMergedBranches selects branches whose heads are reachable from trunk.
+func (h *Handler) locallyMergedBranches(
+	ctx context.Context,
+	branches []spice.LoadBranchItem,
+	trunkHash git.Hash,
+) []spice.LoadBranchItem {
+	var merged []spice.LoadBranchItem
+	for _, branch := range branches {
+		if h.Repository.IsAncestor(ctx, branch.Head, trunkHash) {
+			merged = append(merged, branch)
+		}
+	}
+	return merged
 }
 
 func (h *Handler) findForgeFinishedBranches(
 	ctx context.Context,
+	branchGraph *spice.BranchGraph,
 	knownBranches []spice.LoadBranchItem,
+	trunkHash git.Hash,
 	closedChangeHandling ClosedChanges,
 ) ([]branchDeletion, error) {
 	type submittedBranch struct {
 		Name string
 
 		Base            string
-		MergedDownstack []json.RawMessage
+		MergedDownstack []jsontext.Value
 
 		Change forge.ChangeID
 		State  forge.ChangeState
@@ -508,7 +551,7 @@ func (h *Handler) findForgeFinishedBranches(
 		Name string
 
 		Base            string
-		MergedDownstack []json.RawMessage
+		MergedDownstack []jsontext.Value
 
 		Change        forge.ChangeID
 		Merged        bool
@@ -526,8 +569,12 @@ func (h *Handler) findForgeFinishedBranches(
 	//    with 'gh pr create' or similar.
 	//
 	// For the first, we can perform a cheap API call to check the CR status.
-	// For the second, we need to find recently merged PRs with that branch
-	// name, and match the remote head SHA to the branch head SHA.
+	// For the second, we need to find open and merged PRs with that branch
+	// name. An open PR normally means the branch is still live,
+	// but a source branch name may be reused after an older PR was merged.
+	// A merged PR whose remote head contains the local head proves that the
+	// local branch is safe to delete,
+	// so it wins over an open PR for the same branch name.
 	//
 	// We'll try to do these checks concurrently.
 
@@ -588,51 +635,92 @@ func (h *Handler) findForgeFinishedBranches(
 	}
 
 	if len(trackedBranches) > 0 {
-		trackedch := make(chan *trackedBranch)
-		for range min(runtime.GOMAXPROCS(0), len(trackedBranches)) {
-			wg.Go(func() {
-				for b := range trackedch {
-					changes, err := h.RemoteRepository.FindChangesByBranch(ctx, b.Name, forge.FindChangesOptions{
-						PushRepository: h.PushRepository,
-						Limit:          10,
-					})
-					if err != nil {
-						h.Log.Error("Failed to list changes", "branch", b.Name, "error", err)
-						continue
-					}
+		wg.Go(func() {
+			branchNames := make([]string, len(trackedBranches))
+			for i, b := range trackedBranches {
+				branchNames[i] = b.Name
+			}
+			results := forge.MatchChangesToBranches(
+				ctx,
+				h.RemoteRepository,
+				branchNames,
+				&forge.MatchChangesToBranchesOptions{
+					PushRepository: h.PushRepository,
+				},
+			)
 
-					var change *forge.FindChangeItem
-					for _, c := range changes {
-						if c.State == forge.ChangeOpen {
-							change = c
-							break
-						}
-						if c.State == forge.ChangeMerged && change == nil {
-							change = c
-						}
-					}
-
-					if change != nil {
-						localSHA, err := h.Repository.PeelToCommit(ctx, b.Name)
-						if err != nil {
-							h.Log.Error("Failed to resolve local head SHA", "branch", b.Name, "error", err)
-							continue
-						}
-
-						b.Merged = change.State == forge.ChangeMerged
-						b.Change = change.ID
-						b.RemoteHeadSHA = change.HeadHash
-						b.LocalHeadSHA = localSHA
-					}
-
+			for i, result := range results {
+				b := trackedBranches[i]
+				if result.Err != nil {
+					h.Log.Error("Failed to list changes", "branch", b.Name, "error", result.Err)
+					continue
 				}
-			})
-		}
 
-		for _, b := range trackedBranches {
-			trackedch <- b
-		}
-		close(trackedch)
+				// Closed-unmerged changes cannot prove that this branch is
+				// safe to delete,
+				// so avoid resolving local head state unless a live or
+				// merged change could affect the sync decision.
+				var hasOpenOrMergedChange bool
+				for _, c := range result.Changes {
+					if c.State == forge.ChangeOpen || c.State == forge.ChangeMerged {
+						hasOpenOrMergedChange = true
+						break
+					}
+				}
+				if !hasOpenOrMergedChange {
+					continue
+				}
+
+				// A reused source branch name is ambiguous until we compare
+				// the forge's head hashes with the local branch head.
+				localSHA, err := h.Repository.PeelToCommit(ctx, b.Name)
+				if err != nil {
+					h.Log.Error("Failed to resolve local head SHA", "branch", b.Name, "error", err)
+					continue
+				}
+
+				// Track the best candidates in forge order,
+				// but let a proven-safe merged change outrank an open
+				// change for the same reused source branch name.
+				var (
+					openChange       *forge.MatchedBranchChange
+					mergedChange     *forge.MatchedBranchChange
+					safeMergedChange *forge.MatchedBranchChange
+				)
+			findSafeMergedChange:
+				for _, c := range result.Changes {
+					switch c.State {
+					case forge.ChangeOpen:
+						openChange = cmp.Or(openChange, c)
+					case forge.ChangeMerged:
+						mergedChange = cmp.Or(mergedChange, c)
+						if mergedChangeHeadCheck(ctx, h.Repository,
+							localSHA, c.HeadHash) != mergedChangeHeadMismatch {
+							safeMergedChange = c
+							break findSafeMergedChange
+						}
+					}
+				}
+
+				// Prefer an open change unless a merged change proves
+				// the local head was included,
+				// preserving the conservative behavior for ambiguous
+				// branch-name matches.
+				change := openChange
+				if safeMergedChange != nil {
+					change = safeMergedChange
+				} else if openChange == nil {
+					change = mergedChange
+				}
+
+				if change != nil {
+					b.Merged = change.State == forge.ChangeMerged
+					b.Change = change.ID
+					b.RemoteHeadSHA = change.HeadHash
+					b.LocalHeadSHA = localSHA
+				}
+			}
+		})
 	}
 	wg.Wait()
 
@@ -645,8 +733,37 @@ func (h *Handler) findForgeFinishedBranches(
 	}
 
 	finishedBranches := make(map[string]finishedBranch) // name -> branch
-	mergedDownstacks := make(map[string][]json.RawMessage)
+	mergedDownstacks := make(map[string][]jsontext.Value)
+
+	// Trunk reachability proves inclusion independently of change-request state.
+	// Classify these branches before applying forge-dependent deletion policy.
+	for _, b := range h.locallyMergedBranches(ctx, knownBranches, trunkHash) {
+		upstreamBranch := b.UpstreamBranch
+		if upstreamBranch == "" {
+			upstreamBranch = b.Name
+		}
+
+		var changeID forge.ChangeID
+		if b.Change != nil {
+			changeID = b.Change.ChangeID()
+		}
+
+		finishedBranches[b.Name] = finishedBranch{
+			Name:           b.Name,
+			Base:           b.Base,
+			UpstreamBranch: upstreamBranch,
+			ChangeID:       changeID,
+			Merged:         true,
+		}
+		mergedDownstacks[b.Name] = b.MergedDownstack
+	}
+
 	for _, branch := range submittedBranches {
+		if _, merged := finishedBranches[branch.Name]; merged {
+			h.Log.Infof("%v: %v was merged", branch.Name, branch.Change)
+			continue
+		}
+
 		switch branch.State {
 		case forge.ChangeOpen:
 			continue // not merged yet
@@ -701,6 +818,19 @@ func (h *Handler) findForgeFinishedBranches(
 	}
 
 	for _, branch := range trackedBranches {
+		if finished, merged := finishedBranches[branch.Name]; merged {
+			// Preserve a safely matched forge change for manually submitted PRs.
+			// Branch-name reuse alone does not establish a history association.
+			if branch.Merged && h.reportMergedChange(ctx, branch.Name, branch.Change,
+				branch.LocalHeadSHA, branch.RemoteHeadSHA) {
+				finished.ChangeID = branch.Change
+				finishedBranches[branch.Name] = finished
+			} else {
+				h.Log.Infof("%v: merged into trunk locally", branch.Name)
+			}
+			continue
+		}
+
 		if !branch.Merged {
 			continue
 		}
@@ -735,13 +865,16 @@ func (h *Handler) findForgeFinishedBranches(
 		}
 	}
 	sort.Strings(mergedBranchNames)
-	topoBranches := graph.Toposort(mergedBranchNames,
+	topoBranches, err := graph.Toposort(mergedBranchNames,
 		func(name string) (string, bool) {
 			base := finishedBranches[name].Base
 			// Ordering matters only if the base was also merged.
 			baseBranch, ok := finishedBranches[base]
 			return base, ok && baseBranch.Merged
 		})
+	if err != nil {
+		must.Failf("sort merged branches: %v", err)
+	}
 
 	// For each merged branch, bubble up merged downstacks
 	// to their direct upstacks.
@@ -754,26 +887,29 @@ func (h *Handler) findForgeFinishedBranches(
 		must.Bef(ok, "topologically sorted branch %q must be finished", name)
 		must.Bef(branch.Merged, "topologically sorted branch %q must be merged", name)
 
-		aboves, err := h.Service.ListAbove(ctx, name)
-		if err != nil {
-			h.Log.Warn("Unable to query merged branch's upstacks. Not propagating to merge history.",
-				"branch", name, "error", err)
-			continue
+		// A branch detected as locally merged may not have a ChangeID
+		// because it was never submitted to the forge.
+		// Skip its own contribution to the merge history,
+		// but still propagate any downstack history it carries.
+		var changeIDJSON jsontext.Value
+		if branch.ChangeID != nil {
+			marshaled, err := h.RemoteRepository.Forge().MarshalChangeID(branch.ChangeID)
+			if err != nil {
+				h.Log.Warn("Unable to serialize ChangeID for merged branch. Not propagating to merge history.",
+					"branch", name, "changeID", branch.ChangeID, "error", err)
+				continue
+			}
+			changeIDJSON = marshaled
 		}
 
-		changeIDJSON, err := h.RemoteRepository.Forge().MarshalChangeID(branch.ChangeID)
-		if err != nil {
-			h.Log.Warn("Unable to serialize ChangeID for merged branch. Not propagating to merge history.",
-				"branch", name, "changeID", branch.ChangeID, "error", err)
-			continue
-		}
-
-		for _, above := range aboves {
+		for above := range branchGraph.Aboves(name) {
 			// MergedDownstack for the upstack of the branch being merged
 			// is the branch's own merged downstack and the branch itself.
-			var newHistory []json.RawMessage
+			var newHistory []jsontext.Value
 			newHistory = append(newHistory, mergedDownstacks[name]...)
-			newHistory = append(newHistory, changeIDJSON)
+			if changeIDJSON != nil {
+				newHistory = append(newHistory, changeIDJSON)
+			}
 			// Combine with anything else already in the merged downstack.
 			// (Normally this will be empty.)
 			newHistory = append(newHistory, mergedDownstacks[above]...)
@@ -784,21 +920,28 @@ func (h *Handler) findForgeFinishedBranches(
 	// mergedDownstacks now contains the final merged downstack list
 	// for each of the upstack branches. Commit this information.
 	branchTx := h.Store.BeginBranchTx()
+	updates := make([]state.UpsertRequest, 0, len(mergedDownstacks))
 	for branch, history := range mergedDownstacks {
 		// Note: Even branches that are getting merged
 		// (and will be deleted) are getting their history updated.
 		// This way, if [feat1 -> feat2] are both merged,
 		// but feat2 fails to be deleted because of any reason,
 		// it still remembers feat1.
-		err := branchTx.Upsert(ctx, state.UpsertRequest{
+		updates = append(updates, state.UpsertRequest{
 			Name:            branch,
 			MergedDownstack: &history,
 		})
-		if err != nil {
-			h.Log.Warnf("%v: unable to update merged downstacks: %v", branch, err)
-		}
-		delete(mergedDownstacks, branch)
 	}
+	if err := branchTx.UpsertMany(ctx, updates); err != nil {
+		if rejected, ok := errors.AsType[*state.UpsertManyError](err); ok {
+			for i, index := range rejected.Indexes {
+				h.Log.Warnf("%v: unable to update merged downstacks: %v", updates[index].Name, rejected.Errors[i])
+			}
+		} else {
+			h.Log.Warn("Unable to update merged downstacks", "error", err)
+		}
+	}
+	clear(mergedDownstacks)
 	if err := branchTx.Commit(ctx, "sync: propagate merged branches"); err != nil {
 		h.Log.Warn("Unable to propagated merged downstacks", "error", err)
 	}
@@ -820,6 +963,43 @@ func (h *Handler) shouldDeleteMergedChange(
 	changeID forge.ChangeID,
 	localHead, remoteHead git.Hash,
 ) bool {
+	if h.reportMergedChange(ctx, branchName, changeID, localHead, remoteHead) {
+		return true
+	}
+
+	mismatchMsg := fmt.Sprintf("%v was merged but local SHA (%v) does not match remote SHA (%v)",
+		changeID, localHead.Short(), remoteHead.Short())
+
+	// If the remote head SHA doesn't contain the local head SHA,
+	// there may be local commits that haven't been pushed yet.
+	// Prompt for deletion if we have the option of prompting.
+	if !ui.Interactive(h.View) {
+		h.Log.Warnf("%v: %v. Skipping...", branchName, mismatchMsg)
+		return false
+	}
+
+	var shouldDelete bool
+	prompt := ui.NewConfirm().
+		WithTitle(fmt.Sprintf("Delete %v?", branchName)).
+		WithDescription(h.mergedChangeHeadMismatchDescription(
+			ctx, branchName, changeID, localHead, remoteHead)).
+		WithValue(&shouldDelete)
+	if err := ui.Run(h.View, prompt); err != nil {
+		h.Log.Warn("Skipping branch", "branch", branchName, "error", err)
+		return false
+	}
+
+	return shouldDelete
+}
+
+// reportMergedChange reports a forge merge if its head includes the local head.
+// A false result leaves deletion policy to the caller without prompting.
+func (h *Handler) reportMergedChange(
+	ctx context.Context,
+	branchName string,
+	changeID forge.ChangeID,
+	localHead, remoteHead git.Hash,
+) bool {
 	switch mergedChangeHeadCheck(ctx, h.Repository, localHead, remoteHead) {
 	case mergedChangeHeadExact:
 		h.Log.Infof("%v: %v was merged", branchName, changeID)
@@ -831,33 +1011,78 @@ func (h *Handler) shouldDeleteMergedChange(
 		return true
 
 	case mergedChangeHeadMismatch:
-		mismatchMsg := fmt.Sprintf("%v was merged but local SHA (%v) does not match remote SHA (%v)",
-			changeID, localHead.Short(), remoteHead.Short())
-
-		// If the remote head SHA doesn't contain the local head SHA,
-		// there may be local commits that haven't been pushed yet.
-		// Prompt for deletion if we have the option of prompting.
-		if !ui.Interactive(h.View) {
-			h.Log.Warnf("%v: %v. Skipping...", branchName, mismatchMsg)
-			return false
-		}
-
-		var shouldDelete bool
-		prompt := ui.NewConfirm().
-			WithTitle(fmt.Sprintf("Delete %v?", branchName)).
-			WithDescription(mismatchMsg).
-			WithValue(&shouldDelete)
-		if err := ui.Run(h.View, prompt); err != nil {
-			h.Log.Warn("Skipping branch", "branch", branchName, "error", err)
-			return false
-		}
-
-		return shouldDelete
+		return false
 
 	default:
 		must.Bef(false, "unknown merged change head status")
 		return false
 	}
+}
+
+func (h *Handler) mergedChangeHeadMismatchDescription(
+	ctx context.Context,
+	branchName string,
+	changeID forge.ChangeID,
+	localHead, remoteHead git.Hash,
+) string {
+	const localCommitsLimit = 5
+
+	var desc strings.Builder
+	fmt.Fprintf(&desc,
+		"%v was merged but local SHA (%v) does not match remote SHA (%v)",
+		changeID, localHead.Short(), remoteHead.Short())
+
+	err := func() error {
+		localCommits := git.CommitRangeFrom(localHead).ExcludeFrom(remoteHead)
+
+		count, err := h.Repository.CountCommits(ctx, localCommits)
+		if err != nil {
+			return fmt.Errorf("count unpushed commits: %w", err)
+		}
+
+		if count == 0 {
+			return nil // no unpushed commits
+		}
+
+		localCommitsLimited := localCommits.Limit(localCommitsLimit)
+		commits, err := sliceutil.CollectErr(h.Repository.ListCommitsDetails(ctx, localCommitsLimited))
+		if len(commits) == 0 {
+			// This is not really expected:
+			// if count returned non-zero,
+			// we should be able to list them.
+			// But if it happens, don't fail the whole prompt.
+			fmt.Fprintf(&desc, "\n%v has %d unpushed commit(s).", branchName, count)
+			if err != nil {
+				return fmt.Errorf("list unpushed commits: %w", err)
+			}
+			return nil
+		}
+
+		fmt.Fprintf(&desc, "\n%v has %d unpushed commit(s):", branchName, count)
+		for _, commit := range commits {
+			fmt.Fprintf(&desc, "\n  %v %v", commit.ShortHash, commit.Subject)
+		}
+		if remaining := count - len(commits); remaining > 0 {
+			fmt.Fprintf(&desc, "\n  ... and %d more", remaining)
+		}
+		return nil
+	}()
+	if err != nil {
+		h.Log.Warn("Unable to report unpushed commits", "error", err)
+	}
+
+	for commit, err := range h.Repository.ListCommitsDetails(ctx,
+		git.CommitRangeFrom(remoteHead).Limit(1)) {
+		if err != nil {
+			h.Log.Warn("Unable to list merged head", "error", err)
+			break
+		}
+		fmt.Fprintf(&desc, "\n%v was merged at:", changeID)
+		fmt.Fprintf(&desc, "\n  %v %v", commit.ShortHash, commit.Subject)
+		break
+	}
+
+	return desc.String()
 }
 
 type mergedChangeHeadStatus int
@@ -891,68 +1116,4 @@ func mergedChangeHeadCheck(
 	}
 
 	return mergedChangeHeadMismatch
-}
-
-type branchDeletion struct {
-	BranchName   string
-	UpstreamName string
-}
-
-func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchDeletion) error {
-	if len(branchesToDelete) == 0 {
-		return nil
-	}
-
-	allBranchNames := make([]string, len(branchesToDelete))
-	upstreamByName := make(map[string]string, len(branchesToDelete))
-	for i, b := range branchesToDelete {
-		allBranchNames[i] = b.BranchName
-		if b.UpstreamName != "" {
-			upstreamByName[b.BranchName] = b.UpstreamName
-		}
-	}
-
-	deleteBranchNames := make([]string, 0, len(branchesToDelete))
-	for branchInfo, err := range h.Repository.LocalBranches(ctx, &git.LocalBranchesOptions{Patterns: allBranchNames}) {
-		if err != nil {
-			h.Log.Warn("Failed to list branches", "error", err)
-			break
-		}
-
-		if branchInfo.Worktree != "" && branchInfo.Worktree != h.Worktree.RootDir() {
-			h.Log.Warnf("%v: checked out in another worktree (%v), skipping deletion.", branchInfo.Name, branchInfo.Worktree)
-			h.Log.Warnf("Run '%[1]s branch delete' or run '%[1]s repo sync' again from that worktree to delete it.", cli.Name())
-			continue
-		}
-
-		deleteBranchNames = append(deleteBranchNames, branchInfo.Name)
-	}
-
-	err := h.Delete.DeleteBranches(ctx, &branchdel.Request{
-		Branches: deleteBranchNames,
-		Force:    true,
-	})
-	if err != nil {
-		return fmt.Errorf("delete merged branches: %w", err)
-	}
-
-	// Also delete the remote tracking branch for this branch
-	// if it still exists.
-	for _, branchName := range deleteBranchNames {
-		upstreamName, ok := upstreamByName[branchName]
-		if !ok {
-			continue // no upstream branch, nothing to delete
-		}
-
-		remoteBranch := h.Remote + "/" + upstreamName
-		if _, err := h.Repository.PeelToCommit(ctx, remoteBranch); err == nil {
-			if err := h.Repository.DeleteBranch(ctx, remoteBranch, git.BranchDeleteOptions{
-				Remote: true,
-			}); err != nil {
-				h.Log.Warn("Unable to delete remote tracking branch", "branch", remoteBranch, "error", err)
-			}
-		}
-	}
-
-	return nil
 }

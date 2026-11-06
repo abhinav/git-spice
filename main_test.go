@@ -9,10 +9,12 @@ import (
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/browser/browsertest"
 	"go.abhg.dev/gs/internal/cli"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/mockedit"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/secret/secrettest"
+	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/termtest"
 	"go.abhg.dev/gs/internal/ui"
@@ -50,7 +52,12 @@ func TestMain(m *testing.M) {
 			// If ROBOT_INPUT is set, install a uitest.RobotView
 			// instead of the normal view. This will always be interactive.
 			if fixtureFile := os.Getenv("ROBOT_INPUT"); fixtureFile != "" {
-				_buildView = func(_ io.Reader, stderr io.Writer, _ bool) (ui.View, error) {
+				_buildView = func(
+					_ io.Reader,
+					stderr io.Writer,
+					_ bool,
+					_ *sigstack.Stack,
+				) (ui.View, error) {
 					return uitest.NewRobotView(
 						fixtureFile,
 						&uitest.RobotViewOptions{
@@ -61,10 +68,15 @@ func TestMain(m *testing.M) {
 				}
 			}
 
-			_extraForges = append(_extraForges, &shamhub.Forge{Log: logger})
+			_extraForges = append(_extraForges, func(log *silog.Logger) forge.Definition {
+				return &shamhub.Definition{Log: log}
+			})
 			main()
 		},
 		"mockedit": mockedit.Main,
+		"shamhub": func() {
+			os.Exit(shamhub.CLI())
+		},
 		// "true" is a no-op command that always succeeds.
 		"true": func() {},
 		// with-term file -- cmd [args ...]

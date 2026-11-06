@@ -1,7 +1,7 @@
 package ui_test
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"os"
 	"slices"
 	"strings"
@@ -87,7 +87,7 @@ func TestList(t *testing.T) {
 			assert.Equal(t, want, got)
 		},
 		&uitest.RunScriptsOptions{
-			Update: *ui.UpdateFixtures,
+			Update: ui.UpdateFixtures(),
 		},
 		"testdata/script/list",
 	)

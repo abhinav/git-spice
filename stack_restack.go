@@ -7,6 +7,7 @@ import (
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -88,5 +89,7 @@ func (cmd *stackRestackCmd) Run(
 		return err
 	}
 
-	return handler.RestackStack(ctx, cmd.Branch)
+	return handler.RestackStack(ctx, &restack.StackRequest{
+		Branch: cmd.Branch,
+	})
 }

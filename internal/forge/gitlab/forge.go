@@ -6,11 +6,11 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"net/url"
+	"net/http"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/forge/forgeurl"
 	"go.abhg.dev/gs/internal/gateway/gitlab"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -44,15 +44,67 @@ type Options struct {
 	RemoveSourceBranch bool `name:"gitlab-remove-source-branch" hidden:"" config:"forge.gitlab.removeSourceBranch" default:"true" help:"Remove source branch after merging a merge request"`
 }
 
-// Forge builds a GitLab Forge.
-type Forge struct {
+// Definition configures GitLab forge instances.
+type Definition struct {
+	changeMetadataCodec
+
+	// Options stores CLI and environment configuration.
 	Options Options
 
 	// Log specifies the logger to use.
 	Log *silog.Logger
 }
 
-var _ forge.Forge = (*Forge)(nil)
+var (
+	_ forge.Definition = (*Definition)(nil)
+	_ forge.Forge      = (*Forge)(nil)
+)
+
+// ID reports a unique key for this forge.
+func (*Definition) ID() string { return "gitlab" }
+
+// BaseURL reports the GitLab web URL used for host matching.
+func (d *Definition) BaseURL() string {
+	return cmp.Or(d.Options.URL, DefaultURL)
+}
+
+// CLIPlugin returns the CLI plugin for the GitLab Forge.
+func (d *Definition) CLIPlugin() any { return &d.Options }
+
+// New constructs a GitLab Forge from the configured options.
+func (d *Definition) New(remoteURL *giturl.URL, opts *forge.NewOptions) (forge.Forge, error) {
+	opts = cmp.Or(opts, &forge.NewOptions{})
+	httpClient := opts.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
+		return nil, err
+	}
+
+	return &Forge{
+		HTTPClient: httpClient,
+		Options:    d.Options,
+		baseURL:    d.BaseURL(),
+		Log:        d.Log,
+	}, nil
+}
+
+// Forge provides a GitLab forge instance.
+type Forge struct {
+	changeMetadataCodec
+
+	// HTTPClient sends API and authentication requests.
+	// If nil, the default HTTP client is used.
+	HTTPClient *http.Client
+
+	Options Options
+	baseURL string
+
+	// Log specifies the logger to use.
+	Log *silog.Logger
+}
 
 func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
@@ -67,6 +119,11 @@ func (f *Forge) URL() string {
 	return cmp.Or(f.Options.URL, DefaultURL)
 }
 
+// BaseURL reports the GitLab web URL used for host matching and links.
+func (f *Forge) BaseURL() string {
+	return f.baseURL
+}
+
 // APIURL returns the base API URL configured for the GitHub Forge
 // or the default URL if none is set.
 func (f *Forge) APIURL() string {
@@ -76,15 +133,12 @@ func (f *Forge) APIURL() string {
 // ID reports a unique key for this forge.
 func (*Forge) ID() string { return "gitlab" }
 
-// CLIPlugin returns the CLI plugin for the GitLab Forge.
-func (f *Forge) CLIPlugin() any { return &f.Options }
-
-// ParseRemoteURL parses the given  remote URL and returns a [RepositoryID]
-// for the GitLab repository it points to.
+// ParseRepositoryPath parses a GitLab repository path and returns a [RepositoryID]
+// for the GitLab repository it identifies.
 //
-// It returns [ErrUnsupportedURL] if the remote URL is not a valid GitLab URL.
-func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
-	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
+// It returns [ErrUnsupportedURL] if the path is not a valid GitLab path.
+func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
+	owner, repo, err := extractRepoInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
@@ -105,7 +159,7 @@ func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationTo
 		return nil, fmt.Errorf("build GitLab token source: %w", err)
 	}
 
-	glc, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{BaseURL: f.APIURL()})
+	glc, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{BaseURL: f.APIURL(), HTTPClient: f.HTTPClient})
 	if err != nil {
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}
@@ -144,30 +198,11 @@ func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	return fmt.Sprintf("%s/%s/%s/-/merge_requests/%v", rid.url, owner, repo, mrNum)
 }
 
-func extractRepoInfo(gitlabURL, remoteURL string) (owner, repo string, err error) {
-	baseURL, err := url.Parse(gitlabURL)
-	if err != nil {
-		return "", "", fmt.Errorf("bad base URL: %w", err)
-	}
-
-	u, err := forgeurl.Parse(remoteURL)
-	if err != nil {
-		return "", "", err
-	}
-
-	forgeurl.StripDefaultPort(baseURL, u)
-
-	if !forgeurl.MatchesHost(baseURL, u) {
-		return "", "", fmt.Errorf(
-			"%v is not a GitLab URL: expected host %q, got %q",
-			u, baseURL.Host, u.Host,
-		)
-	}
-
-	owner, repo, ok := forgeurl.ExtractPath(u.Path)
+func extractRepoInfo(path string) (owner, repo string, err error) {
+	owner, repo, ok := forge.SplitRepositoryPath(path)
 	if !ok {
 		return "", "", fmt.Errorf(
-			"path %q does not contain a GitLab repository", u.Path,
+			"path %q does not contain a GitLab repository", path,
 		)
 	}
 

@@ -18,7 +18,10 @@ type branchSquashCmd struct {
 func (*branchSquashCmd) Help() string {
 	return text.Dedent(`
 		Squash all commits in the current branch into a single commit
-		and restack upstack branches.
+		and restack upstack branches automatically.
+		Use --no-restack to disable that,
+		or the 'spice.branchSquash.restack' configuration option
+		to change the default.
 
 		An editor will open to edit the commit message of the squashed commit.
 		Use the -m/--message or -F/--file flag

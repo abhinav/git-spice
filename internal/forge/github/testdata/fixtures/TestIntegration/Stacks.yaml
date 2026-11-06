@@ -1,0 +1,357 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 141
+        host: api.github.com
+        body: '{"query":"query($owner:String!$repo:String!){repository(owner: $owner, name: $repo){id}}","variables":{"owner":"test-owner","repo":"test-repo"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"id":"R_kgDOMVd0xg"}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 245.813458ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 318
+        host: api.github.com
+        body: '{"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"stack-bottom-geOs2I70","title":"Native stack bottom stack-bottom-geOs2I70","body":"Native stack integration test"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABAvngeg","number":189,"url":"https://github.com/test-owner/test-repo/pull/189"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 2.566483666s
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 335
+        host: api.github.com
+        body: '{"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"stack-bottom-geOs2I70","headRefName":"stack-middle-VEtQX9yQ","title":"Native stack middle stack-middle-VEtQX9yQ","body":"Native stack integration test"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABAvnhBw","number":190,"url":"https://github.com/test-owner/test-repo/pull/190"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 2.6603865s
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        url: https://api.github.com/repos/test-owner/test-repo/stacks
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"id":313473,"number":174,"node_id":"PRS_kwDOMVd0xs4ABMiB","url":"https://api.github.com/repos/test-owner/test-repo/stacks/174","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T13:40:09Z","pull_requests":[{"number":170,"state":"closed","draft":false,"merged_at":"2026-08-12T13:40:15Z","head":{"ref":"divergent-stack-a-pO7wJfwF","sha":"cbba7e8dcfec641a88f530c0ccc7c8ce535aeeae"}},{"number":171,"state":"closed","draft":false,"merged_at":"2026-08-12T13:40:16Z","head":{"ref":"divergent-stack-b-9iT5TOLK","sha":"04f50ba691258ef2c136849b1ad0a9e45a6d964a"}},{"number":172,"state":"closed","draft":false,"merged_at":"2026-08-12T13:40:17Z","head":{"ref":"divergent-stack-c-iXygp4Wc","sha":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2"}}]},{"id":313446,"number":169,"node_id":"PRS_kwDOMVd0xs4ABMhm","url":"https://api.github.com/repos/test-owner/test-repo/stacks/169","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T13:39:16Z","pull_requests":[{"number":165,"state":"closed","draft":false,"merged_at":"2026-08-12T13:39:22Z","head":{"ref":"divergent-stack-a-ZwG2QqxN","sha":"bad73a03fe75bb84a66c18758f6a33e964fa5623"}},{"number":166,"state":"closed","draft":false,"merged_at":"2026-08-12T13:39:23Z","head":{"ref":"divergent-stack-b-VxbXF3H4","sha":"1835fe77d5079914c4050ce7f480688f4de316b0"}},{"number":167,"state":"closed","draft":false,"merged_at":"2026-08-12T13:39:23Z","head":{"ref":"divergent-stack-c-MAlCUfYp","sha":"09d733256cafd094d360cb399794138c766a1fef"}}]},{"id":302729,"number":160,"node_id":"PRS_kwDOMVd0xs4ABJ6J","url":"https://api.github.com/repos/test-owner/test-repo/stacks/160","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:18:42Z","pull_requests":[{"number":158,"state":"closed","draft":false,"merged_at":"2026-08-12T04:18:46Z","head":{"ref":"merge-range-bottom-bZiK8Eda","sha":"24777ef044c0a4bc712d1345bf9c0ed8b791197b"}},{"number":159,"state":"closed","draft":false,"merged_at":"2026-08-12T04:18:47Z","head":{"ref":"merge-range-top-hIOTMX1T","sha":"bb58f1370879a404c18b51898dcf2e08ea740727"}}]},{"id":302716,"number":157,"node_id":"PRS_kwDOMVd0xs4ABJ58","url":"https://api.github.com/repos/test-owner/test-repo/stacks/157","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:17:41Z","pull_requests":[{"number":155,"state":"closed","draft":false,"merged_at":"2026-08-12T04:17:45Z","head":{"ref":"merge-range-bottom-0tvkFGY5","sha":"5c1b178950b3b777fb9ebbede6d383db05d22467"}},{"number":156,"state":"closed","draft":false,"merged_at":"2026-08-12T04:17:45Z","head":{"ref":"merge-range-top-J25jZjmP","sha":"12a7613a380b2b58338e3860d2f328f7cdff03b0"}}]},{"id":302692,"number":154,"node_id":"PRS_kwDOMVd0xs4ABJ5k","url":"https://api.github.com/repos/test-owner/test-repo/stacks/154","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:15:44Z","pull_requests":[{"number":152,"state":"closed","draft":false,"merged_at":"2026-08-12T04:15:48Z","head":{"ref":"merge-range-bottom-K06vsatq","sha":"da0f854fa38886c46c4e140f6ccbbf97a0617fda"}},{"number":153,"state":"closed","draft":false,"merged_at":"2026-08-12T04:15:48Z","head":{"ref":"merge-range-top-UQMItpa9","sha":"408a67f73119d0e8394e8f82eeca982994ed20be"}}]},{"id":302586,"number":151,"node_id":"PRS_kwDOMVd0xs4ABJ36","url":"https://api.github.com/repos/test-owner/test-repo/stacks/151","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:06:06Z","pull_requests":[{"number":149,"state":"closed","draft":false,"merged_at":"2026-08-12T04:06:10Z","head":{"ref":"merge-range-bottom-j0y6OqrT","sha":"11e275c782e6d64ef1453ca2a4e1509f8ef1d10a"}},{"number":150,"state":"closed","draft":false,"merged_at":"2026-08-12T04:06:10Z","head":{"ref":"merge-range-top-G8bqRe1G","sha":"4cb95e7edc28838635b54236918b825a9130fcb8"}}]},{"id":302031,"number":147,"node_id":"PRS_kwDOMVd0xs4ABJvP","url":"https://api.github.com/repos/test-owner/test-repo/stacks/147","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T03:16:01Z","pull_requests":[{"number":145,"state":"closed","draft":false,"merged_at":null,"head":{"ref":"stack-bottom-dW4RtWmC","sha":"b5bec1eaccc7a5fb6d5ac747c67832c156bf51bd"}},{"number":146,"state":"closed","draft":false,"merged_at":null,"head":{"ref":"stack-middle-g3WXJxSb","sha":"f740dffc87f2ddf00824f1a09d2c24b70811b247"}},{"number":148,"state":"closed","draft":false,"merged_at":null,"head":{"ref":"stack-top-gampXI6B","sha":"711662448930f8a00d161c842fb0ee8d401c994e"}}]},{"id":167872,"number":144,"node_id":"PRS_kwDOMVd0xs4AAo_A","url":"https://api.github.com/repos/test-owner/test-repo/stacks/144","base":{"ref":"main"},"open":false,"created_at":"2026-08-05T12:16:14Z","pull_requests":[{"number":140,"state":"closed","draft":false,"merged_at":"2026-08-05T12:18:48Z","head":{"ref":"probe-autodelete-20260805-9c4e-a","sha":"920069c11160c4fe98a1b7e346be68ca51d59b73"}},{"number":141,"state":"closed","draft":false,"merged_at":"2026-08-05T12:18:49Z","head":{"ref":"probe-autodelete-20260805-9c4e-b","sha":"1007602d9b285fe3c2825da02aaf020c4f0ecdd7"}},{"number":142,"state":"closed","draft":false,"merged_at":"2026-08-05T12:18:50Z","head":{"ref":"probe-autodelete-20260805-9c4e-c","sha":"d0753d932262f7b817599a792e317f5339a5849d"}}]},{"id":167438,"number":139,"node_id":"PRS_kwDOMVd0xs4AAo4O","url":"https://api.github.com/repos/test-owner/test-repo/stacks/139","base":{"ref":"main"},"open":false,"created_at":"2026-08-05T11:55:14Z","pull_requests":[{"number":135,"state":"closed","draft":false,"merged_at":"2026-08-05T11:55:56Z","head":{"ref":"probe-divergence-20260805-7f3c-a","sha":"b70346dd87e33f1b0182223edee11f43a3a9db66"}},{"number":136,"state":"closed","draft":false,"merged_at":"2026-08-05T11:55:57Z","head":{"ref":"probe-divergence-20260805-7f3c-b","sha":"f5367dbc180b397617065a700e42df50f7646329"}},{"number":137,"state":"closed","draft":false,"merged_at":"2026-08-05T11:55:58Z","head":{"ref":"probe-divergence-20260805-7f3c-c","sha":"f820a52d526b01daba6bd583066d97dd03d33fcd"}}]},{"id":101032,"number":134,"node_id":"PRS_kwDOMVd0xs4AAYqo","url":"https://api.github.com/repos/test-owner/test-repo/stacks/134","base":{"ref":"main"},"open":false,"created_at":"2026-08-02T06:04:41Z","pull_requests":[{"number":132,"state":"closed","draft":false,"merged_at":"2026-08-02T06:05:07Z","head":{"ref":"gs-native-stack-probe-019fbe36-base","sha":"640dd83224aabd95f66ff91912b26f08f33edbbd"}},{"number":133,"state":"closed","draft":false,"merged_at":"2026-08-02T06:05:08Z","head":{"ref":"gs-native-stack-probe-019fbe36-top","sha":"67d6b814fe522ff1e3d850fcf6b1cdc02ac11b43"}}]}]'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 244.73425ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 395
+        host: api.github.com
+        body: '{"query":"query($owner:String!,$repo:String!,$pr0:Int!,$pr1:Int!){repository(owner: $owner, name: $repo){pr0:pullRequest(number: $pr0){id,state,headRefName,baseRefName,headRepository{owner{login},name},stack{id}},pr1:pullRequest(number: $pr1){id,state,headRefName,baseRefName,headRepository{owner{login},name},stack{id}}}}","variables":{"owner":"test-owner","pr0":189,"pr1":190,"repo":"test-repo"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"pr0":{"id":"PR_kwDOMVd0xs8AAAABAvngeg","state":"OPEN","headRefName":"stack-bottom-geOs2I70","baseRefName":"main","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":null},"pr1":{"id":"PR_kwDOMVd0xs8AAAABAvnhBw","state":"OPEN","headRefName":"stack-middle-VEtQX9yQ","baseRefName":"stack-bottom-geOs2I70","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":null}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 255.773625ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 28
+        host: api.github.com
+        body: |
+            {"pull_requests":[189,190]}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/repos/test-owner/test-repo/stacks
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 3360
+        body: '{"id":560648,"number":191,"node_id":"PRS_kwDOMVd0xs4ACI4I","url":"https://api.github.com/repos/test-owner/test-repo/stacks/191","base":{"ref":"main"},"open":true,"created_at":"2026-08-24T02:35:35Z","pull_requests":[{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/189","id":4344897658,"number":189,"head":{"ref":"stack-bottom-geOs2I70","sha":"d09aa9285a4200d6ec0a1454033a5302a8c15f94","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"main","sha":"64adfb2f4b54a69373ea283c80837cc220eb94ba","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs8AAAABAvngeg","title":"Native stack bottom stack-bottom-geOs2I70","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/189","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}},{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/190","id":4344897799,"number":190,"head":{"ref":"stack-middle-VEtQX9yQ","sha":"7b6309fa47e62cd6b9984a4e9dc1c1081756fd76","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"stack-bottom-geOs2I70","sha":"d09aa9285a4200d6ec0a1454033a5302a8c15f94","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs8AAAABAvnhBw","title":"Native stack middle stack-middle-VEtQX9yQ","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/190","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}}]}'
+        headers:
+            Content-Length:
+                - "3360"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 388.543542ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 326
+        host: api.github.com
+        body: '{"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"stack-middle-VEtQX9yQ","headRefName":"stack-top-ip5EzT1K","title":"Native stack top stack-top-ip5EzT1K","body":"Native stack integration test"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs8AAAABAvnicw","number":192,"url":"https://github.com/test-owner/test-repo/pull/192"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 1.257556375s
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        url: https://api.github.com/repos/test-owner/test-repo/stacks
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"id":560648,"number":191,"node_id":"PRS_kwDOMVd0xs4ACI4I","url":"https://api.github.com/repos/test-owner/test-repo/stacks/191","base":{"ref":"main"},"open":true,"created_at":"2026-08-24T02:35:35Z","pull_requests":[{"number":189,"state":"open","draft":false,"merged_at":null,"head":{"ref":"stack-bottom-geOs2I70","sha":"d09aa9285a4200d6ec0a1454033a5302a8c15f94"}},{"number":190,"state":"open","draft":false,"merged_at":null,"head":{"ref":"stack-middle-VEtQX9yQ","sha":"7b6309fa47e62cd6b9984a4e9dc1c1081756fd76"}}]},{"id":313473,"number":174,"node_id":"PRS_kwDOMVd0xs4ABMiB","url":"https://api.github.com/repos/test-owner/test-repo/stacks/174","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T13:40:09Z","pull_requests":[{"number":170,"state":"closed","draft":false,"merged_at":"2026-08-12T13:40:15Z","head":{"ref":"divergent-stack-a-pO7wJfwF","sha":"cbba7e8dcfec641a88f530c0ccc7c8ce535aeeae"}},{"number":171,"state":"closed","draft":false,"merged_at":"2026-08-12T13:40:16Z","head":{"ref":"divergent-stack-b-9iT5TOLK","sha":"04f50ba691258ef2c136849b1ad0a9e45a6d964a"}},{"number":172,"state":"closed","draft":false,"merged_at":"2026-08-12T13:40:17Z","head":{"ref":"divergent-stack-c-iXygp4Wc","sha":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2"}}]},{"id":313446,"number":169,"node_id":"PRS_kwDOMVd0xs4ABMhm","url":"https://api.github.com/repos/test-owner/test-repo/stacks/169","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T13:39:16Z","pull_requests":[{"number":165,"state":"closed","draft":false,"merged_at":"2026-08-12T13:39:22Z","head":{"ref":"divergent-stack-a-ZwG2QqxN","sha":"bad73a03fe75bb84a66c18758f6a33e964fa5623"}},{"number":166,"state":"closed","draft":false,"merged_at":"2026-08-12T13:39:23Z","head":{"ref":"divergent-stack-b-VxbXF3H4","sha":"1835fe77d5079914c4050ce7f480688f4de316b0"}},{"number":167,"state":"closed","draft":false,"merged_at":"2026-08-12T13:39:23Z","head":{"ref":"divergent-stack-c-MAlCUfYp","sha":"09d733256cafd094d360cb399794138c766a1fef"}}]},{"id":302729,"number":160,"node_id":"PRS_kwDOMVd0xs4ABJ6J","url":"https://api.github.com/repos/test-owner/test-repo/stacks/160","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:18:42Z","pull_requests":[{"number":158,"state":"closed","draft":false,"merged_at":"2026-08-12T04:18:46Z","head":{"ref":"merge-range-bottom-bZiK8Eda","sha":"24777ef044c0a4bc712d1345bf9c0ed8b791197b"}},{"number":159,"state":"closed","draft":false,"merged_at":"2026-08-12T04:18:47Z","head":{"ref":"merge-range-top-hIOTMX1T","sha":"bb58f1370879a404c18b51898dcf2e08ea740727"}}]},{"id":302716,"number":157,"node_id":"PRS_kwDOMVd0xs4ABJ58","url":"https://api.github.com/repos/test-owner/test-repo/stacks/157","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:17:41Z","pull_requests":[{"number":155,"state":"closed","draft":false,"merged_at":"2026-08-12T04:17:45Z","head":{"ref":"merge-range-bottom-0tvkFGY5","sha":"5c1b178950b3b777fb9ebbede6d383db05d22467"}},{"number":156,"state":"closed","draft":false,"merged_at":"2026-08-12T04:17:45Z","head":{"ref":"merge-range-top-J25jZjmP","sha":"12a7613a380b2b58338e3860d2f328f7cdff03b0"}}]},{"id":302692,"number":154,"node_id":"PRS_kwDOMVd0xs4ABJ5k","url":"https://api.github.com/repos/test-owner/test-repo/stacks/154","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:15:44Z","pull_requests":[{"number":152,"state":"closed","draft":false,"merged_at":"2026-08-12T04:15:48Z","head":{"ref":"merge-range-bottom-K06vsatq","sha":"da0f854fa38886c46c4e140f6ccbbf97a0617fda"}},{"number":153,"state":"closed","draft":false,"merged_at":"2026-08-12T04:15:48Z","head":{"ref":"merge-range-top-UQMItpa9","sha":"408a67f73119d0e8394e8f82eeca982994ed20be"}}]},{"id":302586,"number":151,"node_id":"PRS_kwDOMVd0xs4ABJ36","url":"https://api.github.com/repos/test-owner/test-repo/stacks/151","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:06:06Z","pull_requests":[{"number":149,"state":"closed","draft":false,"merged_at":"2026-08-12T04:06:10Z","head":{"ref":"merge-range-bottom-j0y6OqrT","sha":"11e275c782e6d64ef1453ca2a4e1509f8ef1d10a"}},{"number":150,"state":"closed","draft":false,"merged_at":"2026-08-12T04:06:10Z","head":{"ref":"merge-range-top-G8bqRe1G","sha":"4cb95e7edc28838635b54236918b825a9130fcb8"}}]},{"id":302031,"number":147,"node_id":"PRS_kwDOMVd0xs4ABJvP","url":"https://api.github.com/repos/test-owner/test-repo/stacks/147","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T03:16:01Z","pull_requests":[{"number":145,"state":"closed","draft":false,"merged_at":null,"head":{"ref":"stack-bottom-dW4RtWmC","sha":"b5bec1eaccc7a5fb6d5ac747c67832c156bf51bd"}},{"number":146,"state":"closed","draft":false,"merged_at":null,"head":{"ref":"stack-middle-g3WXJxSb","sha":"f740dffc87f2ddf00824f1a09d2c24b70811b247"}},{"number":148,"state":"closed","draft":false,"merged_at":null,"head":{"ref":"stack-top-gampXI6B","sha":"711662448930f8a00d161c842fb0ee8d401c994e"}}]},{"id":167872,"number":144,"node_id":"PRS_kwDOMVd0xs4AAo_A","url":"https://api.github.com/repos/test-owner/test-repo/stacks/144","base":{"ref":"main"},"open":false,"created_at":"2026-08-05T12:16:14Z","pull_requests":[{"number":140,"state":"closed","draft":false,"merged_at":"2026-08-05T12:18:48Z","head":{"ref":"probe-autodelete-20260805-9c4e-a","sha":"920069c11160c4fe98a1b7e346be68ca51d59b73"}},{"number":141,"state":"closed","draft":false,"merged_at":"2026-08-05T12:18:49Z","head":{"ref":"probe-autodelete-20260805-9c4e-b","sha":"1007602d9b285fe3c2825da02aaf020c4f0ecdd7"}},{"number":142,"state":"closed","draft":false,"merged_at":"2026-08-05T12:18:50Z","head":{"ref":"probe-autodelete-20260805-9c4e-c","sha":"d0753d932262f7b817599a792e317f5339a5849d"}}]},{"id":167438,"number":139,"node_id":"PRS_kwDOMVd0xs4AAo4O","url":"https://api.github.com/repos/test-owner/test-repo/stacks/139","base":{"ref":"main"},"open":false,"created_at":"2026-08-05T11:55:14Z","pull_requests":[{"number":135,"state":"closed","draft":false,"merged_at":"2026-08-05T11:55:56Z","head":{"ref":"probe-divergence-20260805-7f3c-a","sha":"b70346dd87e33f1b0182223edee11f43a3a9db66"}},{"number":136,"state":"closed","draft":false,"merged_at":"2026-08-05T11:55:57Z","head":{"ref":"probe-divergence-20260805-7f3c-b","sha":"f5367dbc180b397617065a700e42df50f7646329"}},{"number":137,"state":"closed","draft":false,"merged_at":"2026-08-05T11:55:58Z","head":{"ref":"probe-divergence-20260805-7f3c-c","sha":"f820a52d526b01daba6bd583066d97dd03d33fcd"}}]},{"id":101032,"number":134,"node_id":"PRS_kwDOMVd0xs4AAYqo","url":"https://api.github.com/repos/test-owner/test-repo/stacks/134","base":{"ref":"main"},"open":false,"created_at":"2026-08-02T06:04:41Z","pull_requests":[{"number":132,"state":"closed","draft":false,"merged_at":"2026-08-02T06:05:07Z","head":{"ref":"gs-native-stack-probe-019fbe36-base","sha":"640dd83224aabd95f66ff91912b26f08f33edbbd"}},{"number":133,"state":"closed","draft":false,"merged_at":"2026-08-02T06:05:08Z","head":{"ref":"gs-native-stack-probe-019fbe36-top","sha":"67d6b814fe522ff1e3d850fcf6b1cdc02ac11b43"}}]}]'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 233.355334ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 523
+        host: api.github.com
+        body: '{"query":"query($owner:String!,$repo:String!,$pr0:Int!,$pr1:Int!,$pr2:Int!){repository(owner: $owner, name: $repo){pr0:pullRequest(number: $pr0){id,state,headRefName,baseRefName,headRepository{owner{login},name},stack{id}},pr1:pullRequest(number: $pr1){id,state,headRefName,baseRefName,headRepository{owner{login},name},stack{id}},pr2:pullRequest(number: $pr2){id,state,headRefName,baseRefName,headRepository{owner{login},name},stack{id}}}}","variables":{"owner":"test-owner","pr0":189,"pr1":190,"pr2":192,"repo":"test-repo"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"repository":{"pr0":{"id":"PR_kwDOMVd0xs8AAAABAvngeg","state":"OPEN","headRefName":"stack-bottom-geOs2I70","baseRefName":"main","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ACI4I"}},"pr1":{"id":"PR_kwDOMVd0xs8AAAABAvnhBw","state":"OPEN","headRefName":"stack-middle-VEtQX9yQ","baseRefName":"stack-bottom-geOs2I70","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ACI4I"}},"pr2":{"id":"PR_kwDOMVd0xs8AAAABAvnicw","state":"OPEN","headRefName":"stack-top-ip5EzT1K","baseRefName":"stack-middle-VEtQX9yQ","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":null}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 284.43175ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 263
+        host: api.github.com
+        body: '{"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequestStack{id,number,entries(first: 100){nodes{pullRequest{number,state,mergeQueueEntry{id},autoMergeRequest{enabledAt}}},pageInfo{endCursor,hasNextPage}}}}}","variables":{"ids":["PRS_kwDOMVd0xs4ACI4I"]}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"nodes":[{"id":"PRS_kwDOMVd0xs4ACI4I","number":191,"entries":{"nodes":[{"pullRequest":{"number":189,"state":"OPEN","mergeQueueEntry":null,"autoMergeRequest":null}},{"pullRequest":{"number":190,"state":"OPEN","mergeQueueEntry":null,"autoMergeRequest":null}}],"pageInfo":{"endCursor":"Mg","hasNextPage":false}}}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 282.453ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 24
+        host: api.github.com
+        body: |
+            {"pull_requests":[192]}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/repos/test-owner/test-repo/stacks/191/add
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":560648,"number":191,"node_id":"PRS_kwDOMVd0xs4ACI4I","url":"https://api.github.com/repos/test-owner/test-repo/stacks/191","base":{"ref":"main"},"open":true,"created_at":"2026-08-24T02:35:35Z","pull_requests":[{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/189","id":4344897658,"number":189,"head":{"ref":"stack-bottom-geOs2I70","sha":"d09aa9285a4200d6ec0a1454033a5302a8c15f94","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"main","sha":"64adfb2f4b54a69373ea283c80837cc220eb94ba","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs8AAAABAvngeg","title":"Native stack bottom stack-bottom-geOs2I70","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/189","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}},{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/190","id":4344897799,"number":190,"head":{"ref":"stack-middle-VEtQX9yQ","sha":"7b6309fa47e62cd6b9984a4e9dc1c1081756fd76","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"stack-bottom-geOs2I70","sha":"d09aa9285a4200d6ec0a1454033a5302a8c15f94","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs8AAAABAvnhBw","title":"Native stack middle stack-middle-VEtQX9yQ","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/190","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}},{"url":"https://api.github.com/repos/test-owner/test-repo/pulls/192","id":4344898163,"number":192,"head":{"ref":"stack-top-ip5EzT1K","sha":"0e2fa2c652ecd15211e206798f0c6790c360ccdd","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"base":{"ref":"stack-middle-VEtQX9yQ","sha":"7b6309fa47e62cd6b9984a4e9dc1c1081756fd76","repo":{"id":827815110,"url":"https://api.github.com/repos/test-owner/test-repo","name":"test-repo"}},"node_id":"PR_kwDOMVd0xs8AAAABAvnicw","title":"Native stack top stack-top-ip5EzT1K","state":"open","merged_at":null,"draft":false,"html_url":"https://github.com/test-owner/test-repo/pull/192","user":{"login":"test-owner","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/test-owner","html_url":"https://github.com/test-owner","followers_url":"https://api.github.com/users/test-owner/followers","following_url":"https://api.github.com/users/test-owner/following{/other_user}","gists_url":"https://api.github.com/users/test-owner/gists{/gist_id}","starred_url":"https://api.github.com/users/test-owner/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/test-owner/subscriptions","organizations_url":"https://api.github.com/users/test-owner/orgs","repos_url":"https://api.github.com/users/test-owner/repos","events_url":"https://api.github.com/users/test-owner/events{/privacy}","received_events_url":"https://api.github.com/users/test-owner/received_events","type":"User","user_view_type":"public","site_admin":false}}]}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 318.7545ms
+    - id: 11
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        url: https://api.github.com/repos/test-owner/test-repo/stacks
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"id":560648,"number":191,"node_id":"PRS_kwDOMVd0xs4ACI4I","url":"https://api.github.com/repos/test-owner/test-repo/stacks/191","base":{"ref":"main"},"open":true,"created_at":"2026-08-24T02:35:35Z","pull_requests":[{"number":189,"state":"open","draft":false,"merged_at":null,"head":{"ref":"stack-bottom-geOs2I70","sha":"d09aa9285a4200d6ec0a1454033a5302a8c15f94"}},{"number":190,"state":"open","draft":false,"merged_at":null,"head":{"ref":"stack-middle-VEtQX9yQ","sha":"7b6309fa47e62cd6b9984a4e9dc1c1081756fd76"}},{"number":192,"state":"open","draft":false,"merged_at":null,"head":{"ref":"stack-top-ip5EzT1K","sha":"0e2fa2c652ecd15211e206798f0c6790c360ccdd"}}]},{"id":313473,"number":174,"node_id":"PRS_kwDOMVd0xs4ABMiB","url":"https://api.github.com/repos/test-owner/test-repo/stacks/174","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T13:40:09Z","pull_requests":[{"number":170,"state":"closed","draft":false,"merged_at":"2026-08-12T13:40:15Z","head":{"ref":"divergent-stack-a-pO7wJfwF","sha":"cbba7e8dcfec641a88f530c0ccc7c8ce535aeeae"}},{"number":171,"state":"closed","draft":false,"merged_at":"2026-08-12T13:40:16Z","head":{"ref":"divergent-stack-b-9iT5TOLK","sha":"04f50ba691258ef2c136849b1ad0a9e45a6d964a"}},{"number":172,"state":"closed","draft":false,"merged_at":"2026-08-12T13:40:17Z","head":{"ref":"divergent-stack-c-iXygp4Wc","sha":"5e059d8b881a4c03271f7bd6eff43496fb7bfba2"}}]},{"id":313446,"number":169,"node_id":"PRS_kwDOMVd0xs4ABMhm","url":"https://api.github.com/repos/test-owner/test-repo/stacks/169","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T13:39:16Z","pull_requests":[{"number":165,"state":"closed","draft":false,"merged_at":"2026-08-12T13:39:22Z","head":{"ref":"divergent-stack-a-ZwG2QqxN","sha":"bad73a03fe75bb84a66c18758f6a33e964fa5623"}},{"number":166,"state":"closed","draft":false,"merged_at":"2026-08-12T13:39:23Z","head":{"ref":"divergent-stack-b-VxbXF3H4","sha":"1835fe77d5079914c4050ce7f480688f4de316b0"}},{"number":167,"state":"closed","draft":false,"merged_at":"2026-08-12T13:39:23Z","head":{"ref":"divergent-stack-c-MAlCUfYp","sha":"09d733256cafd094d360cb399794138c766a1fef"}}]},{"id":302729,"number":160,"node_id":"PRS_kwDOMVd0xs4ABJ6J","url":"https://api.github.com/repos/test-owner/test-repo/stacks/160","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:18:42Z","pull_requests":[{"number":158,"state":"closed","draft":false,"merged_at":"2026-08-12T04:18:46Z","head":{"ref":"merge-range-bottom-bZiK8Eda","sha":"24777ef044c0a4bc712d1345bf9c0ed8b791197b"}},{"number":159,"state":"closed","draft":false,"merged_at":"2026-08-12T04:18:47Z","head":{"ref":"merge-range-top-hIOTMX1T","sha":"bb58f1370879a404c18b51898dcf2e08ea740727"}}]},{"id":302716,"number":157,"node_id":"PRS_kwDOMVd0xs4ABJ58","url":"https://api.github.com/repos/test-owner/test-repo/stacks/157","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:17:41Z","pull_requests":[{"number":155,"state":"closed","draft":false,"merged_at":"2026-08-12T04:17:45Z","head":{"ref":"merge-range-bottom-0tvkFGY5","sha":"5c1b178950b3b777fb9ebbede6d383db05d22467"}},{"number":156,"state":"closed","draft":false,"merged_at":"2026-08-12T04:17:45Z","head":{"ref":"merge-range-top-J25jZjmP","sha":"12a7613a380b2b58338e3860d2f328f7cdff03b0"}}]},{"id":302692,"number":154,"node_id":"PRS_kwDOMVd0xs4ABJ5k","url":"https://api.github.com/repos/test-owner/test-repo/stacks/154","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:15:44Z","pull_requests":[{"number":152,"state":"closed","draft":false,"merged_at":"2026-08-12T04:15:48Z","head":{"ref":"merge-range-bottom-K06vsatq","sha":"da0f854fa38886c46c4e140f6ccbbf97a0617fda"}},{"number":153,"state":"closed","draft":false,"merged_at":"2026-08-12T04:15:48Z","head":{"ref":"merge-range-top-UQMItpa9","sha":"408a67f73119d0e8394e8f82eeca982994ed20be"}}]},{"id":302586,"number":151,"node_id":"PRS_kwDOMVd0xs4ABJ36","url":"https://api.github.com/repos/test-owner/test-repo/stacks/151","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T04:06:06Z","pull_requests":[{"number":149,"state":"closed","draft":false,"merged_at":"2026-08-12T04:06:10Z","head":{"ref":"merge-range-bottom-j0y6OqrT","sha":"11e275c782e6d64ef1453ca2a4e1509f8ef1d10a"}},{"number":150,"state":"closed","draft":false,"merged_at":"2026-08-12T04:06:10Z","head":{"ref":"merge-range-top-G8bqRe1G","sha":"4cb95e7edc28838635b54236918b825a9130fcb8"}}]},{"id":302031,"number":147,"node_id":"PRS_kwDOMVd0xs4ABJvP","url":"https://api.github.com/repos/test-owner/test-repo/stacks/147","base":{"ref":"main"},"open":false,"created_at":"2026-08-12T03:16:01Z","pull_requests":[{"number":145,"state":"closed","draft":false,"merged_at":null,"head":{"ref":"stack-bottom-dW4RtWmC","sha":"b5bec1eaccc7a5fb6d5ac747c67832c156bf51bd"}},{"number":146,"state":"closed","draft":false,"merged_at":null,"head":{"ref":"stack-middle-g3WXJxSb","sha":"f740dffc87f2ddf00824f1a09d2c24b70811b247"}},{"number":148,"state":"closed","draft":false,"merged_at":null,"head":{"ref":"stack-top-gampXI6B","sha":"711662448930f8a00d161c842fb0ee8d401c994e"}}]},{"id":167872,"number":144,"node_id":"PRS_kwDOMVd0xs4AAo_A","url":"https://api.github.com/repos/test-owner/test-repo/stacks/144","base":{"ref":"main"},"open":false,"created_at":"2026-08-05T12:16:14Z","pull_requests":[{"number":140,"state":"closed","draft":false,"merged_at":"2026-08-05T12:18:48Z","head":{"ref":"probe-autodelete-20260805-9c4e-a","sha":"920069c11160c4fe98a1b7e346be68ca51d59b73"}},{"number":141,"state":"closed","draft":false,"merged_at":"2026-08-05T12:18:49Z","head":{"ref":"probe-autodelete-20260805-9c4e-b","sha":"1007602d9b285fe3c2825da02aaf020c4f0ecdd7"}},{"number":142,"state":"closed","draft":false,"merged_at":"2026-08-05T12:18:50Z","head":{"ref":"probe-autodelete-20260805-9c4e-c","sha":"d0753d932262f7b817599a792e317f5339a5849d"}}]},{"id":167438,"number":139,"node_id":"PRS_kwDOMVd0xs4AAo4O","url":"https://api.github.com/repos/test-owner/test-repo/stacks/139","base":{"ref":"main"},"open":false,"created_at":"2026-08-05T11:55:14Z","pull_requests":[{"number":135,"state":"closed","draft":false,"merged_at":"2026-08-05T11:55:56Z","head":{"ref":"probe-divergence-20260805-7f3c-a","sha":"b70346dd87e33f1b0182223edee11f43a3a9db66"}},{"number":136,"state":"closed","draft":false,"merged_at":"2026-08-05T11:55:57Z","head":{"ref":"probe-divergence-20260805-7f3c-b","sha":"f5367dbc180b397617065a700e42df50f7646329"}},{"number":137,"state":"closed","draft":false,"merged_at":"2026-08-05T11:55:58Z","head":{"ref":"probe-divergence-20260805-7f3c-c","sha":"f820a52d526b01daba6bd583066d97dd03d33fcd"}}]},{"id":101032,"number":134,"node_id":"PRS_kwDOMVd0xs4AAYqo","url":"https://api.github.com/repos/test-owner/test-repo/stacks/134","base":{"ref":"main"},"open":false,"created_at":"2026-08-02T06:04:41Z","pull_requests":[{"number":132,"state":"closed","draft":false,"merged_at":"2026-08-02T06:05:07Z","head":{"ref":"gs-native-stack-probe-019fbe36-base","sha":"640dd83224aabd95f66ff91912b26f08f33edbbd"}},{"number":133,"state":"closed","draft":false,"merged_at":"2026-08-02T06:05:08Z","head":{"ref":"gs-native-stack-probe-019fbe36-top","sha":"67d6b814fe522ff1e3d850fcf6b1cdc02ac11b43"}}]}]'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 179.437667ms
+    - id: 12
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 523
+        host: api.github.com
+        body: '{"query":"query($owner:String!,$repo:String!,$pr0:Int!,$pr1:Int!,$pr2:Int!){repository(owner: $owner, name: $repo){pr0:pullRequest(number: $pr0){id,state,headRefName,baseRefName,headRepository{owner{login},name},stack{id}},pr1:pullRequest(number: $pr1){id,state,headRefName,baseRefName,headRepository{owner{login},name},stack{id}},pr2:pullRequest(number: $pr2){id,state,headRefName,baseRefName,headRepository{owner{login},name},stack{id}}}}","variables":{"owner":"test-owner","pr0":189,"pr1":190,"pr2":192,"repo":"test-repo"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"pr0":{"id":"PR_kwDOMVd0xs8AAAABAvngeg","state":"OPEN","headRefName":"stack-bottom-geOs2I70","baseRefName":"main","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ACI4I"}},"pr1":{"id":"PR_kwDOMVd0xs8AAAABAvnhBw","state":"OPEN","headRefName":"stack-middle-VEtQX9yQ","baseRefName":"stack-bottom-geOs2I70","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ACI4I"}},"pr2":{"id":"PR_kwDOMVd0xs8AAAABAvnicw","state":"OPEN","headRefName":"stack-top-ip5EzT1K","baseRefName":"stack-middle-VEtQX9yQ","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"stack":{"id":"PRS_kwDOMVd0xs4ACI4I"}}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 230.991167ms
+    - id: 13
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 263
+        host: api.github.com
+        body: '{"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequestStack{id,number,entries(first: 100){nodes{pullRequest{number,state,mergeQueueEntry{id},autoMergeRequest{enabledAt}}},pageInfo{endCursor,hasNextPage}}}}}","variables":{"ids":["PRS_kwDOMVd0xs4ACI4I"]}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"nodes":[{"id":"PRS_kwDOMVd0xs4ACI4I","number":191,"entries":{"nodes":[{"pullRequest":{"number":189,"state":"OPEN","mergeQueueEntry":null,"autoMergeRequest":null}},{"pullRequest":{"number":190,"state":"OPEN","mergeQueueEntry":null,"autoMergeRequest":null}},{"pullRequest":{"number":192,"state":"OPEN","mergeQueueEntry":null,"autoMergeRequest":null}}],"pageInfo":{"endCursor":"Mw","hasNextPage":false}}}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 288.943458ms

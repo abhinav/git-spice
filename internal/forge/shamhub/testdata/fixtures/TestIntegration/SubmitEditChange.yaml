@@ -7,48 +7,48 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 79
-        host: 127.0.0.1:58759
-        body: '{"subject":"Testing lOFITYc8","body":"Test PR","base":"main","head":"lOFITYc8"}'
-        url: http://127.0.0.1:58759/abhinav/test-repo/changes
+        host: 127.0.0.1:53776
+        body: '{"subject":"Testing cfSEkgZG","body":"Test PR","base":"main","head":"cfSEkgZG"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 80
-        body: |
+        content_length: 79
+        body: |-
             {
-              "number": 2,
-              "url": "http://127.0.0.1:58760/abhinav/test-repo/change/2"
+              "number": 3,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/3"
             }
         headers:
             Content-Length:
-                - "80"
+                - "79"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 25.637625ms
+        duration: 34.632708ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:58759
-        url: http://127.0.0.1:58759/abhinav/test-repo/change/2
+        host: 127.0.0.1:53776
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/3
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 498
-        body: |
+        content_length: 497
+        body: |-
             {
-              "number": 2,
-              "html_url": "http://127.0.0.1:58760/abhinav/test-repo/change/2",
+              "number": 3,
+              "html_url": "http://127.0.0.1:53777/abhinav/test-repo/change/3",
               "state": "open",
-              "title": "Testing lOFITYc8",
+              "title": "Testing cfSEkgZG",
               "body": "Test PR",
               "base": {
                 "repository": {
@@ -56,51 +56,51 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "a5d51b179b81f5b03c6ee4647ea57c81969f653f"
+                "sha": "d611aeb178efe6b2ac67352f039c293651415ed5"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "lOFITYc8",
-                "sha": "083b339f7b7815b9673f1ae6e5b0e7b0052d8674"
+                "ref": "cfSEkgZG",
+                "sha": "b33773e0bdbff9515a54400ef1a6acfac4404fe0"
               }
             }
         headers:
             Content-Length:
-                - "498"
+                - "497"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 17.6775ms
+        duration: 48.249ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:58759
+        host: 127.0.0.1:53776
         form:
             limit:
                 - "10"
             state:
                 - all
-        url: http://127.0.0.1:58759/abhinav/test-repo/changes/by-branch/lOFITYc8?limit=10&state=all
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes/by-branch/cfSEkgZG?limit=10&state=all
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 548
-        body: |
+        content_length: 547
+        body: |-
             [
               {
-                "number": 2,
-                "html_url": "http://127.0.0.1:58760/abhinav/test-repo/change/2",
+                "number": 3,
+                "html_url": "http://127.0.0.1:53777/abhinav/test-repo/change/3",
                 "state": "open",
-                "title": "Testing lOFITYc8",
+                "title": "Testing cfSEkgZG",
                 "body": "Test PR",
                 "base": {
                   "repository": {
@@ -108,23 +108,104 @@ interactions:
                     "name": "test-repo"
                   },
                   "ref": "main",
-                  "sha": "a5d51b179b81f5b03c6ee4647ea57c81969f653f"
+                  "sha": "d611aeb178efe6b2ac67352f039c293651415ed5"
                 },
                 "head": {
                   "repository": {
                     "owner": "abhinav",
                     "name": "test-repo"
                   },
-                  "ref": "lOFITYc8",
-                  "sha": "083b339f7b7815b9673f1ae6e5b0e7b0052d8674"
+                  "ref": "cfSEkgZG",
+                  "sha": "b33773e0bdbff9515a54400ef1a6acfac4404fe0"
                 }
               }
             ]
         headers:
             Content-Length:
-                - "548"
+                - "547"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 19.458959ms
+        duration: 43.560125ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:53776
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes/by-branch/does-not-exist?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 2
+        body: '[]'
+        headers:
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 1.419958ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:53776
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes/by-branch/cfSEkgZG?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 547
+        body: |-
+            [
+              {
+                "number": 3,
+                "html_url": "http://127.0.0.1:53777/abhinav/test-repo/change/3",
+                "state": "open",
+                "title": "Testing cfSEkgZG",
+                "body": "Test PR",
+                "base": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "main",
+                  "sha": "d611aeb178efe6b2ac67352f039c293651415ed5"
+                },
+                "head": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "cfSEkgZG",
+                  "sha": "b33773e0bdbff9515a54400ef1a6acfac4404fe0"
+                }
+              }
+            ]
+        headers:
+            Content-Length:
+                - "547"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 28.461834ms

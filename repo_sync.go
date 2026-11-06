@@ -19,6 +19,12 @@ func (*repoSyncCmd) Help() string {
 		The repository must have a remote associated for syncing.
 		A prompt will ask for one if the repository
 		was not initialized with a remote.
+
+		Branches above merged and deleted branches
+		are retargeted to the trunk branch.
+		Run with --restack to also restack them and their upstacks.
+		Run with --restack=aboves to only restack direct upstacks
+		of deleted branches, leaving higher branches in place.
 	`)
 }
 

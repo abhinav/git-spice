@@ -35,6 +35,27 @@ on:
         required: false
         default: '1'
         type: string
+      ppa_omit_orig:
+        description: >-
+          Omit the upstream orig tarball from every PPA upload.
+          Enable this when retrying an upstream version already in the PPA.
+        required: false
+        default: false
+        type: boolean
+      ppa_series:
+        description: >-
+          Comma-separated Ubuntu series for PPA publishing.
+          Set this to resume a partial PPA upload.
+        required: false
+        default: noble,resolute
+        type: string
+      ppa_source_date_epoch:
+        description: >-
+          Unix timestamp for reproducible PPA source package outputs.
+          Leave unset to use the release ref commit timestamp.
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -44,6 +65,9 @@ jobs:
     name: Publish Release
     runs-on: ubuntu-latest
     environment: release
+    permissions:
+      contents: write
+      id-token: write # for Cosigning
 
     steps:
     - uses: actions/checkout@v6
@@ -148,7 +172,7 @@ jobs:
         fi
 
     - name: Update Homebrew Formula
-      uses: dawidd6/action-homebrew-bump-formula@v7
+      uses: dawidd6/action-homebrew-bump-formula@b12d2bc99c46444125e606142f28200ec71a1214 # v10
       if: inputs.skip_homebrew == false
       with:
         token: ${{ secrets.ROBOT_PAT }}
@@ -196,7 +220,7 @@ jobs:
     - name: Install Debian upload tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y devscripts dput
+        sudo apt-get install -y debhelper devscripts distro-info dput
 
     - name: Import Launchpad signing key
       run: |
@@ -213,15 +237,27 @@ jobs:
 
     - name: Publish source packages
       run: |
-        go run ./tools/ci/launchpad-ppa \
-          -version "v${VERSION}" \
-          -ref "${REF}" \
-          -series noble,plucky,questing,resolute \
-          -ppa-revision "${PPA_REVISION}" \
-          -sign \
+        args=(
+          -version "v${VERSION}"
+          -ref "${REF}"
+          -series "${PPA_SERIES}"
+          -ppa-revision "${PPA_REVISION}"
+          -sign
           -dput
+        )
+        if [[ "$PPA_OMIT_ORIG" == "true" ]]; then
+          args+=(-omit-orig)
+        fi
+        if [[ -n "$PPA_SOURCE_DATE_EPOCH" ]]; then
+          args+=(-source-date-epoch "$PPA_SOURCE_DATE_EPOCH")
+        fi
+
+        go run ./tools/ci/launchpad-ppa "${args[@]}"
       env:
         LAUNCHPAD_GPG_KEY_ID: ${{ secrets.LAUNCHPAD_GPG_KEY_ID }}
         LAUNCHPAD_GPG_PASSPHRASE: ${{ secrets.LAUNCHPAD_GPG_PASSPHRASE }}
+        PPA_OMIT_ORIG: ${{ inputs.ppa_omit_orig }}
         PPA_REVISION: ${{ inputs.ppa_revision }}
+        PPA_SERIES: ${{ inputs.ppa_series }}
+        PPA_SOURCE_DATE_EPOCH: ${{ inputs.ppa_source_date_epoch }}
         REF: ${{ inputs.ref }}

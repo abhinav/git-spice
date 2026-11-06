@@ -139,7 +139,7 @@ func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Has
 
 	waitErr := cmd.Wait() // will use below
 	if waitErr != nil {
-		waitErr = fmt.Errorf("git merge-tree: %w", err)
+		waitErr = fmt.Errorf("git merge-tree: %w", waitErr)
 	}
 
 	o := outputs[0]
