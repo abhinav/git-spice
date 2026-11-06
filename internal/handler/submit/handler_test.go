@@ -294,12 +294,16 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 	)
 
 	draft := true
+	pushErr := errors.New("push rejected")
+	editErr := errors.New("edit rejected")
 	tests := []struct {
 		name       string
 		change     *forge.FindChangeItem
 		opts       *Options
 		wantEdit   forge.EditChangeOptions
 		wantPushed bool
+		pushErr    error
+		editErr    error
 	}{
 		{
 			name: "UnchangedBase",
@@ -358,6 +362,28 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 				Base: "main",
 			},
 		},
+		{
+			name: "PushFailure",
+			change: &forge.FindChangeItem{
+				ID: submitFakeChangeID("pr-1"), State: forge.ChangeOpen,
+				Subject: "Feature", URL: "https://example.com/pr-1",
+				HeadHash: "old-head", BaseName: "main",
+			},
+			opts:       &Options{},
+			wantPushed: true,
+			pushErr:    pushErr,
+		},
+		{
+			name: "EditFailureAfterPush",
+			change: &forge.FindChangeItem{
+				ID: submitFakeChangeID("pr-1"), State: forge.ChangeOpen,
+				Subject: "Feature", URL: "https://example.com/pr-1",
+				HeadHash: "old-head", BaseName: "main",
+			},
+			opts:       &Options{},
+			wantPushed: true,
+			editErr:    editErr,
+		},
 	}
 
 	for _, tt := range tests {
@@ -375,9 +401,11 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 			mockRemoteRepo.EXPECT().
 				FindChangeByID(gomock.Any(), submitFakeChangeID("pr-1")).
 				Return(tt.change, nil)
-			mockRemoteRepo.EXPECT().
-				EditChange(gomock.Any(), submitFakeChangeID("pr-1"), tt.wantEdit).
-				Return(nil)
+			if tt.pushErr == nil {
+				mockRemoteRepo.EXPECT().
+					EditChange(gomock.Any(), submitFakeChangeID("pr-1"), tt.wantEdit).
+					Return(tt.editErr)
+			}
 
 			var pushed bool
 			handler := &Handler{
@@ -403,7 +431,7 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 				Worktree: &submitTestGitWorktree{
 					push: func(context.Context, git.PushOptions) error {
 						pushed = true
-						return nil
+						return tt.pushErr
 					},
 				},
 				Store:   mockStore,
@@ -434,8 +462,17 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 			status, err := handler.submitBranch(
 				t.Context(), graph, "feature", &submitOptions{Options: tt.opts},
 			)
-			require.NoError(t, err)
-			assert.True(t, status.Submitted)
+			wantErr := tt.pushErr
+			if wantErr == nil {
+				wantErr = tt.editErr
+			}
+			if wantErr != nil {
+				require.ErrorIs(t, err, wantErr)
+				assert.Equal(t, changeIncomplete, status.change)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, changeComplete, status.change)
+			}
 			assert.Equal(t, tt.wantPushed, pushed)
 		})
 	}
@@ -546,7 +583,7 @@ func TestHandler_submitBranch_importsChangeWithAbbreviatedHead(t *testing.T) {
 		Options: &Options{DryRun: true, Publish: true},
 	})
 	require.NoError(t, err)
-	assert.True(t, status.Submitted)
+	assert.Equal(t, changeComplete, status.change)
 
 	branch, err := store.LookupBranch(t.Context(), "feature")
 	require.NoError(t, err)

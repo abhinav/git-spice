@@ -9,11 +9,8 @@ import (
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
-// _preparedDir is the directory holding information about branches
-// that are ready to submitted but not yet submitted.
-//
-// This is used by 'branch submit' command to recover
-// change metadata in case of failure in submitting.
+// _preparedDir holds saved change titles and bodies for submission retries.
+// These records recover user input; they do not record publication progress.
 const _preparedDir = "prepared"
 
 type preparedBranchState struct {
@@ -25,7 +22,10 @@ func (s *Store) preparedBranchJSON(name string) string {
 	return path.Join(_preparedDir, name)
 }
 
-// PreparedBranch is a branch that is ready to be submitted.
+// PreparedBranch holds the title and body entered for a branch submission.
+// Its presence does not establish whether a push or remote creation succeeded.
+// Submission saves it before pushing and clears it after remote creation,
+// independently of recording the created change's local association.
 type PreparedBranch struct {
 	// Name is the name of the branch.
 	Name string
@@ -37,10 +37,8 @@ type PreparedBranch struct {
 	Body string
 }
 
-// SavePreparedBranch saves information about a branch that is ready for
-// submission.
-// This information may be retrieved later with TakePreparedBranch
-// to recover change metadata in case of failure in submitting.
+// SavePreparedBranch saves submission input for recovery with LoadPreparedBranch
+// if pushing or creating the change fails.
 // If the branch is already saved, it will be overwritten.
 // Use ClearPreparedBranch to remove the saved information.
 func (s *Store) SavePreparedBranch(ctx context.Context, b *PreparedBranch) error {
