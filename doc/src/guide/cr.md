@@ -178,7 +178,6 @@ you may also specify title and body directly.
     $$gs branch submit$$, or repeat `--message-file BRANCH:PATH` for
     $$gs stack submit$$, $$gs upstack submit$$, and $$gs downstack submit$$.
     The first line is the title; the rest is the body.
-    A title-only file supplies an empty body.
     <!-- gs:version unreleased -->
 
     Set `--draft` or `--no-draft` to skip the draft-status prompt.

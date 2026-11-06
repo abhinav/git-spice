@@ -47,10 +47,10 @@ only if there are multiple CRs in the stack.
 type branchSubmitCmd struct {
 	submitOptions
 
-	Title       string              `xor:"title-source" help:"Title of the change request" placeholder:"TITLE"`
-	Body        string              `xor:"body-source" help:"Body of the change request" placeholder:"BODY"`
-	MessageFile *submit.MessageFile `name:"message-file" placeholder:"PATH" xor:"title-source,body-source" help:"Read a new CR's message from PATH. First line is the title; remaining text is the body."`
-	Branch      string              `placeholder:"NAME" help:"Branch to submit" predictor:"trackedBranches"`
+	Title       string             `xor:"title-source" help:"Title of the change request" placeholder:"TITLE"`
+	Body        string             `xor:"body-source" help:"Body of the change request" placeholder:"BODY"`
+	MessageFile submit.MessageFile `name:"message-file" placeholder:"PATH" xor:"title-source,body-source" help:"Read a new CR's message from PATH. First line is the title; remaining text is the body."`
+	Branch      string             `placeholder:"NAME" help:"Branch to submit" predictor:"trackedBranches"`
 }
 
 func (*branchSubmitCmd) Help() string {

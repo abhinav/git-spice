@@ -308,7 +308,7 @@ type Request struct {
 
 	// MessageFile supplies the complete message for a new change request.
 	// When set, Title and Body are not used.
-	MessageFile *MessageFile // optional
+	MessageFile MessageFile // optional
 
 	// Options are the options for the submit operation.
 	Options *Options // optional
@@ -389,7 +389,7 @@ type submitOptions struct {
 	*Options
 
 	Title, Body  string
-	MessageFile  *MessageFile
+	MessageFile  MessageFile
 	upstreamBase string
 	stackUpdates *submitStackUpdates
 }
@@ -1093,10 +1093,10 @@ func (h *Handler) prepareBranch(
 	pushRepository forge.RepositoryID,
 	opts *submitOptions,
 ) (*preparedBranch, error) {
-	if opts.MessageFile != nil {
+	if opts.MessageFile != "" {
 		title, body, err := opts.MessageFile.read()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read message file %q: %w", opts.MessageFile, err)
 		}
 		opts.Title = title
 		opts.Body = body
@@ -1188,7 +1188,7 @@ func (h *Handler) prepareBranch(
 		fields = append(fields, form.titleField(&opts.Title, msgs))
 	}
 
-	if opts.Body == "" && opts.MessageFile == nil {
+	if opts.Body == "" && opts.MessageFile == "" {
 		opts.Body = defaultBody.String()
 		if opts.Fill {
 			// If the user selected --fill,

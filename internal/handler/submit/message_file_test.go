@@ -25,9 +25,26 @@ func TestMessageFiles_Decode(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, MessageFiles{
-		"feature=one": {Path: first},
-		"feature-two": {Path: second},
+		"feature=one": MessageFile(first),
+		"feature-two": MessageFile(second),
 	}, opts.MessageFiles)
+}
+
+func TestMessageFiles_Decode_duplicateBranch(t *testing.T) {
+	dir := t.TempDir()
+	first := filepath.Join(dir, "first.md")
+	second := filepath.Join(dir, "second.md")
+	require.NoError(t, os.WriteFile(first, nil, 0o600))
+	require.NoError(t, os.WriteFile(second, nil, 0o600))
+	var opts BatchOptions
+	parser, err := kong.New(&opts)
+	require.NoError(t, err)
+	_, err = parser.Parse([]string{
+		"--message-file", "feature:" + first,
+		"--message-file", "feature:" + second,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `message file already supplied for branch "feature"`)
 }
 
 func TestMessageFiles_Decode_invalid(t *testing.T) {
@@ -55,13 +72,13 @@ func TestMessageFile_Decode(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "message.md")
 	require.NoError(t, os.WriteFile(path, nil, 0o600))
 	var cli struct {
-		File *MessageFile `name:"message-file"`
+		File MessageFile `name:"message-file"`
 	}
 	parser, err := kong.New(&cli)
 	require.NoError(t, err)
 	_, err = parser.Parse([]string{"--message-file", path})
 	require.NoError(t, err)
-	assert.Equal(t, path, cli.File.Path)
+	assert.Equal(t, path, string(cli.File))
 }
 
 func TestMessageFile_Decode_invalid(t *testing.T) {
@@ -72,13 +89,13 @@ func TestMessageFile_Decode_invalid(t *testing.T) {
 		want string
 	}{
 		{name: "Empty", want: "path must be supplied"},
-		{name: "Missing", path: filepath.Join(dir, "missing"), want: "stat message file"},
+		{name: "Missing", path: filepath.Join(dir, "missing"), want: "missing"},
 		{name: "Directory", path: dir, want: "must be a regular file"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var cli struct {
-				File *MessageFile `name:"message-file"`
+				File MessageFile `name:"message-file"`
 			}
 			parser, err := kong.New(&cli)
 			require.NoError(t, err)
@@ -105,7 +122,7 @@ func TestMessageFile_read(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "message.md")
 			require.NoError(t, os.WriteFile(path, []byte(tt.contents), 0o600))
-			title, body, err := (&MessageFile{Path: path}).read()
+			title, body, err := MessageFile(path).read()
 			require.NoError(t, err)
 			assert.Equal(t, tt.title, title)
 			assert.Equal(t, tt.body, body)
@@ -115,7 +132,7 @@ func TestMessageFile_read(t *testing.T) {
 
 func TestMessageFile_read_invalid(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "message.md")
-	file := &MessageFile{Path: path}
+	file := MessageFile(path)
 	_, _, err := file.read()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), path)
@@ -123,6 +140,6 @@ func TestMessageFile_read_invalid(t *testing.T) {
 		require.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
 		_, _, err = file.read()
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "title")
+		assert.EqualError(t, err, "must start with a non-empty title")
 	}
 }

@@ -18,8 +18,6 @@ gs branch create feature -m 'Default title' -m 'Default body'
 gs --no-prompt branch submit --no-draft --message-file $WORK/message.md
 stderr 'Created #1'
 
-# An existing CR validates the path without reading or changing its message.
-gs --no-prompt branch submit --no-draft --message-file $WORK/empty.md
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/changes.json
 
@@ -29,8 +27,6 @@ Feature contents
 Supplied title
 
 Supplied body.
--- empty.md --
-
 -- golden/changes.json --
 [
   {

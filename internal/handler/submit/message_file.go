@@ -10,7 +10,7 @@ import (
 )
 
 // MessageFiles maps branch names to files containing their new CR messages.
-type MessageFiles map[string]*MessageFile // branch -> MessageFile
+type MessageFiles map[string]MessageFile // branch -> MessageFile
 
 // Decode parses a BRANCH:PATH pair and adds it to the map.
 func (files *MessageFiles) Decode(ctx *kong.DecodeContext) error {
@@ -27,9 +27,12 @@ func (files *MessageFiles) Decode(ctx *kong.DecodeContext) error {
 	if branch == "" {
 		return errors.New("branch name must be supplied")
 	}
-	file := new(MessageFile)
+	if _, exists := (*files)[branch]; exists {
+		return fmt.Errorf("message file already supplied for branch %q", branch)
+	}
+	var file MessageFile
 	if err := file.Decode(ctx.WithScanner(kong.ScanAsType(kong.FlagValueToken, path))); err != nil {
-		return err
+		return fmt.Errorf("message file for branch %q: %w", branch, err)
 	}
 	if *files == nil {
 		*files = make(MessageFiles)
@@ -40,9 +43,7 @@ func (files *MessageFiles) Decode(ctx *kong.DecodeContext) error {
 
 // MessageFile identifies a regular file containing a new CR's title and body.
 // Decoding validates the path; contents are read only when creating the CR.
-type MessageFile struct {
-	Path string
-}
+type MessageFile string
 
 // Decode validates a message file's path without reading its contents.
 func (f *MessageFile) Decode(ctx *kong.DecodeContext) error {
@@ -55,25 +56,25 @@ func (f *MessageFile) Decode(ctx *kong.DecodeContext) error {
 	}
 	info, err := os.Stat(path)
 	if err != nil {
-		return fmt.Errorf("stat message file %q: %w", path, err)
+		return err
 	}
 	if !info.Mode().IsRegular() {
-		return fmt.Errorf("message file %q must be a regular file", path)
+		return errors.New("must be a regular file")
 	}
-	f.Path = path
+	*f = MessageFile(path)
 	return nil
 }
 
-func (f *MessageFile) read() (title, body string, _ error) {
-	data, err := os.ReadFile(f.Path)
+func (f MessageFile) read() (title, body string, _ error) {
+	data, err := os.ReadFile(string(f))
 	if err != nil {
-		return "", "", fmt.Errorf("read message file %q: %w", f.Path, err)
+		return "", "", err
 	}
 	text := strings.ReplaceAll(string(data), "\r\n", "\n")
 	title, body, _ = strings.Cut(text, "\n")
 	title = strings.TrimSpace(title)
 	if title == "" {
-		return "", "", fmt.Errorf("message file %q must start with a non-empty title", f.Path)
+		return "", "", errors.New("must start with a non-empty title")
 	}
 	return title, strings.Trim(body, "\n"), nil
 }

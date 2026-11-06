@@ -18,8 +18,8 @@ func TestBranchSubmitCmd_messageFile(t *testing.T) {
 	require.NoError(t, err)
 	_, err = parser.Parse([]string{"--message-file", path})
 	require.NoError(t, err)
-	require.NotNil(t, cmd.MessageFile)
-	assert.Equal(t, path, cmd.MessageFile.Path)
+	require.NotEmpty(t, cmd.MessageFile)
+	assert.Equal(t, path, string(cmd.MessageFile))
 }
 
 func TestBranchSubmitCmd_messageFile_conflicts(t *testing.T) {
