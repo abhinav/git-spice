@@ -4,9 +4,9 @@ go 1.27.0
 
 require (
 	charm.land/bubbles/v2 v2.2.1
-	charm.land/bubbletea/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.1.1
 	charm.land/lipgloss/v2 v2.0.6
-	github.com/alecthomas/kong v1.16.2-0.20260824060553-27d969c48021
+	github.com/alecthomas/kong v1.17.0
 	github.com/bluekeyes/go-gitdiff v0.9.0
 	github.com/buildkite/shellwords v1.0.1
 	github.com/charmbracelet/colorprofile v0.4.3
