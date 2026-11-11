@@ -22,7 +22,7 @@ jobs:
     if: ${{ github.actor != 'renovate[bot]' }}
     steps:
       - name: Check
-        uses: brettcannon/check-for-changed-files@v1.2.1
+        uses: brettcannon/check-for-changed-files@871d7b8b5917a4f6f06662e2262e8ffc51dff6d1 # v1.2.1
         # Run only if PR body doesn't contain '[skip changelog]'.
         if: ${{ !contains(github.event.pull_request.body, '[skip changelog]') }}
         with:

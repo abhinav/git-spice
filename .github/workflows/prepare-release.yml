@@ -20,9 +20,9 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-    - uses: jdx/mise-action@v4
+    - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - id: run
@@ -31,7 +31,7 @@ jobs:
         mise run generate
 
     - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v8
+      uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8
       with:
         title: Release ${{ steps.run.outputs.latest }}
         branch: release/${{ steps.run.outputs.latest }}

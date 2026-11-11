@@ -16,9 +16,9 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       name: Check out repository
-    - uses: jdx/mise-action@v4
+    - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - run: mise run lint
@@ -27,13 +27,13 @@ jobs:
     name: Generate test matrix
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       name: Check out repository
-    - uses: jdx/mise-action@v4
+    - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Go cache
-      uses: ./.github/actions/go-cache
+      uses: $/.github/actions/go-cache
     - name: Generate test matrix
       id: generate
       run: echo "matrix=$(go run ./tools/ci/test-matrix)" >> "$GITHUB_OUTPUT"
@@ -61,15 +61,15 @@ jobs:
     name: Test / ${{ matrix.name }}
 
     steps:
-    - uses: actions/checkout@v6
-    - uses: jdx/mise-action@v4
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Go cache
-      uses: ./.github/actions/go-cache
+      uses: $/.github/actions/go-cache
 
     - name: Install Git
-      uses: ./.github/actions/install-git
+      uses: $/.github/actions/install-git
       if: matrix.git-version != 'system'
       with:
         version: ${{ matrix.git-version }}
@@ -103,7 +103,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v6.0.0
+      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
       if: ${{ matrix.os != 'windows-latest' }}
       with:
         files: ./cover.out
