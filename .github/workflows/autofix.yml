@@ -17,8 +17,11 @@ jobs:
     - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
+    # Register the dependency used by the local cache and install actions.
+    - if: ${{ false }}
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
     - name: Go cache
-      uses: $/.github/actions/go-cache
+      uses: ./.github/actions/go-cache
     - run: mise run generate
     - uses: autofix-ci/action@7a166d7532b277f34e16238930461bf77f9d7ed8
       with:
