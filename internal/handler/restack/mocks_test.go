@@ -70,6 +70,20 @@ func (mr *MockGitWorktreeMockRecorder) CurrentBranch(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBranch", reflect.TypeOf((*MockGitWorktree)(nil).CurrentBranch), ctx)
 }
 
+// RebaseAbort mocks base method.
+func (m *MockGitWorktree) RebaseAbort(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RebaseAbort", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RebaseAbort indicates an expected call of RebaseAbort.
+func (mr *MockGitWorktreeMockRecorder) RebaseAbort(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebaseAbort", reflect.TypeOf((*MockGitWorktree)(nil).RebaseAbort), ctx)
+}
+
 // RootDir mocks base method.
 func (m *MockGitWorktree) RootDir() string {
 	m.ctrl.T.Helper()

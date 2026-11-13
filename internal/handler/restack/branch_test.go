@@ -89,6 +89,50 @@ func TestHandler_RestackBranch(t *testing.T) {
 		}))
 	})
 
+	t.Run("SkipConflicts", func(t *testing.T) {
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Build(t), nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(nil, &git.RebaseInterruptError{
+				Kind: git.RebaseInterruptConflict,
+			})
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+		mockWorktree.EXPECT().
+			RebaseAbort(gomock.Any()).
+			Return(nil)
+		mockWorktree.EXPECT().
+			CheckoutBranch(gomock.Any(), "feature").
+			Return(nil)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		require.NoError(t, handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "feature",
+			Options: &Options{
+				SkipConflicts: true,
+			},
+		}))
+		assert.Contains(t, logBuffer.String(), "feature: conflict, skipping")
+	})
+
 	t.Run("UntrackedBranch", func(t *testing.T) {
 		var logBuffer bytes.Buffer
 		log := silog.New(&logBuffer, nil)

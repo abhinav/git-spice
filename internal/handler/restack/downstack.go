@@ -1,6 +1,9 @@
 package restack
 
-import "context"
+import (
+	"cmp"
+	"context"
+)
 
 // DownstackRequest is a request to restack a branch and its downstack.
 type DownstackRequest struct {
@@ -13,10 +16,12 @@ type DownstackRequest struct {
 // RestackDownstack restacks the downstack of the given branch.
 // This includes the branch itself.
 func (h *Handler) RestackDownstack(ctx context.Context, req *DownstackRequest) error {
+	opts := cmp.Or(req.Options, &Options{})
 	_, err := h.Restack(ctx, &Request{
 		Branch:          req.Branch,
 		Scope:           ScopeDownstack,
 		ContinueCommand: []string{"downstack", "restack"},
+		SkipConflicts:   opts.SkipConflicts,
 	})
 	return err
 }
