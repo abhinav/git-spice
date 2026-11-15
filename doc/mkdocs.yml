@@ -84,6 +84,7 @@ nav:
     - guide/cr.md
     - guide/review.md
     - guide/merge.md
+    - guide/scripting.md
     - guide/limits.md
     - guide/troubleshooting.md
     - guide/internals.md

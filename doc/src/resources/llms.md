@@ -29,3 +29,7 @@ this website provides the following files per
 - [llms.txt](https://abhinav.github.io/git-spice/llms.txt)
 - [llms-full.txt](https://abhinav.github.io/git-spice/llms-full.txt)
 
+## Scripting with assistants
+
+See [Scripting and automation](../guide/scripting.md)
+for non-interactive git-spice usage.
