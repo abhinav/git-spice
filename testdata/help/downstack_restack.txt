@@ -8,7 +8,8 @@ their respective bases, ensuring a linear history.
 Use --branch to start at a different branch.
 
 Flags:
-  --branch=NAME    Branch to restack the downstack of
+  --branch=NAME       Branch to restack the downstack of
+  --skip-conflicts    Skip branches that cannot be rebased due to conflicts
 
 Global Flags:
   -h, --help           Show help for the command

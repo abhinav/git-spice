@@ -1,0 +1,3 @@
+kind: Added
+body: 'restack: Add ''--skip-conflicts'' to ''gs repo restack'', ''gs stack restack'', ''gs upstack restack'', ''gs downstack restack'', and ''gs branch restack'' to skip branches that cannot be rebased cleanly and their upstacks instead of stopping for conflict resolution.'
+time: 2026-06-09T04:52:11.175578-07:00

@@ -6,7 +6,8 @@ The current branch will be rebased onto its base, ensuring a linear history.
 Use --branch to target a different branch.
 
 Flags:
-  --branch=NAME    Branch to restack
+  --branch=NAME       Branch to restack
+  --skip-conflicts    Skip branches that cannot be rebased due to conflicts
 
 Global Flags:
   -h, --help           Show help for the command
