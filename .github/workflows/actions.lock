@@ -9,7 +9,7 @@ workflows:
         - 'autofix-ci/action@7a166d7532b277f34e16238930461bf77f9d7ed8'
         - 'jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c'
     '.github/workflows/changelog-check.yml':
-        - 'brettcannon/check-for-changed-files@871d7b8b5917a4f6f06662e2262e8ffc51dff6d1'
+        - 'brettcannon/check-for-changed-files@d85c64d17b3c1d0ac57c9cc46ea39399b0d6fa71'
     '.github/workflows/changelog-merge.yml':
         - 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'
         - 'jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c'
@@ -17,7 +17,7 @@ workflows:
     '.github/workflows/ci.yml':
         - 'actions/cache@caa296126883cff596d87d8935842f9db880ef25'
         - 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'
-        - 'codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2'
+        - 'codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f'
         - 'jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c'
     '.github/workflows/doc.yml':
         - 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'
@@ -74,14 +74,14 @@ dependencies:
         commit: 'sha1-7a166d7532b277f34e16238930461bf77f9d7ed8'
         owner_id: 114818642
         repo_id: 544055925
-    'brettcannon/check-for-changed-files@871d7b8b5917a4f6f06662e2262e8ffc51dff6d1':
-        ref: 'v1.2.1'
-        commit: 'sha1-871d7b8b5917a4f6f06662e2262e8ffc51dff6d1'
+    'brettcannon/check-for-changed-files@d85c64d17b3c1d0ac57c9cc46ea39399b0d6fa71':
+        ref: 'v1.2.2'
+        commit: 'sha1-d85c64d17b3c1d0ac57c9cc46ea39399b0d6fa71'
         owner_id: 54418
         repo_id: 324871402
-    'codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2':
-        ref: 'v6.0.0'
-        commit: 'sha1-57e3a136b779b570ffcdbf80b3bdc90e7fab3de2'
+    'codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f':
+        ref: 'v7.0.0'
+        commit: 'sha1-fb8b3582c8e4def4969c97caa2f19720cb33a72f'
         owner_id: 8226205
         repo_id: 200299178
         uses:
