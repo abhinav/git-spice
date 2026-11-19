@@ -1,4 +1,4 @@
-module go.abhg.dev/gs/doc
+module go.abhg.dev/git-spice/doc
 
 go 1.24.0
 

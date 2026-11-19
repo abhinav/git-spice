@@ -146,7 +146,7 @@ To **build from source**, follow these steps:
 2. Run the following command:
 
     ```bash
-    go install go.abhg.dev/gs@latest
+    go install go.abhg.dev/git-spice@latest
     ```
 
 ## Recommended: add a `gs` alias
