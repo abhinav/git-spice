@@ -20,9 +20,9 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-    - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+    - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - id: run
