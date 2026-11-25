@@ -7,19 +7,17 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/msggen"
-	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
-//go:generate mockgen -package squash -destination mocks_test.go . GitRepository,GitWorktree,Store,Service,RestackHandler
+//go:generate go tool mockgen -package squash -destination mocks_test.go . GitRepository,GitWorktree,Store,Service,RestackHandler,MessageHandler
 
 // GitRepository provides treeless read/write access to the Git state.
 type GitRepository interface {
@@ -60,23 +58,32 @@ type RestackHandler interface {
 	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
 }
 
+// MessageHandler generates the message for a selected squash range.
+type MessageHandler interface {
+	Enabled() bool
+	Configured() bool
+	Generate(context.Context, *msggen.RangeRequest) (string, error)
+}
+
+var _ MessageHandler = (*msggen.Handler)(nil)
+
 // Handler handles git-spice's squash commands.
 type Handler struct {
+	Messages MessageHandler // required
+
 	Log        *silog.Logger  // required
 	Repository GitRepository  // required
 	Worktree   GitWorktree    // required
 	Store      Store          // required
 	Service    Service        // required
 	Restack    RestackHandler // required
-	Config     *spice.Config  // optional
-	RepoRoot   string         // optional; repo root dir
-	Args       []string       // optional; invoking process args
 }
 
 // Options defines options for the SquashBranch method.
-// These are exposed as flags in the CLI.
+// These are exposed as flags in the CLI
 type Options struct {
-	Fill     bool `short:"c" help:"Fill the commit message using the configured message generator."`
+	MessageFill msggen.Options `embed:""`
+
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 
 	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"branchSquash.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
@@ -110,60 +117,32 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 		return fmt.Errorf("lookup branch %q: %w", branchName, err)
 	}
 
-	// If no message was specified,
-	// combine the commit messages of all commits in the branch
-	// to form the initial commit message for the squashed commit.
 	var commitTemplate string
 	if opts.Message == "" && opts.MessageFile == "" {
-		commitMessages, err := h.Repository.CommitMessageRange(ctx, branch.Head.String(), branch.BaseHash.String())
-		if err != nil {
-			return fmt.Errorf("get commit messages: %w", err)
-		}
-
-		msg := commitMessageTemplate(
-			commitMessages,
-			opts.CommentPrefix,
-			!opts.NoEdit, // comments only if editing
-		)
-
-		// If --fill and a message generator is configured,
-		// run it to produce the squash commit message.
-		if opts.Fill {
-			var script string
-			if h.Config != nil {
-				script = h.Config.MessageGenerator()
-			}
-			if script == "" {
-				return msggen.ErrNoGenerator
-			}
-
-			env := scriptrun.EnvFor(
-				scriptrun.OpBranchSquash, branchName, branch.Base,
-			)
-			env = append(env,
-				"GS_MESSAGE_KIND=commit",
-				"GS_MESSAGE_UPDATE="+strconv.FormatBool(true),
-				"GS_MESSAGE="+msg,
-			)
-			result, err := (&msggen.Runner{
-				Log:  h.Log,
-				Args: h.Args,
-			}).Run(
-				ctx, script, h.RepoRoot, env,
-			)
+		fill := h.Messages.Enabled()
+		if fill && h.Messages.Configured() {
+			message, err := h.Messages.Generate(ctx, &msggen.RangeRequest{
+				Operation: msggen.BranchSquash,
+				Base:      branch.BaseHash,
+				Head:      branch.Head,
+			})
 			if err != nil {
-				h.Log.Warn(
-					"Message generator failed,"+
-						" falling back to editor",
-					"error", err,
-				)
-			} else {
-				opts.Message = result.Message()
+				return err
 			}
-		}
+			opts.Message = message
+		} else {
+			// Combine the commit messages for built-in filling or editing.
+			commitMessages, err := h.Repository.CommitMessageRange(ctx, branch.Head.String(), branch.BaseHash.String())
+			if err != nil {
+				return fmt.Errorf("get commit messages: %w", err)
+			}
 
-		if opts.Message == "" {
-			if opts.NoEdit {
+			msg := commitMessageTemplate(
+				commitMessages,
+				opts.CommentPrefix,
+				!opts.NoEdit && !fill, // comments only for the editor
+			)
+			if fill || opts.NoEdit {
 				opts.Message = msg
 			} else {
 				commitTemplate = msg

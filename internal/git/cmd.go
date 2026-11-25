@@ -33,7 +33,8 @@ type commonOptions struct {
 }
 
 type extraConfig struct {
-	Editor string // core.editor
+	// Editor overrides the message editor, including an inherited GIT_EDITOR.
+	Editor string
 
 	MergeConflictStyle string // merge.conflictStyle
 
@@ -43,9 +44,6 @@ type extraConfig struct {
 // args builds the git -c flags for the configured values.
 func (ec *extraConfig) args() []string {
 	var args []string
-	if ec.Editor != "" {
-		args = append(args, "-c", "core.editor="+ec.Editor)
-	}
 	if ec.MergeConflictStyle != "" {
 		args = append(args, "-c", "merge.conflictStyle="+ec.MergeConflictStyle)
 	}
@@ -140,14 +138,18 @@ func newGitCmd(
 	}
 }
 
-// WithExtraConfig prepends transient git -c configuration
-// to the wrapped command.
+// WithExtraConfig applies transient Git configuration to the wrapped command.
 //
 // This is the package-local mechanism for applying per-command Git settings
-// such as core.editor or merge.conflictStyle.
+// such as the message editor or merge.conflictStyle.
 func (c *gitCmd) WithExtraConfig(ec *extraConfig) *gitCmd {
 	if ec == nil {
 		return c
+	}
+	if ec.Editor != "" {
+		// GIT_EDITOR takes precedence over core.editor and keeps the override
+		// out of the configuration inherited by commands the editor runs.
+		c.AppendEnv("GIT_EDITOR=" + ec.Editor)
 	}
 
 	args := ec.args()

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+
+	"github.com/kballard/go-shellquote"
 )
 
 // CommitRequest is a request to commit changes.
@@ -46,8 +48,8 @@ type CommitRequest struct {
 	// Amend amends the last commit.
 	Amend bool
 
-	// NoEdit skips editing the commit message.
-	NoEdit bool
+	// Edit controls how Git edits the message. The zero value uses Git's default.
+	Edit CommitEdit
 
 	// AllowEmpty allows a commit with no changes.
 	AllowEmpty bool
@@ -63,6 +65,40 @@ type CommitRequest struct {
 
 	// If set, the Author and/or Committer signatures are used for the commit.
 	Author, Committer *Signature
+}
+
+// CommitEdit selects one message editing behavior for a commit.
+// Its zero value lets Git choose whether to edit and which editor to use.
+type CommitEdit struct {
+	mode   commitEditMode
+	editor CommitEditor
+}
+
+type commitEditMode int
+
+const (
+	commitEditDefault commitEditMode = iota
+	commitEditSkip
+	commitEditCustom
+)
+
+// SkipCommitEdit instructs Git to use the message without opening an editor.
+func SkipCommitEdit() CommitEdit {
+	return CommitEdit{mode: commitEditSkip}
+}
+
+// EditCommitWith requests an edit using the given editor and Git's prepared index.
+func EditCommitWith(editor CommitEditor) CommitEdit {
+	return CommitEdit{mode: commitEditCustom, editor: editor}
+}
+
+// CommitEditor describes a process Git will invoke with a message file.
+type CommitEditor struct {
+	// Args contains the executable and any arguments before Git's file argument.
+	Args []string // required
+
+	// Env is supplied to Git and inherited by the editor.
+	Env []string
 }
 
 // Commit runs the 'git commit' command,
@@ -101,7 +137,12 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 	if req.Amend {
 		args = append(args, "--amend")
 	}
-	if req.NoEdit {
+	switch req.Edit.mode {
+	case commitEditDefault:
+		// Git chooses whether to invoke the user's editor.
+	case commitEditCustom:
+		args = append(args, "--edit")
+	case commitEditSkip:
 		args = append(args, "--no-edit")
 	}
 	if req.AllowEmpty {
@@ -125,6 +166,13 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 			WithStdin(os.Stdin).
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr)
+		if req.Edit.mode == commitEditCustom {
+			cmd.AppendEnv(req.Edit.editor.Env...)
+			// Git invokes editor commands through sh, including on Windows.
+			cmd.WithExtraConfig(&extraConfig{
+				Editor: shellquote.Join(req.Edit.editor.Args...),
+			})
+		}
 		if req.Author != nil {
 			cmd.AppendEnv(req.Author.appendEnv("AUTHOR", nil)...)
 		}

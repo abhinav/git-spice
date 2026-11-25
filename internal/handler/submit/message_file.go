@@ -70,11 +70,15 @@ func (f MessageFile) read() (title, body string, _ error) {
 	if err != nil {
 		return "", "", err
 	}
-	text := strings.ReplaceAll(string(data), "\r\n", "\n")
-	title, body, _ = strings.Cut(text, "\n")
-	title = strings.TrimSpace(title)
+	title, body = splitMessage(string(data))
 	if title == "" {
 		return "", "", errors.New("must start with a non-empty title")
 	}
-	return title, strings.Trim(body, "\n"), nil
+	return title, body, nil
+}
+
+func splitMessage(message string) (title, body string) {
+	text := strings.ReplaceAll(message, "\r\n", "\n")
+	title, body, _ = strings.Cut(text, "\n")
+	return strings.TrimSpace(title), strings.Trim(body, "\n")
 }

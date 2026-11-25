@@ -1,0 +1,35 @@
+# Explicit commit messages and fixups take precedence over filling.
+
+as 'Test <test@example.com>'
+at '2026-11-06T20:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m Initial
+gs repo init
+gs branch create feature --no-commit
+
+git config spice.message.fill.command mock-message
+git config spice.message.fill true
+env MOCK_MESSAGE_EXIT=8
+
+gs commit create --allow-empty -m Explicit
+gs commit create --allow-empty --fill --fixup HEAD
+git log -1 --format=%s
+stdout '^fixup! Explicit$'
+
+gs commit create --allow-empty --fill --message-file $WORK/message.txt
+git log -1 --format=%s
+stdout '^From file$'
+
+gs commit create --allow-empty --fill -m Explicit
+git log -1 --format=%s
+stdout '^Explicit$'
+
+gs commit amend --fill --allow-empty -m 'Explicit amendment'
+git log -1 --format=%s
+stdout '^Explicit amendment$'
+
+-- message.txt --
+From file

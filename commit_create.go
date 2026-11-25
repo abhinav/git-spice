@@ -8,12 +8,15 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type commitCreateCmd struct {
+	MessageFill msggen.Options `embed:""`
+
 	All         bool     `short:"a" help:"Stage all changes before committing."`
 	AllowEmpty  bool     `help:"Create a new commit even if it contains no changes."`
 	Fixup       string   `help:"Create a fixup commit. See also 'git-spice commit fixup'." placeholder:"COMMIT"`
@@ -54,8 +57,17 @@ func (cmd *commitCreateCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	wt *git.Worktree,
+	messages *msggen.CommitEditor,
 	restackHandler RestackHandler,
 ) error {
+	var edit git.CommitEdit
+	if messages.Enabled() && len(cmd.Message) == 0 && cmd.MessageFile == "" && cmd.Fixup == "" {
+		var err error
+		edit, err = messages.CommitEdit(msggen.CommitCreate)
+		if err != nil {
+			return err
+		}
+	}
 	if err := wt.Commit(ctx, git.CommitRequest{
 		Messages:    cmd.Message,
 		MessageFile: cmd.MessageFile,
@@ -64,6 +76,7 @@ func (cmd *commitCreateCmd) Run(
 		Fixup:       cmd.Fixup,
 		NoVerify:    cmd.NoVerify,
 		Signoff:     cmd.Signoff,
+		Edit:        edit,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

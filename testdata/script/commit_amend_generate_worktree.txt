@@ -1,0 +1,36 @@
+# commit amend --fill reads the active worktree's commit and message draft.
+
+as 'Test <test@example.com>'
+at '2026-11-06T18:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Primary checkout message'
+gs repo init
+git worktree add -b linked ../linked
+cd ../linked
+gs branch track
+git commit --allow-empty -m 'Linked checkout message'
+
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
+
+git rev-parse HEAD
+cp stdout $WORK/before.txt
+gs --no-prompt commit amend --fill --allow-empty --no-restack --no-edit
+stderr 'Generator diagnostic'
+cmp $WORK/invocation/head $WORK/before.txt
+grep '^Linked checkout message$' $WORK/invocation/subject
+grep '^Linked checkout message$' $WORK/invocation/draft
+grep '^commit-amend$' $WORK/invocation/operation
+git log -1 --format=%s
+stdout '^Generated in linked checkout$'
+
+cd ../repo
+git log -1 --format=%s
+stdout '^Primary checkout message$'
+
+-- message.txt --
+Generated in linked checkout

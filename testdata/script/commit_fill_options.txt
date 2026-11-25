@@ -1,0 +1,36 @@
+# commit filling respects configuration and --no-fill.
+
+as 'Test <test@example.com>'
+at '2026-11-06T20:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m Initial
+gs repo init
+gs branch create feature --no-commit
+
+# -c remains available for other commit flags.
+! gs commit create -c --allow-empty
+stderr 'unknown.*-c'
+
+git config spice.message.fill.command mock-message
+git config spice.message.fill true
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+gs commit create --allow-empty
+git log -1 --format=%s
+stdout '^Generated subject$'
+
+# Disabling filling never invokes the command.
+env MOCK_MESSAGE_EXIT=8
+gs commit amend --no-fill --no-edit --allow-empty
+! gs commit create --allow-empty
+stderr 'status 8'
+git log -1 --format=%s
+stdout '^Generated subject$'
+
+git config spice.message.fill false
+gs commit amend --no-edit --allow-empty
+
+-- message.txt --
+Generated subject

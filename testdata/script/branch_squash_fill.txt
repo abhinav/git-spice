@@ -1,35 +1,43 @@
-# 'gs branch squash --fill' uses the configured message generator
-# to produce the squash commit message.
+# branch squash --fill supplies an empty draft and the selected commit range.
 
 as 'Test <test@example.com>'
-at '2024-03-30T14:59:32Z'
+at '2026-11-06T20:00:00Z'
 
 cd repo
 git init
-git commit --allow-empty -m 'Initial commit'
-gs repo i
+git commit --allow-empty -m Initial
+gs repo init
+git add feature.txt
+gs branch create feature -m Feature
+gs commit create --allow-empty -m Followup
 
-# Create a branch with two commits
-git add feature1.txt
-gs branch create feature-1 -m 'First commit'
-git add feature2.txt
-git commit -m 'Second commit'
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
 
-# configure the message generator (emits the shared JSON protocol)
-chmod 755 $WORK/gen.sh
-git config spice.message.generator $WORK/gen.sh
-
-# squash with --fill
+git rev-parse main feature
+cp stdout $WORK/range.txt
 gs branch squash --fill
-
-# verify the commit message
+cmp $WORK/invocation/range $WORK/range.txt
+cmp $WORK/invocation/draft $WORK/golden/empty.txt
+grep '^branch-squash$' $WORK/invocation/operation
 git log -1 --format=%s
-stdout 'generated squash message'
+stdout '^Generated squash$'
 
--- repo/feature1.txt --
-Feature 1
--- repo/feature2.txt --
-Feature 2
--- gen.sh --
-#!/bin/sh
-printf '{"title":"generated squash message"}'
+# With no external command, filling uses the branch's commit messages.
+git config --unset spice.message.fill.command
+gs commit create --allow-empty -m 'Second squash message'
+gs branch squash --fill
+git log -1 --format=%B
+cmp stdout $WORK/golden/builtin.txt
+
+-- repo/feature.txt --
+feature
+-- message.txt --
+Generated squash
+-- golden/builtin.txt --
+Generated squash
+
+Second squash message
+
+-- golden/empty.txt --

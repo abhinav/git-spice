@@ -18,11 +18,10 @@ commit when run with 'git rebase --autosquash'. See also, the 'gs commit fixup'
 command, which is preferable when you want to apply changes to an older commit.
 
 Flags:
+      --[no-]fill            Fill the message automatically. (🔧
+                             spice.message.fill)
   -a, --all                  Stage all changes before committing.
       --allow-empty          Create a new commit even if it contains no changes.
-  -c, --[no-]fill            Fill the commit message using the
-                             configured message generator. Defaults to
-                             spice.message.autoFill. (🔧 spice.message.autoFill)
       --fixup=COMMIT         Create a fixup commit. See also 'git-spice commit
                              fixup'.
   -m, --message=MSG          Use the given message as the commit message.
@@ -40,3 +39,6 @@ Global Flags:
   -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
   -C, --dir=DIR        Change to DIR before doing anything
       --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.message.fill.command    Command that edits the message file in place.

@@ -45,6 +45,26 @@ Afterwards, compare these against the test's golden copy:
 cmpenv $WORK/browser.log $WORK/browser.log.golden
 ```
 
+### Message filling
+
+`mock-message` is an external message command implemented in Go.
+Configure it with `git config spice.message.fill.command mock-message`.
+
+- `MOCK_MESSAGE_RESPONSE` names the response template file.
+  `{{.Operation}}` is the invoking operation,
+  and `{{.Subject}}` is the selected range's head subject
+  (or the current commit's subject for commit operations).
+- `MOCK_MESSAGE_RECORD` optionally names a directory for invocation records:
+  `operation`, `range`, `draft`, `head`, `subject`, `staged`, and `unstaged`.
+  Paths in `staged` and `unstaged` are relative to the worktree root.
+- `MOCK_MESSAGE_EXIT` requests an exit status without editing the file.
+
+The command prints progress to stdout and diagnostics to stderr.
+Use the recorded files to assert the context visible to the command.
+For tests of Git's post-commit index,
+`exec mock-message-hook install` installs a hook that checks the active index
+against the installed index and requires no staged changes.
+
 ### Interactive prompts
 
 Many commands in git-spice prompt the user for input.

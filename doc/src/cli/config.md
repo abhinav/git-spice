@@ -1253,3 +1253,30 @@ and not for existing ones that were updated.
 - `true`
 - `false` (default)
 - `created` (<!-- gs:version v0.16.0 -->)
+
+### spice.message.fill
+
+<!-- gs:version unreleased -->
+
+Whether to fill commit messages and CR descriptions automatically.
+Equivalent to passing `--fill` to corresponding commands.
+
+**Accepted values:**
+
+- `true`
+- `false` (default)
+
+If set to true, pass `--no-fill` to commands to override this default.
+
+See [Message generation](/guide/scripting.md#generating-messages)
+for how to configure message generation.
+
+### spice.message.fill.command
+
+<!-- gs:version unreleased -->
+
+Command used to fill a commit message or CR description
+when `--fill` is passed to a command or $$spice.message.fill$$ is set to true.
+
+The command edits the message file passed as its first argument.
+See [Message generation](/guide/scripting.md#generating-messages) for details.

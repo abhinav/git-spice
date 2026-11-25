@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go.abhg.dev/gs/internal/iterutil"
+	"go.abhg.dev/gs/internal/msggen"
 )
 
 // Options defines options for the submit operations.
@@ -15,8 +16,11 @@ import (
 // Options translate into user-facing command line flags or configuration options,
 // so care must be taken when adding things here.
 type Options struct {
+	MessageFill msggen.Options `embed:""`
+
+	FillShortAlias bool `name:"fill-short-alias" short:"c" hidden:"" help:"Alias for --fill."`
+
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
-	Fill   bool `short:"c" help:"Fill in the change title and body from the commit messages"`
 	// TODO: Default to Fill if --no-prompt?
 	Draft   *bool   `negatable:"" help:"Whether to mark change requests as drafts"`
 	Publish bool    `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
@@ -65,6 +69,14 @@ type Options struct {
 	// If set, this template will be automatically selected instead of prompting the user.
 	// The value should match the filename of one of the available templates.
 	Template string `hidden:"" config:"submit.template" help:"Default template to use when multiple templates are available"`
+}
+
+// AfterApply translates the submission-only shorthand into the shared fill flag.
+func (o *Options) AfterApply() error {
+	if o.FillShortAlias {
+		o.MessageFill.Fill = true
+	}
+	return nil
 }
 
 func mergeConfiguredValues(values []string, configured []string) []string {

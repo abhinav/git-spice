@@ -17,6 +17,7 @@ require (
 	github.com/dustin/go-humanize v1.1.0
 	github.com/google/uuid v1.6.0
 	github.com/hexops/autogold/v2 v2.3.1
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-isatty v0.0.24
 	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
 	github.com/rogpeppe/go-internal v1.16.0

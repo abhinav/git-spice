@@ -153,8 +153,10 @@ configuration key.
 
 Use the `--fill` flag (or `-c` since <!-- gs:version v0.3.0 -->)
 provided by all the above commands
-to fill in the PR information from commit messages
-and skip the interactive prompts.
+to fill in the PR title and body.
+By default, git-spice uses commit messages and available CR templates.
+To supply the message with a command, see
+[Generating messages](scripting.md#generating-messages).
 
 ```freeze language="terminal"
 {green}${reset} gs stack submit --fill

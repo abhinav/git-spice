@@ -8,9 +8,10 @@ below it until trunk. Use --branch to start at a different branch.
 Use --dry-run to print what would be submitted without submitting it.
 
 For new Change Requests, a prompt will allow filling metadata. Use --fill to
-populate title and body from the commit messages. The --[no-]draft flag marks
-the CR as draft or not. Use the 'spice.submit.draft' configuration option to
-mark new CRs as drafts (or not) by default, skipping the prompt.
+populate title and body with the configured message command, or from commit
+messages when no command is configured. The --[no-]draft flag marks the CR as
+draft or not. Use the 'spice.submit.draft' configuration option to mark new CRs
+as drafts (or not) by default, skipping the prompt.
 
 For updating Change Requests, use --[no-]draft to change its draft status.
 Without the flag, the draft status is not changed.
@@ -26,17 +27,9 @@ Use --nav-comment=false to disable navigation comments in CRs, or
 the stack.
 
 Flags:
+      --[no-]fill                Fill the message automatically. (🔧
+                                 spice.message.fill)
   -n, --dry-run                  Don't actually submit the stack
-  -c, --[no-]fill                Fill in the title and body of new change
-                                 requests via the configured message generator.
-                                 Defaults to spice.message.autoFill. Use
-                                 --regenerate-message to also update existing
-                                 change requests. (🔧 spice.message.autoFill)
-      --regenerate-message       Regenerate the title and body of existing
-                                 change requests via the configured message
-                                 generator. Unlike --fill, this is never implied
-                                 by configuration: overwriting an existing
-                                 description is always explicit.
       --[no-]draft               Whether to mark change requests as drafts
       --[no-]publish             Whether to create CRs for pushed branches.
                                  Defaults to true. (🔧 spice.submit.publish)
@@ -72,6 +65,7 @@ Global Flags:
       --[no-]prompt    Whether to prompt for missing information
 
 Configuration (🔧):
+  spice.message.fill.command       Command that edits the message file in place.
   spice.submit.assignees           Default assignees to add to change requests.
   spice.submit.draft               Default value for --draft when creating
                                    change requests.

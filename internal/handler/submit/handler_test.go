@@ -83,6 +83,7 @@ func TestHandler_pushRepositoryID_rejectsDifferentForge(t *testing.T) {
 		AnyTimes()
 
 	handler := &Handler{
+		Messages:   NewMockMessageHandler(mockCtrl),
 		Log:        silog.Nop(),
 		View:       ui.NewFileView(&bytes.Buffer{}),
 		Repository: nil,
@@ -146,7 +147,14 @@ func TestHandler_SubmitBatch_rejectsStaleBaseBeforeSubmitting(t *testing.T) {
 		}, nil)
 
 	var logBuffer bytes.Buffer
+	mockMessages := NewMockMessageHandler(mockCtrl)
+	mockMessages.EXPECT().
+		Enabled().
+		Return(false).
+		AnyTimes()
+
 	handler := &Handler{
+		Messages:   mockMessages,
 		Log:        silog.New(&logBuffer, nil),
 		View:       ui.NewFileView(&bytes.Buffer{}),
 		Repository: nil,
@@ -238,9 +246,16 @@ func TestHandler_SubmitBatch_updatesStackRepresentationsAfterPartialFailure(t *t
 	service.EXPECT().BranchGraph(gomock.Any(), nil).Return(graph, nil)
 
 	transientErr := errors.New("transient submit failure")
+	mockMessages := NewMockMessageHandler(ctrl)
+	mockMessages.EXPECT().
+		Enabled().
+		Return(false).
+		AnyTimes()
+
 	handler := &Handler{
-		Log:  log,
-		View: ui.NewFileView(&bytes.Buffer{}),
+		Messages: mockMessages,
+		Log:      log,
+		View:     ui.NewFileView(&bytes.Buffer{}),
 		Repository: &submitTestGitRepository{
 			peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
 				switch ref {
@@ -409,8 +424,9 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 
 			var pushed bool
 			handler := &Handler{
-				Log:  silogtest.New(t),
-				View: ui.NewFileView(&bytes.Buffer{}),
+				Messages: NewMockMessageHandler(mockCtrl),
+				Log:      silogtest.New(t),
+				View:     ui.NewFileView(&bytes.Buffer{}),
 				Repository: &submitTestGitRepository{
 					peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
 						switch ref {
@@ -537,8 +553,9 @@ func TestHandler_submitBranch_importsChangeWithAbbreviatedHead(t *testing.T) {
 		Return(func(func(*forge.ListChangeCommentItem, error) bool) {})
 
 	handler := &Handler{
-		Log:  log,
-		View: ui.NewFileView(&bytes.Buffer{}),
+		Messages: NewMockMessageHandler(mockCtrl),
+		Log:      log,
+		View:     ui.NewFileView(&bytes.Buffer{}),
 		Repository: &submitTestGitRepository{
 			peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
 				switch ref {
@@ -605,6 +622,7 @@ func TestHandler_resolveUpstreamBranch_refusesStoredTrunk(t *testing.T) {
 		Return("main")
 
 	handler := &Handler{
+		Messages:   NewMockMessageHandler(mockCtrl),
 		Log:        silog.Nop(),
 		View:       ui.NewFileView(&bytes.Buffer{}),
 		Repository: nil,
@@ -646,6 +664,7 @@ func TestHandler_checkStaleSubmissionBases_forceSkipsValidation(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 
 	handler := &Handler{
+		Messages:          NewMockMessageHandler(mockCtrl),
 		Log:               silog.Nop(),
 		View:              ui.NewFileView(&bytes.Buffer{}),
 		Repository:        nil,

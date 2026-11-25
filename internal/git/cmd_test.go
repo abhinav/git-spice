@@ -78,7 +78,6 @@ func TestGitCmd_WithExtraConfig(t *testing.T) {
 		})
 
 		assert.Equal(t, []string{
-			"-c", "core.editor=vim",
 			"-c", "merge.conflictStyle=zdiff3",
 			"-c", "advice.mergeConflict=false",
 			"rebase", "--continue",

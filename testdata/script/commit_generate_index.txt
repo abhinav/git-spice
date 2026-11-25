@@ -1,0 +1,45 @@
+# commit create --all exposes Git's prepared index to the fill command.
+
+as 'Test <test@example.com>'
+at '2026-11-06T20:00:00Z'
+
+cd repo
+git init
+git add tracked.txt
+git commit -m Initial
+gs repo init
+gs branch create feature --no-commit
+
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
+cp $WORK/update.txt tracked.txt
+
+# A failed command leaves the original index unchanged.
+env MOCK_MESSAGE_EXIT=8
+! gs commit create --all --fill
+stderr 'status 8'
+git diff --cached --quiet
+
+# Invoke from a subdirectory and let post-commit inspect the installed index.
+env MOCK_MESSAGE_EXIT=
+exec mock-message-hook install
+mkdir sub
+cd sub
+gs commit create --all --fill
+stderr 'post-commit saw the installed index'
+cmp $WORK/invocation/staged $WORK/golden/staged.txt
+cmp $WORK/invocation/unstaged $WORK/golden/empty.txt
+
+git show HEAD:tracked.txt
+cmp stdout $WORK/update.txt
+
+-- repo/tracked.txt --
+original
+-- update.txt --
+updated
+-- message.txt --
+Tracked edit
+-- golden/staged.txt --
+tracked.txt
+-- golden/empty.txt --

@@ -4,214 +4,115 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/scriptrun"
+	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
-// jsonEcho is a small helper that prints a JSON ResolveResponse with
-// the given title.
-func jsonEcho(title string) string {
-	return `printf '{"title":"` + title + `"}'`
-}
-
-func TestRunner_Run_shellCommand(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	result, err := runner.Run(
-		t.Context(),
-		jsonEcho("hello world"),
-		t.TempDir(),
-		nil,
-	)
+func TestHandler_Generate(t *testing.T) {
+	exe, err := os.Executable()
 	require.NoError(t, err)
-	assert.Equal(t, "hello world", result.Title)
-	assert.Empty(t, result.Body)
-}
-
-func TestRunner_Run_titleAndBody(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	script := `cat <<'EOF'
-{"title":"Add feature X","body":"This adds feature X.\nIt does Y and Z."}
-EOF`
-	result, err := runner.Run(
-		t.Context(),
-		script,
-		t.TempDir(),
-		nil,
-	)
-	require.NoError(t, err)
-	assert.Equal(t, "Add feature X", result.Title)
-	assert.Equal(t, "This adds feature X.\nIt does Y and Z.", result.Body)
-}
-
-func TestRunner_Run_envVars(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	script := `printf '{"title":"branch=%s base=%s"}' "$GS_BRANCH" "$GS_BASE"`
-	result, err := runner.Run(
-		t.Context(),
-		script,
-		t.TempDir(),
-		[]string{"GS_BRANCH=feature-x", "GS_BASE=main"},
-	)
-	require.NoError(t, err)
-	assert.Equal(t, "branch=feature-x base=main", result.Title)
-}
-
-func TestRunner_Run_workingDirectory(t *testing.T) {
-	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(
-		filepath.Join(dir, "marker.txt"),
-		[]byte("found"),
-		0o644,
-	))
-
-	runner := &Runner{Log: silog.Nop()}
-	result, err := runner.Run(
-		t.Context(),
-		`printf '{"title":"%s"}' "$(cat marker.txt)"`,
-		dir,
-		nil,
-	)
-	require.NoError(t, err)
-	assert.Equal(t, "found", result.Title)
-}
-
-func TestRunner_Run_shebang(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	script := `#!/bin/sh
-printf '{"title":"shebang works"}'`
-	result, err := runner.Run(
-		t.Context(),
-		script,
-		t.TempDir(),
-		nil,
-	)
-	require.NoError(t, err)
-	assert.Equal(t, "shebang works", result.Title)
-}
-
-func TestRunner_Run_gitOptionalLocks(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	result, err := runner.Run(
-		t.Context(),
-		`printf '{"title":"%s"}' "$GIT_OPTIONAL_LOCKS"`,
-		t.TempDir(),
-		nil,
-	)
-	require.NoError(t, err)
-	assert.Equal(t, "0", result.Title)
-}
-
-func TestRunner_Run_emptyOutput(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	_, err := runner.Run(
-		t.Context(),
-		`printf ""`,
-		t.TempDir(),
-		nil,
-	)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "parse")
-}
-
-func TestRunner_Run_missingTitle(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	_, err := runner.Run(
-		t.Context(),
-		`printf '{"body":"only body"}'`,
-		t.TempDir(),
-		nil,
-	)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no title")
-}
-
-func TestRunner_Run_invalidJSON(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	_, err := runner.Run(
-		t.Context(),
-		`printf 'not json'`,
-		t.TempDir(),
-		nil,
-	)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "parse")
-}
-
-func TestRunner_Run_assumptionsAndQuestions(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	script := `printf '{"title":"T","assumptions":["a1","a2"],"questions":["q1"]}'`
-	result, err := runner.Run(
-		t.Context(),
-		script,
-		t.TempDir(),
-		nil,
-	)
-	require.NoError(t, err)
-	assert.Equal(t, "T", result.Title)
-	assert.Equal(t, []string{"a1", "a2"}, result.Assumptions)
-	assert.Equal(t, []string{"q1"}, result.Questions)
-}
-
-func TestRunner_Run_nonZeroExit(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	_, err := runner.Run(
-		t.Context(),
-		`exit 1`,
-		t.TempDir(),
-		nil,
-	)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "exited with code 1")
-}
-
-func TestRunner_Run_contextCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-
-	runner := &Runner{Log: silog.Nop()}
-	_, err := runner.Run(
-		ctx,
-		`sleep 10`,
-		t.TempDir(),
-		nil,
-	)
-	require.Error(t, err)
-}
-
-func TestResult_Message(t *testing.T) {
-	tests := []struct {
-		name string
-		give Result
-		want string
-	}{
-		{
-			name: "TitleOnly",
-			give: Result{Title: "fix: resolve crash"},
-			want: "fix: resolve crash",
-		},
-		{
-			name: "TitleAndBody",
-			give: Result{
-				Title: "feat: add login",
-				Body:  "Adds OAuth-based login.",
-			},
-			want: "feat: add login\n\nAdds OAuth-based login.",
-		},
+	t.Setenv("MSGGEN_TEST_HELPER", "range")
+	handler := &Handler{
+		Fill:    true,
+		Command: exe,
+		Runner:  &scriptrun.Runner{Log: silogtest.New(t)},
 	}
+	message, err := handler.Generate(t.Context(), &RangeRequest{
+		Operation: BranchSquash,
+		Base:      git.Hash("base"),
+		Head:      git.Hash("head"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "Subject\n\nBody\n", message)
+}
 
-	for _, tt := range tests {
+func TestHandler_Generate_missingCommand(t *testing.T) {
+	handler := &Handler{Fill: true, Runner: &scriptrun.Runner{Log: silogtest.New(t)}}
+	_, err := handler.Generate(t.Context(), &RangeRequest{
+		Operation: BranchSubmit,
+		Base:      "base",
+		Head:      "head",
+	})
+	require.ErrorIs(t, err, ErrNoCommand)
+}
+
+func TestHandler_Generate_failures(t *testing.T) {
+	exe, err := os.Executable()
+	require.NoError(t, err)
+	for _, tt := range []struct{ name, mode, message string }{
+		{name: "NonzeroExit", mode: "exit", message: "status 7"},
+		{name: "StdoutOnly", mode: "stdout-only", message: "non-empty subject"},
+		{name: "BlankSubject", mode: "blank-subject", message: "non-empty subject"},
+	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.give.Message())
+			t.Setenv("MSGGEN_TEST_HELPER", tt.mode)
+			handler := &Handler{Fill: true, Command: exe, Runner: &scriptrun.Runner{Log: silogtest.New(t)}}
+			_, err := handler.Generate(t.Context(), &RangeRequest{
+				Operation: BranchSubmit, Base: "base", Head: "head",
+			})
+			require.ErrorContains(t, err, tt.message)
 		})
 	}
 }
 
-func TestRunner_Run_emptyScript(t *testing.T) {
-	runner := &Runner{Log: silog.Nop()}
-	_, err := runner.Run(t.Context(), "", t.TempDir(), nil)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "empty script")
+func TestHandler_Generate_executable(t *testing.T) {
+	exe, err := os.Executable()
+	require.NoError(t, err)
+	t.Setenv("MSGGEN_TEST_HELPER", "executable")
+	root := t.TempDir()
+	bin := filepath.Join(root, "bin")
+	dir := filepath.Join(root, "worktree")
+	require.NoError(t, os.Mkdir(bin, 0o700))
+	require.NoError(t, os.Mkdir(dir, 0o700))
+	installMessageTestExecutable(t, exe, bin)
+	command := installMessageTestExecutable(t, exe, dir)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	for _, tt := range []struct{ name, command, message string }{
+		{name: "OnPath", command: "fill-message", message: "bin\n"},
+		{name: "AbsolutePath", command: command, message: "worktree\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := &Handler{Fill: true, Command: tt.command, Dir: dir, Runner: &scriptrun.Runner{Log: silogtest.New(t)}}
+			message, err := handler.Generate(t.Context(), &RangeRequest{
+				Operation: BranchSubmit, Base: "base", Head: "head",
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tt.message, message)
+		})
+	}
+}
+
+func TestHandler_Generate_cancelled(t *testing.T) {
+	exe, err := os.Executable()
+	require.NoError(t, err)
+	t.Setenv("MSGGEN_TEST_HELPER", "range")
+	handler := &Handler{Fill: true, Command: exe, Runner: &scriptrun.Runner{Log: silogtest.New(t)}}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_, err = handler.Generate(ctx, &RangeRequest{
+		Operation: BranchSquash, Base: "base", Head: "head",
+	})
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+func installMessageTestExecutable(t *testing.T, source, dir string) string {
+	t.Helper()
+	name := "fill-message"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	path := filepath.Join(dir, name)
+	if err := os.Symlink(source, path); err != nil {
+		data, err := os.ReadFile(source)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(path, data, 0o700))
+	}
+	return path
 }

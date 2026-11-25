@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -72,6 +73,13 @@ func TestMain(m *testing.M) {
 				return &shamhub.Definition{Log: log}
 			})
 			main()
+		},
+		"mock-message": func() { os.Exit(runMockMessage()) },
+		"mock-message-hook": func() {
+			if err := mockMessageHook(os.Args[1:]); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
 		},
 		"mockedit": mockedit.Main,
 		"shamhub": func() {

@@ -13,7 +13,7 @@
 // temporary file (with executable permission) and executed directly,
 // letting the kernel use the interpreter from the shebang.
 //
-// If a script is the path to a regular file, it is executed directly.
+// If [exec.LookPath] resolves the script as an executable, it is executed directly.
 //
 // Otherwise, the script is passed to 'sh -c'. RunRequest.Args are forwarded
 // as positional parameters ($1, $2, ...).
@@ -39,6 +39,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec" //nolint:depguard // LookPath only; process execution goes through xec.
 	"strings"
 	"time"
 
@@ -61,12 +62,11 @@ type Runner struct {
 type RunRequest struct {
 	// Script is the script body to execute.
 	// If it starts with "#!", it is executed directly via the
-	// interpreter named in the shebang. If it names a regular file,
-	// that file is executed directly. Otherwise, it is passed to
-	// "sh -c".
+	// interpreter named in the shebang. If [exec.LookPath] resolves it as an
+	// executable, it is executed directly. Otherwise, it is passed to "sh -c".
 	Script string // required
 
-	// Args is forwarded to the script as positional parameters.
+	// Args are passed to the executable or exposed as shell positional parameters.
 	Args []string
 
 	// Dir is the working directory for the script.
@@ -183,8 +183,11 @@ func (r *Runner) buildCmd(
 	if strings.HasPrefix(script, "#!") {
 		return r.buildShebangCmd(ctx, log, script, scriptArgs)
 	}
-	if info, err := os.Stat(script); err == nil && info.Mode().IsRegular() {
-		return xec.Command(ctx, log, script, scriptArgs...), func() {}, nil
+
+	if executable, err := exec.LookPath(script); err == nil {
+		return xec.Command(ctx, log, executable, scriptArgs...), func() {}, nil
+	} else if errors.Is(err, exec.ErrDot) {
+		return nil, nil, err
 	}
 	args := make([]string, 0, 3+len(scriptArgs))
 	args = append(args, "-c", script, "gs-scriptrun")

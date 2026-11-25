@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/hexops/autogold/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
@@ -66,7 +67,7 @@ Signed-off-by: Test Committer <committer@example.com>`))
 		require.NoError(t, worktree.Commit(ctx, git.CommitRequest{
 			Amend:   true,
 			Signoff: true,
-			NoEdit:  true,
+			Edit:    git.SkipCommitEdit(),
 		}))
 
 		assertCommitBodyEquals(t, autogold.Expect(`Body of the commit message.
@@ -80,7 +81,7 @@ Signed-off-by: Test Committer <committer@example.com>`))
 		require.NoError(t, worktree.Commit(ctx, git.CommitRequest{
 			Amend:   true,
 			Signoff: true,
-			NoEdit:  true,
+			Edit:    git.SkipCommitEdit(),
 		}))
 
 		assertCommitBodyEquals(t, autogold.Expect(`Body of the commit message.
@@ -190,4 +191,76 @@ func TestWorktree_Commit_multipleMessages(t *testing.T) {
 		require.Equal(t, "Only subject", commit.Subject)
 		require.Empty(t, commit.Body)
 	})
+}
+
+func TestWorktree_Commit_customEditor(t *testing.T) {
+	t.Setenv("GIT_EDITOR", "false")
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		git init
+		git add file.txt
+		git commit -m 'Initial commit'
+
+		-- file.txt --
+		original
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{Log: silogtest.New(t)})
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(fixture.Dir(), "file.txt"), []byte("updated\n"), 0o600))
+
+	editor := filepath.Join(t.TempDir(), "editor ' $;.sh")
+	require.NoError(t, os.WriteFile(editor, []byte(text.Dedent(`
+		set -eu
+		test "$#" = 2
+		test "$1" = "$EXPECTED_ARGUMENT"
+		git diff --cached -- file.txt | grep '^+updated$'
+		grep '^Draft subject$' "$2"
+		grep '^Signed-off-by:' "$2"
+		trailer=$(grep '^Signed-off-by:' "$2")
+		printf 'Edited subject\n\nEdited with prepared index\n\n%s\n' "$trailer" > "$2"
+	`)), 0o600))
+
+	argument := "spaces 'quotes' \"double\" $dollar `backticks` ; & \\backslash"
+	require.NoError(t, wt.Commit(t.Context(), git.CommitRequest{
+		Message:   "Draft subject",
+		All:       true,
+		Signoff:   true,
+		Author:    &git.Signature{Name: "Test", Email: "test@example.com"},
+		Committer: &git.Signature{Name: "Test", Email: "test@example.com"},
+		Edit: git.EditCommitWith(git.CommitEditor{
+			Args: []string{"sh", editor, argument},
+			Env:  []string{"EXPECTED_ARGUMENT=" + argument},
+		}),
+	}))
+	commit, err := wt.Repository().ReadCommit(t.Context(), "HEAD")
+	require.NoError(t, err)
+	assert.Equal(t, "Edited subject", commit.Subject)
+	assert.Contains(t, commit.Body, "Signed-off-by: Test <test@example.com>")
+	assert.Contains(t, commit.Body, "Edited with prepared index")
+}
+
+func TestWorktree_Commit_editorFailure(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		git init
+		git commit --allow-empty -m 'Initial commit'
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{Log: silogtest.New(t)})
+	require.NoError(t, err)
+
+	err = wt.Commit(t.Context(), git.CommitRequest{
+		AllowEmpty: true,
+		Author:     &git.Signature{Name: "Test", Email: "test@example.com"},
+		Committer:  &git.Signature{Name: "Test", Email: "test@example.com"},
+		Edit:       git.EditCommitWith(git.CommitEditor{Args: []string{"false"}}),
+	})
+	require.Error(t, err)
+	commit, err := wt.Repository().ReadCommit(t.Context(), "HEAD")
+	require.NoError(t, err)
+	assert.Equal(t, "Initial commit", commit.Subject)
 }

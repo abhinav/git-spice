@@ -1,160 +1,74 @@
-// Package msggen runs the user-configured message generator script
-// and parses its JSON output into a [Result].
-//
-// Scripts are configured via spice.message.generator. Execution is
-// delegated to [scriptrun.Runner] -- the same runner the auto-resolve
-// features use -- so the message generator speaks the same JSON
-// protocol as the resolvers (see doc/src/guide/scripts.md).
-//
-// The result fields msggen cares about are Title and Body. The
-// shared protocol's Assumptions and Questions are surfaced as logged
-// info messages and (when a prompter is wired) an interactive Q&A
-// loop driven by the caller.
+// Package msggen generates commit and CR messages with user-configured commands.
+// Commands edit a message file and inherit all three standard streams.
 package msggen
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/scriptrun"
-	"go.abhg.dev/gs/internal/silog"
 )
 
-// Result holds the parsed output of a message generator script.
-//
-// Title and Body are the user-facing message fields. Assumptions are
-// short notes the script wants surfaced (logged at info level by the
-// caller). Questions, when non-empty, drives a clarification loop the
-// caller may run before treating the result as final.
-type Result struct {
-	// Title is the first-line commit subject or PR title.
-	Title string
+// Handler generates messages for committed ranges with a configured command.
+type Handler struct {
+	// Fill enables automatic message filling.
+	Fill bool
 
-	// Body is the multi-line message body.
-	Body string
+	// Command edits message files in place. Empty selects built-in filling
+	// where the invoking workflow supports it.
+	Command string
 
-	// Assumptions are informational notes the script made; logged at
-	// info level by the caller.
-	Assumptions []string
+	// Dir is the worktree root. Empty uses the current directory.
+	Dir string
 
-	// Questions, when non-empty, asks the user for clarification
-	// before the result is treated as final.
-	Questions []string
+	Runner ScriptRunner // required
 }
 
-// Message returns the full message by combining Title and Body in the
-// conventional format: title, blank line, body. If Body is empty,
-// only the Title is returned.
-func (r *Result) Message() string {
-	if r.Body == "" {
-		return r.Title
-	}
-	return r.Title + "\n\n" + r.Body
+// Enabled reports whether automatic filling was selected.
+func (h *Handler) Enabled() bool { return h.Fill }
+
+// Configured reports whether an external fill command is configured.
+func (h *Handler) Configured() bool { return h.Command != "" }
+
+// RangeRequest describes the committed range selected by squash or submit.
+type RangeRequest struct {
+	Operation OperationKind // required
+
+	// Base and Head are the commit endpoints of the selected range.
+	Base, Head git.Hash // required
 }
 
-// ErrNoGenerator is returned when --fill is requested but no message
-// generator script is configured.
-var ErrNoGenerator = errors.New(
-	"--fill requires a message generator script; " +
-		"configure one with: " +
-		"git config spice.message.generator '<script>'",
-)
-
-// ScriptRunner is the subset of [scriptrun.Runner] msggen uses. It is
-// named so tests can supply a fake.
-type ScriptRunner interface {
-	Run(ctx context.Context, req *scriptrun.RunRequest) (*scriptrun.RunResult, error)
-}
-
-var _ ScriptRunner = (*scriptrun.Runner)(nil)
-
-// Runner executes a message generator script and parses its JSON
-// output.
-type Runner struct {
-	// Log is the logger used for info, warn, and debug messages.
-	Log *silog.Logger
-
-	// Args is the invoking process's argument vector (typically
-	// os.Args). Forwarded to the script as positional parameters via
-	// scriptrun.
-	Args []string
-}
-
-// scriptOutputPreviewBytes is how much script stdout/stderr is
-// included in error diagnostics on parse / non-zero exit.
-const scriptOutputPreviewBytes = 2048
-
-// Run executes the given script in dir with the provided extra env
-// vars layered on top of the parent environment.
-//
-// The script speaks the shared scriptrun.ResolveResponse protocol on
-// stdout; this method returns the title/body/assumptions/questions
-// fields a message-generation caller cares about. Errors are returned
-// for: invalid runner state, non-zero script exit, empty stdout,
-// invalid JSON, or a JSON document without a Title field.
-func (r *Runner) Run(
-	ctx context.Context,
-	script string,
-	dir string,
-	env []string,
-) (*Result, error) {
-	if r.Log == nil {
-		r.Log = silog.Nop()
-	}
-	if script == "" {
-		return nil, errors.New("empty script")
-	}
-
-	r.Log.Info("Generating message...")
-	r.Log.Debug("Running message script",
-		"script", script,
-		"dir", dir,
-	)
-
-	runner := &scriptrun.Runner{Log: r.Log, Args: r.Args}
-	res, err := runner.Run(ctx, &scriptrun.RunRequest{
-		Script: script,
-		Dir:    dir,
-		Env:    append([]string{"GIT_OPTIONAL_LOCKS=0"}, env...),
-	})
+// Generate supplies an empty message file and returns the message the command wrote.
+func (h *Handler) Generate(ctx context.Context, req *RangeRequest) (string, error) {
+	f, err := os.CreateTemp("", "gs-message-*")
 	if err != nil {
-		return nil, fmt.Errorf("run script: %w", err)
+		return "", fmt.Errorf("create message file: %w", err)
 	}
-	if res.ExitCode != 0 {
-		return nil, fmt.Errorf(
-			"message script exited with code %d: %s",
-			res.ExitCode, previewBytes(res.Stderr),
-		)
+	defer func() { _ = os.Remove(f.Name()) }()
+	if err := f.Close(); err != nil {
+		return "", fmt.Errorf("close message file: %w", err)
 	}
 
-	resp, err := scriptrun.ParseResponse(res.Stdout)
+	if err := runMessageCommand(ctx, h.Runner, &scriptrun.RunRequest{
+		Script: h.Command,
+		Dir:    h.Dir,
+		Args:   []string{f.Name(), req.Operation.String(), req.Base.String(), req.Head.String()},
+	}); err != nil {
+		return "", err
+	}
+
+	data, err := os.ReadFile(f.Name())
 	if err != nil {
-		return nil, fmt.Errorf("parse script output: %w (stdout: %s)",
-			err, previewBytes(res.Stdout),
-		)
+		return "", fmt.Errorf("read generated message: %w", err)
 	}
-	if resp.Title == "" {
-		return nil, errors.New(
-			"message script returned no title; the JSON response must include a non-empty 'title' field",
-		)
+	message := string(data)
+	subject, _, _ := strings.Cut(message, "\n")
+	if strings.TrimSpace(subject) == "" {
+		return "", errors.New("generated message must start with a non-empty subject")
 	}
-
-	for _, a := range resp.Assumptions {
-		r.Log.Infof("Message: %s", a)
-	}
-
-	return &Result{
-		Title:       resp.Title,
-		Body:        resp.Body,
-		Assumptions: resp.Assumptions,
-		Questions:   resp.Questions,
-	}, nil
-}
-
-func previewBytes(b []byte) string {
-	if len(b) <= scriptOutputPreviewBytes {
-		return string(b)
-	}
-	return string(b[:scriptOutputPreviewBytes]) + "...[truncated]"
+	return message, nil
 }

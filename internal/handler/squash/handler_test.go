@@ -23,6 +23,7 @@ func TestHandler_SquashBranch(t *testing.T) {
 	t.Run("TrunkBranch", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		handler := &Handler{
+			Messages:   NewMockMessageHandler(ctrl),
 			Log:        silog.Nop(),
 			Store:      mockStore,
 			Repository: NewMockGitRepository(ctrl),
@@ -44,6 +45,7 @@ func TestHandler_SquashBranch(t *testing.T) {
 			Return(&spice.BranchNeedsRestackError{Base: "main"})
 
 		handler := &Handler{
+			Messages:   NewMockMessageHandler(ctrl),
 			Log:        silog.Nop(),
 			Store:      mockStore,
 			Service:    mockService,
@@ -97,7 +99,13 @@ func TestHandler_SquashBranch(t *testing.T) {
 			CheckoutBranch(t.Context(), branchName).
 			Return(nil)
 
+		mockMessages := NewMockMessageHandler(ctrl)
+		mockMessages.EXPECT().
+			Enabled().
+			Return(false)
+
 		handler := &Handler{
+			Messages:   mockMessages,
 			Log:        silog.Nop(),
 			Repository: mockRepo,
 			Worktree:   mockWorktree,
@@ -171,7 +179,13 @@ func TestHandler_SquashBranch(t *testing.T) {
 			}).
 			Return(nil)
 
+		mockMessages := NewMockMessageHandler(ctrl)
+		mockMessages.EXPECT().
+			Enabled().
+			Return(false)
+
 		handler := &Handler{
+			Messages:   mockMessages,
 			Log:        silog.Nop(),
 			Repository: mockRepo,
 			Worktree:   mockWorktree,
@@ -234,6 +248,7 @@ func TestHandler_SquashBranch(t *testing.T) {
 			Return(nil)
 
 		handler := &Handler{
+			Messages:   NewMockMessageHandler(ctrl),
 			Log:        silog.Nop(),
 			Repository: mockRepo,
 			Worktree:   mockWorktree,
@@ -297,6 +312,7 @@ func TestHandler_SquashBranch(t *testing.T) {
 			Return(nil)
 
 		handler := &Handler{
+			Messages:   NewMockMessageHandler(ctrl),
 			Log:        silog.Nop(),
 			Repository: mockRepo,
 			Worktree:   mockWorktree,
@@ -369,7 +385,13 @@ func TestHandler_SquashBranch(t *testing.T) {
 			}).
 			Return(nil)
 
+		mockMessages := NewMockMessageHandler(ctrl)
+		mockMessages.EXPECT().
+			Enabled().
+			Return(false)
+
 		handler := &Handler{
+			Messages:   mockMessages,
 			Log:        silog.Nop(),
 			Repository: mockRepo,
 			Worktree:   mockWorktree,

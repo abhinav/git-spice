@@ -1,0 +1,28 @@
+# Explicit squash messages take precedence over filling.
+
+as 'Test <test@example.com>'
+at '2026-11-06T20:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m Initial
+gs repo init
+git add feature.txt
+gs branch create feature -m Feature
+
+git config spice.message.fill.command mock-message
+git config spice.message.fill true
+env MOCK_MESSAGE_EXIT=8
+
+gs branch squash --fill -m 'Explicit squash message'
+git log -1 --format=%s
+stdout '^Explicit squash message$'
+
+gs branch squash --fill --message-file $WORK/message.txt
+git log -1 --format=%s
+stdout '^From file$'
+
+-- repo/feature.txt --
+feature
+-- message.txt --
+From file
