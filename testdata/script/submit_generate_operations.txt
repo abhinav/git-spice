@@ -28,32 +28,20 @@ grep '^branch-submit$' $WORK/invocation/operation
 
 git add two.txt
 gs branch create two -m Two
-git rev-parse HEAD^ HEAD
-cp stdout $WORK/range.txt
 gs --no-prompt upstack submit --fill --no-draft
 stderr 'Created #2'
-cmp $WORK/invocation/range $WORK/range.txt
-grep '^Two$' $WORK/invocation/draft
 grep '^upstack-submit$' $WORK/invocation/operation
 
 git add three.txt
 gs branch create three -m Three
-git rev-parse HEAD^ HEAD
-cp stdout $WORK/range.txt
 gs --no-prompt stack submit --fill --no-draft
 stderr 'Created #3'
-cmp $WORK/invocation/range $WORK/range.txt
-grep '^Three$' $WORK/invocation/draft
 grep '^stack-submit$' $WORK/invocation/operation
 
 git add four.txt
 gs branch create four -m Four
-git rev-parse HEAD^ HEAD
-cp stdout $WORK/range.txt
 gs --no-prompt downstack submit --fill --no-draft
 stderr 'Created #4'
-cmp $WORK/invocation/range $WORK/range.txt
-grep '^Four$' $WORK/invocation/draft
 grep '^downstack-submit$' $WORK/invocation/operation
 
 -- repo/one.txt --

@@ -34,6 +34,19 @@ grep '^branch-create$' $WORK/invocation/operation
 git log -1 --format=%s
 stdout '^Generated for main$'
 
+# Selecting filling does not request a commit.
+env MOCK_MESSAGE_EXIT=8
+git rev-parse HEAD
+cp stdout $WORK/before.txt
+gs branch create uncommitted --fill --no-commit
+git rev-parse HEAD
+cmp stdout $WORK/before.txt
+
+# An explicit message bypasses filling.
+gs branch create supplied --fill -m 'Explicit branch message'
+git log -1 --format=%s
+stdout '^Explicit branch message$'
+
 -- repo/one.txt --
 one
 -- repo/two.txt --

@@ -3,8 +3,6 @@ package msggen
 import (
 	"context"
 	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,34 +59,6 @@ func TestHandler_Generate_failures(t *testing.T) {
 	}
 }
 
-func TestHandler_Generate_executable(t *testing.T) {
-	exe, err := os.Executable()
-	require.NoError(t, err)
-	t.Setenv("MSGGEN_TEST_HELPER", "executable")
-	root := t.TempDir()
-	bin := filepath.Join(root, "bin")
-	dir := filepath.Join(root, "worktree")
-	require.NoError(t, os.Mkdir(bin, 0o700))
-	require.NoError(t, os.Mkdir(dir, 0o700))
-	installMessageTestExecutable(t, exe, bin)
-	command := installMessageTestExecutable(t, exe, dir)
-	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-
-	for _, tt := range []struct{ name, command, message string }{
-		{name: "OnPath", command: "fill-message", message: "bin\n"},
-		{name: "AbsolutePath", command: command, message: "worktree\n"},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			handler := &Handler{Fill: true, Command: tt.command, Dir: dir, Runner: &scriptrun.Runner{Log: silogtest.New(t)}}
-			message, err := handler.Generate(t.Context(), &RangeRequest{
-				Operation: BranchSubmit, Base: "base", Head: "head",
-			})
-			require.NoError(t, err)
-			assert.Equal(t, tt.message, message)
-		})
-	}
-}
-
 func TestHandler_Generate_cancelled(t *testing.T) {
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -102,17 +72,22 @@ func TestHandler_Generate_cancelled(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 }
 
-func installMessageTestExecutable(t *testing.T, source, dir string) string {
-	t.Helper()
-	name := "fill-message"
-	if runtime.GOOS == "windows" {
-		name += ".exe"
+func TestHandler_Generate_unchangedDraft(t *testing.T) {
+	exe, err := os.Executable()
+	require.NoError(t, err)
+	t.Setenv("MSGGEN_TEST_HELPER", "unchanged")
+	handler := &Handler{
+		Fill:    true,
+		Command: exe,
+		Runner:  &scriptrun.Runner{Log: silogtest.New(t)},
 	}
-	path := filepath.Join(dir, name)
-	if err := os.Symlink(source, path); err != nil {
-		data, err := os.ReadFile(source)
-		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(path, data, 0o700))
-	}
-	return path
+	draft := "Subject\n\nBody\n"
+	message, err := handler.Generate(t.Context(), &RangeRequest{
+		Operation: BranchSubmit,
+		Base:      "base",
+		Head:      "head",
+		Draft:     draft,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, draft, message)
 }

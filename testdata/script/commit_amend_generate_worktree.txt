@@ -32,5 +32,13 @@ cd ../repo
 git log -1 --format=%s
 stdout '^Primary checkout message$'
 
+cd ../linked
+
+# An explicit amendment message bypasses the configured command.
+env MOCK_MESSAGE_EXIT=8
+gs commit amend --fill --allow-empty -m 'Explicit amendment'
+git log -1 --format=%s
+stdout '^Explicit amendment$'
+
 -- message.txt --
 Generated in linked checkout

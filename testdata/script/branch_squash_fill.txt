@@ -31,19 +31,17 @@ gs branch squash --fill
 git log -1 --format=%B
 cmp stdout $WORK/golden/builtin.txt
 
-# A command can leave the normal draft unchanged, including a single commit.
+# An explicit message takes precedence over filling.
 git config spice.message.fill.command mock-message
-env MOCK_MESSAGE_RESPONSE=$WORK/unchanged.txt
-gs branch squash --fill
-git log -1 --format=%B
-cmp stdout $WORK/golden/builtin.txt
+env MOCK_MESSAGE_EXIT=8
+gs branch squash --fill -m 'Explicit squash message'
+git log -1 --format=%s
+stdout '^Explicit squash message$'
 
 -- repo/feature.txt --
 feature
 -- message.txt --
 Generated squash
--- unchanged.txt --
-{{.Draft}}
 -- golden/builtin.txt --
 Generated squash
 

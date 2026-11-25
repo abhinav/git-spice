@@ -15,7 +15,7 @@ import (
 )
 
 // runMockMessage is a message command controlled by test-script fixtures.
-// MOCK_MESSAGE_RESPONSE names a template with Operation, Subject, and Draft fields.
+// MOCK_MESSAGE_RESPONSE names a template with Operation and Subject fields.
 // MOCK_MESSAGE_RECORD optionally names a directory for the original draft,
 // invocation arguments, and Git state observed by the command.
 // MOCK_MESSAGE_EXIT requests a nonzero exit without editing the message.
@@ -57,11 +57,11 @@ func mockMessage(args []string) error {
 		return err
 	}
 
-	draft, err := os.ReadFile(args[0])
-	if err != nil {
-		return err
-	}
 	if dir := os.Getenv("MOCK_MESSAGE_RECORD"); dir != "" {
+		draft, err := os.ReadFile(args[0])
+		if err != nil {
+			return err
+		}
 		staged, err := wt.DiffIndex(ctx, "HEAD")
 		if err != nil {
 			return err
@@ -106,10 +106,9 @@ func mockMessage(args []string) error {
 		return err
 	}
 	var message bytes.Buffer
-	if err := tmpl.Execute(&message, struct{ Operation, Subject, Draft string }{
+	if err := tmpl.Execute(&message, struct{ Operation, Subject string }{
 		Operation: args[1],
 		Subject:   commit.Subject,
-		Draft:     string(draft),
 	}); err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 	"testing"
 )
@@ -46,6 +45,9 @@ func runMessageTestHelper(mode string, args []string) error {
 	if len(args) != 4 {
 		return fmt.Errorf("unexpected range arguments: %q", args)
 	}
+	if mode == "unchanged" {
+		return nil
+	}
 	draft, err := os.ReadFile(args[0])
 	if err != nil {
 		return err
@@ -59,11 +61,6 @@ func runMessageTestHelper(mode string, args []string) error {
 			return fmt.Errorf("unexpected range: %q", args[1:])
 		}
 		return os.WriteFile(args[0], []byte("Subject\n\nBody\n"), 0o600)
-	case "executable":
-		if !slices.Equal(args[1:], []string{"branch-submit", "base", "head"}) {
-			return fmt.Errorf("unexpected range: %q", args[1:])
-		}
-		return os.WriteFile(args[0], []byte(filepath.Base(filepath.Dir(os.Args[0]))+"\n"), 0o600)
 	case "stdout-only":
 		fmt.Fprintln(os.Stdout, "only stdout")
 		return nil
