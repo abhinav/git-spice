@@ -75,6 +75,25 @@ git fetch
 git branch --set-upstream-to=origin/feature1
 gs branch submit
 
+# Test 3: Fix by fetching all branches from the remote
+gs trunk
+git add other.txt
+gs bc -m 'Add other' other
+
+# Submit fails because 'other' does not match main or feature*.
+! gs branch submit --fill
+stderr 'git remote set-branches origin'
+
+# Fix by configuring origin to fetch all branches.
+git remote set-branches origin '*'
+
+# Submit and follow-up submit succeed now.
+gs branch submit --fill
+cp $WORK/extra/other-update.txt other.txt
+git add other.txt
+gs commit create -m 'update other'
+gs branch submit
+
 -- repo/feature1.txt --
 Contents of feature1
 
@@ -86,6 +105,12 @@ Contents of feature2
 
 -- extra/feature2-update.txt --
 Updated contents of feature2
+
+-- repo/other.txt --
+Contents of other
+
+-- extra/other-update.txt --
+Updated contents of other
 
 -- golden/refspec_does_not_match.txt --
 ERR Remote 'origin' has refspecs:
@@ -100,7 +125,9 @@ ERR    and add a fetch refspec to fetch all branches under that prefix:
 ERR        git config --add remote.origin.fetch '+refs/heads/yourname/*:refs/remotes/origin/yourname/*'
 ERR    You can configure git-spice to automatically add this prefix for future branches with:
 ERR        git config --global spice.branchCreate.prefix yourname/
-ERR 3. Use the --force flag to push anyway (not recommended).
+ERR 3. Fetch all branches from the remote (e.g. if this was a single-branch clone):
+ERR        git remote set-branches origin '*'
+ERR 4. Use the --force flag to push anyway (not recommended).
 FTL gs: submit branch feature1: remote cannot fetch pushed branch
 -- golden/no_upstream_set.txt --
 ERR No upstream branch was found for branch %v with existing CR %v  feature1=#1
