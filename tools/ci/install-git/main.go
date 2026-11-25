@@ -222,7 +222,11 @@ func downloadGit(log *silog.Logger, version string) (dir string, cleanup func(),
 }
 
 func installGit(ctx context.Context, log *silog.Logger, prefix, srcDir string) error {
-	if err := xec.Command(ctx, log, "make", "prefix="+prefix).
+	// Older Git versions use names that conflict with C23 macros.
+	// Select C17 explicitly so compiler default changes do not break them.
+	const cflags = "CFLAGS=-g -O2 -Wall -std=gnu17"
+
+	if err := xec.Command(ctx, log, "make", "prefix="+prefix, cflags).
 		WithDir(srcDir).
 		WithStdout(os.Stdout).
 		WithStderr(os.Stderr).
@@ -230,7 +234,7 @@ func installGit(ctx context.Context, log *silog.Logger, prefix, srcDir string) e
 		return fmt.Errorf("make: %w", err)
 	}
 
-	if err := xec.Command(ctx, log, "make", "prefix="+prefix, "install").
+	if err := xec.Command(ctx, log, "make", "prefix="+prefix, cflags, "install").
 		WithDir(srcDir).
 		WithStdout(os.Stdout).
 		WithStderr(os.Stderr).
