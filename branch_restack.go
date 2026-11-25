@@ -11,6 +11,8 @@ import (
 
 type branchRestackCmd struct {
 	Branch string `placeholder:"NAME" help:"Branch to restack" predictor:"trackedBranches"`
+
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
 }
 
 func (*branchRestackCmd) Help() string {
@@ -35,5 +37,8 @@ func (cmd *branchRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) e
 func (cmd *branchRestackCmd) Run(ctx context.Context, handler RestackHandler) error {
 	return handler.RestackBranch(ctx, &restack.BranchRequest{
 		Branch: cmd.Branch,
+		Options: &restack.Options{
+			SkipConflicts: cmd.SkipConflicts,
+		},
 	})
 }

@@ -13,6 +13,8 @@ import (
 
 type downstackRestackCmd struct {
 	Branch string `help:"Branch to restack the downstack of" placeholder:"NAME" predictor:"trackedBranches"`
+
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
 }
 
 func (*downstackRestackCmd) Help() string {
@@ -47,5 +49,8 @@ func (cmd *downstackRestackCmd) Run(
 
 	return handler.RestackDownstack(ctx, &restack.DownstackRequest{
 		Branch: cmd.Branch,
+		Options: &restack.Options{
+			SkipConflicts: cmd.SkipConflicts,
+		},
 	})
 }
