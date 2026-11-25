@@ -733,7 +733,9 @@ func (h *Handler) submitBranch(
 					remote.Push, user, remote.Push, user)
 				log.Errorf("   You can configure git-spice to automatically add this prefix for future branches with:")
 				log.Errorf("       git config --global spice.branchCreate.prefix %v/", user)
-				log.Errorf("3. Use the --force flag to push anyway (not recommended).")
+				log.Errorf("3. Fetch all branches from the remote (e.g. if this was a single-branch clone):")
+				log.Errorf("       git remote set-branches %v '*'", remote.Push)
+				log.Errorf("4. Use the --force flag to push anyway (not recommended).")
 				return status, errors.New("remote cannot fetch pushed branch")
 			}
 		}
