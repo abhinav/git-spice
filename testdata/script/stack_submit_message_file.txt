@@ -22,7 +22,7 @@ git add three.txt
 gs branch create feature3 -m 'Default title three'
 
 # A title-only file supplies an empty body, even with --fill and a CR template.
-gs --no-prompt downstack submit --branch feature1 --no-draft --fill --message-file feature1:$WORK/messages/one.md
+gs --no-prompt downstack submit --branch feature1 --no-draft -c --message-file feature1:$WORK/messages/one.md
 stderr 'Created #1'
 
 # Mixed submission uses file content for feature3 and commit defaults for feature2.

@@ -9,6 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -22,6 +23,8 @@ type branchCreateConfig struct {
 
 type branchCreateCmd struct {
 	branchCreateConfig
+
+	MessageFill msggen.Options `embed:""`
 
 	Name string `arg:"" optional:"" help:"Name of the new branch"`
 
@@ -111,13 +114,12 @@ func (cmd *branchCreateCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	messages *msggen.CommitEditor,
 	restackHandler RestackHandler,
 ) (err error) {
-	// If a message is specified, automatically enable commits
 	if len(cmd.Message) > 0 || cmd.MessageFile != "" {
 		cmd.Commit = true
 	}
-
 	if cmd.Name == "" && !cmd.Commit {
 		return errors.New("a branch name is required with --no-commit")
 	}
@@ -216,7 +218,7 @@ func (cmd *branchCreateCmd) Run(
 	)
 	branchAt := baseHash
 	if cmd.Commit {
-		commitHash, restore, err := cmd.commit(ctx, wt, baseName, log)
+		commitHash, restore, err := cmd.commit(ctx, wt, baseName, log, messages)
 		if err != nil {
 			return err
 		}
@@ -349,11 +351,34 @@ func (cmd *branchCreateCmd) commit(
 	wt *git.Worktree,
 	baseName string,
 	log *silog.Logger,
+	messages *msggen.CommitEditor,
 ) (commitHash git.Hash, restore func() error, err error) {
+	var edit git.CommitEdit
+	if messages.Enabled() && len(cmd.Message) == 0 && cmd.MessageFile == "" {
+		edit, err = messages.CommitEdit(msggen.BranchCreate)
+		if err != nil {
+			return "", nil, err
+		}
+	}
 	// We'll need --allow-empty if there are no staged changes.
 	diff, err := wt.DiffIndex(ctx, "HEAD")
 	if err != nil {
 		return "", nil, fmt.Errorf("diff index: %w", err)
+	}
+
+	// The commit editor runs after switching to the selected base.
+	// Restore the caller's checkout if creation stops before making a branch.
+	rollbackCtx := context.WithoutCancel(ctx)
+	originalBranch, err := wt.CurrentBranch(ctx)
+	restoreCheckout := func() error { return wt.CheckoutBranch(rollbackCtx, originalBranch) }
+	if errors.Is(err, git.ErrDetachedHead) {
+		originalHead, err := wt.Head(ctx)
+		if err != nil {
+			return "", nil, fmt.Errorf("get original HEAD: %w", err)
+		}
+		restoreCheckout = func() error { return wt.DetachHead(rollbackCtx, originalHead.String()) }
+	} else if err != nil {
+		return "", nil, fmt.Errorf("get original branch: %w", err)
 	}
 
 	if err := wt.DetachHead(ctx, baseName); err != nil {
@@ -367,9 +392,10 @@ func (cmd *branchCreateCmd) commit(
 		NoVerify:    cmd.NoVerify,
 		All:         cmd.All,
 		Signoff:     cmd.Signoff,
+		Edit:        edit,
 	}); err != nil {
-		if err := wt.CheckoutBranch(ctx, baseName); err != nil {
-			log.Warn("Could not restore original branch. You may need to reset manually.", "error", err)
+		if err := restoreCheckout(); err != nil {
+			log.Warn("Could not restore original checkout. You may need to reset manually.", "error", err)
 		}
 		return "", nil, fmt.Errorf("commit: %w", err)
 	}
@@ -382,7 +408,7 @@ func (cmd *branchCreateCmd) commit(
 	return commitHash, func() error {
 		// Move HEAD to the state just before the commit
 		// while leaving the index and working tree as-is.
-		err := wt.Reset(ctx, commitHash.String()+"^", git.ResetOptions{
+		err := wt.Reset(rollbackCtx, commitHash.String()+"^", git.ResetOptions{
 			Mode:  git.ResetSoft,
 			Quiet: true,
 		})
@@ -390,6 +416,6 @@ func (cmd *branchCreateCmd) commit(
 			return fmt.Errorf("reset to parent commit: %w", err)
 		}
 
-		return wt.CheckoutBranch(ctx, baseName)
+		return restoreCheckout()
 	}, nil
 }

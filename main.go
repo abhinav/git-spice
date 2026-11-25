@@ -41,6 +41,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/sigstack"
@@ -425,6 +426,10 @@ func (cmd *mainCmd) AfterApply(
 	// just to get the current branch name.
 
 	return errors.Join(
+		// Commands may compose submission without exposing message-fill options.
+		kctx.BindSingletonProvider(func(runner *scriptrun.Runner) *msggen.Handler {
+			return &msggen.Handler{Runner: runner}
+		}),
 		kctx.BindSingletonProvider(func(config *spice.Config) (*http.Client, error) {
 			return newHTTPClient(config, nil)
 		}),
@@ -511,8 +516,10 @@ func (cmd *mainCmd) AfterApply(
 			svc *spice.Service,
 			secretStash secret.Stash,
 			remoteResolver *remoteResolver,
+			messages *msggen.Handler,
 		) (SubmitHandler, error) {
 			return &submit.Handler{
+				Messages:   messages,
 				Log:        log,
 				View:       view,
 				Repository: wt.Repository(),
@@ -581,8 +588,10 @@ func (cmd *mainCmd) AfterApply(
 			store *state.Store,
 			svc *spice.Service,
 			restackHandler RestackHandler,
+			messages *msggen.Handler,
 		) (SquashHandler, error) {
 			return &squash.Handler{
+				Messages:   messages,
 				Log:        log,
 				Repository: repo,
 				Worktree:   wt,

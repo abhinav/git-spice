@@ -14,12 +14,15 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/spicetest"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/statetest"
+	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -83,6 +86,7 @@ func TestHandler_pushRepositoryID_rejectsDifferentForge(t *testing.T) {
 		AnyTimes()
 
 	handler := &Handler{
+		Messages:   NewMockMessageHandler(mockCtrl),
 		Log:        silog.Nop(),
 		View:       ui.NewFileView(&bytes.Buffer{}),
 		Repository: nil,
@@ -146,7 +150,14 @@ func TestHandler_SubmitBatch_rejectsStaleBaseBeforeSubmitting(t *testing.T) {
 		}, nil)
 
 	var logBuffer bytes.Buffer
+	mockMessages := NewMockMessageHandler(mockCtrl)
+	mockMessages.EXPECT().
+		Enabled().
+		Return(false).
+		AnyTimes()
+
 	handler := &Handler{
+		Messages:   mockMessages,
 		Log:        silog.New(&logBuffer, nil),
 		View:       ui.NewFileView(&bytes.Buffer{}),
 		Repository: nil,
@@ -238,9 +249,16 @@ func TestHandler_SubmitBatch_updatesStackRepresentationsAfterPartialFailure(t *t
 	service.EXPECT().BranchGraph(gomock.Any(), nil).Return(graph, nil)
 
 	transientErr := errors.New("transient submit failure")
+	mockMessages := NewMockMessageHandler(ctrl)
+	mockMessages.EXPECT().
+		Enabled().
+		Return(false).
+		AnyTimes()
+
 	handler := &Handler{
-		Log:  log,
-		View: ui.NewFileView(&bytes.Buffer{}),
+		Messages: mockMessages,
+		Log:      log,
+		View:     ui.NewFileView(&bytes.Buffer{}),
 		Repository: &submitTestGitRepository{
 			peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
 				switch ref {
@@ -409,8 +427,9 @@ func TestHandler_submitBranch_editBase(t *testing.T) {
 
 			var pushed bool
 			handler := &Handler{
-				Log:  silogtest.New(t),
-				View: ui.NewFileView(&bytes.Buffer{}),
+				Messages: NewMockMessageHandler(mockCtrl),
+				Log:      silogtest.New(t),
+				View:     ui.NewFileView(&bytes.Buffer{}),
 				Repository: &submitTestGitRepository{
 					peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
 						switch ref {
@@ -537,8 +556,9 @@ func TestHandler_submitBranch_importsChangeWithAbbreviatedHead(t *testing.T) {
 		Return(func(func(*forge.ListChangeCommentItem, error) bool) {})
 
 	handler := &Handler{
-		Log:  log,
-		View: ui.NewFileView(&bytes.Buffer{}),
+		Messages: NewMockMessageHandler(mockCtrl),
+		Log:      log,
+		View:     ui.NewFileView(&bytes.Buffer{}),
 		Repository: &submitTestGitRepository{
 			peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
 				switch ref {
@@ -596,6 +616,75 @@ func TestHandler_submitBranch_importsChangeWithAbbreviatedHead(t *testing.T) {
 	assert.NotContains(t, logBuffer.String(), "feature-2")
 }
 
+func TestHandler_prepareBranch_configuredTemplate(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		git init -b main
+		git commit --allow-empty -m Base
+		git checkout -b feature
+		git add feature.txt
+		git commit -m Subject -m Body
+
+		-- feature.txt --
+		feature
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{Log: silogtest.New(t)})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name         string
+		giveTemplate string
+		wantBody     string
+	}{
+		{name: "Configured", giveTemplate: "b.md", wantBody: "Configured template\n"},
+		{name: "Unavailable", giveTemplate: "missing.md", wantBody: "Default template\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			service := NewMockService(ctrl)
+			service.EXPECT().
+				ListChangeTemplates(gomock.Any(), "origin", nil).
+				Return([]*forge.ChangeTemplate{
+					{Filename: "b.md", Body: "Configured template\n"},
+					{Filename: "a.md", Body: "Default template\n"},
+				}, nil)
+			messages := NewMockMessageHandler(ctrl)
+			messages.EXPECT().Enabled().Return(true)
+			messages.EXPECT().Configured().Return(true)
+			messages.EXPECT().
+				Generate(t.Context(), gomock.Cond(func(req *msggen.RangeRequest) bool {
+					return assert.Equal(t, "Subject\n\nBody\n\n"+tt.wantBody, req.Draft)
+				})).
+				Return("Filled\n\nEdited body", nil)
+			store := NewMockStore(ctrl)
+			store.EXPECT().SavePreparedBranch(t.Context(), gomock.Any()).Return(nil)
+
+			handler := &Handler{
+				Messages:          messages,
+				Log:               silogtest.New(t),
+				View:              ui.NewFileView(&bytes.Buffer{}),
+				Repository:        wt.Repository(),
+				Worktree:          wt,
+				Store:             store,
+				Service:           service,
+				Browser:           &browser.Noop{},
+				FindRemote:        nil,
+				ResolveRepository: nil,
+				OpenRepository:    nil,
+			}
+			prepared, err := handler.prepareBranch(
+				t.Context(), "feature", "origin", nil, "feature", "main", "main", "head", nil,
+				&submitOptions{Options: &Options{Template: tt.giveTemplate}, operation: msggen.BranchSubmit},
+			)
+			require.NoError(t, err)
+			assert.Equal(t, "Filled", prepared.Subject)
+			assert.Equal(t, "Edited body", prepared.Body)
+		})
+	}
+}
+
 func TestHandler_resolveUpstreamBranch_refusesStoredTrunk(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 
@@ -605,6 +694,7 @@ func TestHandler_resolveUpstreamBranch_refusesStoredTrunk(t *testing.T) {
 		Return("main")
 
 	handler := &Handler{
+		Messages:   NewMockMessageHandler(mockCtrl),
 		Log:        silog.Nop(),
 		View:       ui.NewFileView(&bytes.Buffer{}),
 		Repository: nil,
@@ -646,6 +736,7 @@ func TestHandler_checkStaleSubmissionBases_forceSkipsValidation(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 
 	handler := &Handler{
+		Messages:          NewMockMessageHandler(mockCtrl),
 		Log:               silog.Nop(),
 		View:              ui.NewFileView(&bytes.Buffer{}),
 		Repository:        nil,

@@ -1,0 +1,52 @@
+# commit create --fill uses an external command to edit the message.
+
+as 'Test <test@example.com>'
+at '2026-11-06T20:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m Initial
+gs repo init
+gs branch create feature --no-commit
+
+# A command is required only when a message needs filling.
+! gs commit create --fill --allow-empty
+stderr 'spice.message.fill.command'
+gs commit create --fill --allow-empty -m 'Supplied without command'
+
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
+
+gs commit create --fill --allow-empty
+stdout 'Generator progress'
+stderr 'Generator diagnostic'
+grep '^commit-create$' $WORK/invocation/operation
+git log -1 --format=%B
+cmp stdout $WORK/golden/message.txt
+
+# Fixup messages bypass the command.
+env MOCK_MESSAGE_EXIT=8
+gs commit create --allow-empty --fill --fixup HEAD
+git log -1 --format=%s
+stdout '^fixup! Generated subject$'
+
+# Configured filling can be disabled for one invocation.
+env MOCK_MESSAGE_EXIT=
+git config spice.message.fill true
+gs commit create --allow-empty
+git log -1 --format=%s
+stdout '^Generated subject$'
+env MOCK_MESSAGE_EXIT=8
+gs commit amend --no-fill --no-edit --allow-empty
+
+-- golden/message.txt --
+Generated subject
+
+Generated body
+
+-- message.txt --
+Generated subject
+
+Generated body

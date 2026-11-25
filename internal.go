@@ -5,7 +5,8 @@ import (
 )
 
 type internalCmd struct {
-	AutostashPop internalAutostashPop `cmd:""`
+	AutostashPop internalAutostashPop   `cmd:""`
+	FillMessage  internalFillMessageCmd `cmd:""`
 }
 
 type internalAutostashPop struct {

@@ -18,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -70,10 +71,21 @@ type Service interface {
 
 var _ Service = (*spice.Service)(nil)
 
-//go:generate mockgen -typed -destination mocks_test.go -package submit -write_package_comment=false . Service,Store
+//go:generate go tool mockgen -typed -destination mocks_test.go -package submit -write_package_comment=false . Service,Store,MessageHandler
+
+// MessageHandler prepares new CR messages for the invoking submit command.
+type MessageHandler interface {
+	Enabled() bool
+	Configured() bool
+	Generate(context.Context, *msggen.RangeRequest) (string, error)
+}
+
+var _ MessageHandler = (*msggen.Handler)(nil)
 
 // Handler implements support for submission of change requests.
 type Handler struct {
+	Messages MessageHandler // required
+
 	Log        *silog.Logger    // required
 	View       ui.View          // required
 	Repository GitRepository    // required
@@ -201,6 +213,9 @@ type BatchOptions struct {
 
 // BatchRequest is a request to submit one or more change requests.
 type BatchRequest struct {
+	// Operation is the batch submit command invoking generation.
+	Operation msggen.OperationKind
+
 	Branches     []string // required
 	Options      *Options
 	BatchOptions *BatchOptions // required
@@ -270,10 +285,12 @@ func (h *Handler) SubmitBatch(
 		// Shallow copy the options because submitBranch may modify them.
 		opts := *opts
 		sopts := &submitOptions{
-			Options:      &opts,
-			upstreamBase: resolvedUpstreams[branchInfo.Base],
-			stackUpdates: &stackUpdates,
-			MessageFile:  batchOpts.MessageFiles[branch],
+			fillFromCommits: h.Messages.Enabled() && !h.Messages.Configured(),
+			operation:       req.Operation,
+			Options:         &opts,
+			upstreamBase:    resolvedUpstreams[branchInfo.Base],
+			stackUpdates:    &stackUpdates,
+			MessageFile:     batchOpts.MessageFiles[branch],
 		}
 
 		status, err := h.submitBranch(
@@ -348,11 +365,13 @@ func (h *Handler) Submit(ctx context.Context, req *Request) (retErr error) {
 		graph,
 		req.Branch,
 		&submitOptions{
-			Options:      opts,
-			Title:        req.Title,
-			Body:         req.Body,
-			MessageFile:  req.MessageFile,
-			stackUpdates: &stackUpdates,
+			fillFromCommits: h.Messages.Enabled() && !h.Messages.Configured(),
+			operation:       msggen.BranchSubmit,
+			Options:         opts,
+			Title:           req.Title,
+			Body:            req.Body,
+			MessageFile:     req.MessageFile,
+			stackUpdates:    &stackUpdates,
 		},
 	)
 	results = append(results, status)
@@ -385,6 +404,9 @@ const (
 
 type submitOptions struct {
 	*Options
+
+	fillFromCommits bool
+	operation       msggen.OperationKind
 
 	Title, Body  string
 	MessageFile  MessageFile
@@ -742,6 +764,7 @@ func (h *Handler) submitBranch(
 				remote.Upstream,
 				remoteRepo,
 				upstreamBranch, branch.Base, upstreamBase,
+				commitHash,
 				pushRepo,
 				opts,
 			)
@@ -1092,25 +1115,28 @@ func (h *Handler) prepareBranch(
 	remoteName string,
 	remoteRepo forge.Repository,
 	upstreamBranch, baseBranch, upstreamBase string,
+	head git.Hash,
 	pushRepository forge.RepositoryID,
 	opts *submitOptions,
 ) (*preparedBranch, error) {
-	if opts.MessageFile != "" {
-		title, body, err := opts.MessageFile.read()
-		if err != nil {
-			return nil, fmt.Errorf("read message file %q: %w", opts.MessageFile, err)
-		}
-		opts.Title = title
-		opts.Body = body
-	}
-
-	// Fetch the template while we're prompting the other fields.
+	// Fetch templates for filling or prompting while preparing the message.
 	changeTemplatesCh := make(chan []*forge.ChangeTemplate, 1)
 	go func() {
 		defer close(changeTemplatesCh)
 
 		changeTemplatesCh <- listChangeTemplates(ctx, h.Service, h.Log, remoteName, remoteRepo, opts.Options)
 	}()
+
+	title, body := opts.Title, opts.Body
+	var completeMessage bool
+	if opts.MessageFile != "" {
+		var err error
+		title, body, err = opts.MessageFile.read()
+		if err != nil {
+			return nil, fmt.Errorf("read message file %q: %w", opts.MessageFile, err)
+		}
+		completeMessage = true
+	}
 
 	msgs, err := h.Repository.CommitMessageRange(ctx, branchToSubmit, baseBranch)
 	if err != nil {
@@ -1183,28 +1209,66 @@ func (h *Handler) prepareBranch(
 		}
 	}
 
-	var fields []ui.Field
-	form := newBranchSubmitForm(ctx, h.Service, h.Worktree, remoteRepo, h.Log, opts.Options)
-	if opts.Title == "" {
-		opts.Title = defaultTitle
-		fields = append(fields, form.titleField(&opts.Title, msgs))
+	if !completeMessage && title == "" && body == "" && h.Messages.Enabled() && h.Messages.Configured() {
+		base, err := h.Repository.PeelToCommit(ctx, baseBranch)
+		if err != nil {
+			return nil, fmt.Errorf("resolve message base: %w", err)
+		}
+		draft := defaultTitle + "\n\n" + defaultBody.String()
+		if templates := <-changeTemplatesCh; len(templates) > 0 {
+			tmpl := templates[0]
+			if opts.Template != "" {
+				if idx := slices.IndexFunc(templates, func(tmpl *forge.ChangeTemplate) bool {
+					return tmpl.Filename == opts.Template
+				}); idx >= 0 {
+					tmpl = templates[idx]
+				} else {
+					h.Log.Warnf("Template %q not found", opts.Template)
+				}
+			}
+			if defaultBody.Len() > 0 {
+				draft += "\n\n"
+			}
+			draft += tmpl.Body
+		}
+		if !strings.HasSuffix(draft, "\n") {
+			draft += "\n"
+		}
+		message, err := h.Messages.Generate(ctx, &msggen.RangeRequest{
+			Operation: opts.operation,
+			Base:      base,
+			Head:      head,
+			Draft:     draft,
+		})
+		if err != nil {
+			return nil, err
+		}
+		title, body = splitMessage(message)
+		completeMessage = true
 	}
 
-	if opts.Body == "" && opts.MessageFile == "" {
-		opts.Body = defaultBody.String()
-		if opts.Fill {
+	var fields []ui.Field
+	form := newBranchSubmitForm(ctx, h.Service, h.Worktree, remoteRepo, h.Log, opts.Options)
+	if title == "" {
+		title = defaultTitle
+		fields = append(fields, form.titleField(&title, msgs))
+	}
+
+	if !completeMessage && body == "" {
+		body = defaultBody.String()
+		if opts.fillFromCommits {
 			// If the user selected --fill,
 			// and there are templates to choose from,
 			// just pick the first template in the body.
 			tmpls := <-changeTemplatesCh
 			if len(tmpls) > 0 {
-				opts.Body += "\n\n" + tmpls[0].Body
+				body += "\n\n" + tmpls[0].Body
 			}
 		} else {
 			// Otherwise, we'll prompt for the template (if needed)
 			// and the body.
 			fields = append(fields, form.templateField(changeTemplatesCh))
-			fields = append(fields, form.bodyField(&opts.Body))
+			fields = append(fields, form.bodyField(&body))
 		}
 	}
 
@@ -1217,7 +1281,7 @@ func (h *Handler) prepareBranch(
 	}
 
 	// TODO: should we assume --fill if --no-prompt?
-	if len(fields) > 0 && !opts.Fill {
+	if len(fields) > 0 && !opts.fillFromCommits {
 		if !ui.Interactive(h.View) {
 			return nil, fmt.Errorf("prompt for commit information: %w", ui.ErrPrompt)
 		}
@@ -1239,8 +1303,8 @@ func (h *Handler) prepareBranch(
 			}
 
 			if usePrepared {
-				opts.Title = prePrepared.Subject
-				opts.Body = prePrepared.Body
+				title = prePrepared.Subject
+				body = prePrepared.Body
 			} else {
 				// It will get cleared anyway when the branch
 				// is submitted, but clear it now to avoid the
@@ -1255,12 +1319,12 @@ func (h *Handler) prepareBranch(
 			return nil, fmt.Errorf("prompt form: %w", err)
 		}
 	}
-	must.NotBeBlankf(opts.Title, "CR title must have been set")
+	must.NotBeBlankf(title, "CR title must have been set")
 
 	storePrepared := state.PreparedBranch{
 		Name:    branchToSubmit,
-		Subject: opts.Title,
-		Body:    opts.Body,
+		Subject: title,
+		Body:    body,
 	}
 
 	draft := opts.DraftDefault

@@ -1,0 +1,147 @@
+# Generate new CR descriptions and mix generated messages with supplied files.
+
+as 'Test <test@example.com>'
+at '2026-11-06T18:00:00Z'
+
+cd repo
+git init
+git add .shamhub
+git commit --allow-empty -m 'Initial commit'
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add one.txt
+gs branch create feature1 -m 'Default title one' -m 'Default body one'
+git add two.txt
+gs branch create feature2 -m 'Default title two' -m 'Default body two'
+git add three.txt
+gs branch create feature3 -m 'Default title three'
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
+
+# The command sees the normal draft but may replace it with an empty body.
+gs --no-prompt downstack submit --branch feature1 --fill --no-draft
+stderr 'Created #1'
+cmp $WORK/invocation/draft $WORK/golden/draft.txt
+git config spice.message.fill true
+! gs --no-prompt stack submit --no-fill --no-draft
+stderr 'prompt for commit information'
+git config spice.message.fill false
+gs --no-prompt stack submit -c --no-draft --message-file feature2:$WORK/message.md
+stderr 'Created #2'
+stderr 'Created #3'
+git config spice.message.fill true
+
+# Existing descriptions are untouched and do not invoke the command.
+env MOCK_MESSAGE_EXIT=8
+gs --no-prompt stack submit --fill --no-draft
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+# Supplied messages bypass the command for a single new CR too.
+gs branch create supplied --no-commit
+git add supplied.txt
+gs commit create -m Supplied
+env MOCK_MESSAGE_EXIT=8
+gs --no-prompt branch submit --fill --no-draft --title 'Explicit title' --body 'Explicit body'
+stderr 'Created #4'
+
+-- repo/one.txt --
+one
+-- repo/two.txt --
+two
+-- repo/three.txt --
+three
+-- repo/supplied.txt --
+supplied
+-- repo/.shamhub/CHANGE_TEMPLATE.md --
+Default template body
+-- message.txt --
+Generated {{.Subject}}
+-- message.md --
+Supplied title
+
+Supplied body.
+-- golden/draft.txt --
+Default title one
+
+Default body one
+
+Default template body
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Generated Default title one",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "9b1b9f755413140392f7f7d01e3d37bc102fb5fb"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "287ae61d06acab3b8146b76bff7934dce2d920b3"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Supplied title",
+    "body": "Supplied body.",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "287ae61d06acab3b8146b76bff7934dce2d920b3"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "e9c9f755ae5cd9493c5939bb778dcdb17d692281"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "Generated Default title three",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "e9c9f755ae5cd9493c5939bb778dcdb17d692281"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature3",
+      "sha": "eab0039cdff3fdbfec49176326bf5abbc0d59c1c"
+    }
+  }
+]

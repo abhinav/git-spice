@@ -1,0 +1,57 @@
+# branch squash --fill supplies the normal draft and the selected commit range.
+
+as 'Test <test@example.com>'
+at '2026-11-06T20:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m Initial
+gs repo init
+git add feature.txt
+gs branch create feature -m Feature -m 'Feature body'
+gs commit create --allow-empty -m Followup -m 'Followup body'
+
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
+
+git rev-parse main feature
+cp stdout $WORK/range.txt
+gs branch squash --fill
+cmp $WORK/invocation/range $WORK/range.txt
+cmp $WORK/invocation/draft $WORK/golden/draft.txt
+grep '^branch-squash$' $WORK/invocation/operation
+git log -1 --format=%s
+stdout '^Generated squash$'
+
+# With no external command, filling uses the branch's commit messages.
+git config --unset spice.message.fill.command
+gs commit create --allow-empty -m 'Second squash message'
+gs branch squash --fill
+git log -1 --format=%B
+cmp stdout $WORK/golden/builtin.txt
+
+# An explicit message takes precedence over filling.
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_EXIT=8
+gs branch squash --fill -m 'Explicit squash message'
+git log -1 --format=%s
+stdout '^Explicit squash message$'
+
+-- repo/feature.txt --
+feature
+-- message.txt --
+Generated squash
+-- golden/builtin.txt --
+Generated squash
+
+Second squash message
+
+-- golden/draft.txt --
+Feature
+
+Feature body
+
+Followup
+
+Followup body

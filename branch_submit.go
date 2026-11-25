@@ -9,8 +9,9 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-// submitOptions defines options that are common to all submit commands.
-type submitOptions struct {
+// SubmitOptions defines options that are common to all submit commands.
+// It is exported so Kong can discover hooks on its embedded options.
+type SubmitOptions struct {
 	submit.Options
 
 	NoWeb bool `help:"Alias for --web=false."`
@@ -23,7 +24,8 @@ const _submitHelp = `
 Use --dry-run to print what would be submitted without submitting it.
 
 For new Change Requests, a prompt will allow filling metadata.
-Use --fill to populate title and body from the commit messages.
+Use --fill to populate title and body with the configured message command,
+or from commit messages when no command is configured.
 The --[no-]draft flag marks the CR as draft or not.
 Use the 'spice.submit.draft' configuration option
 to mark new CRs as drafts (or not) by default,
@@ -45,7 +47,7 @@ only if there are multiple CRs in the stack.
 `
 
 type branchSubmitCmd struct {
-	submitOptions
+	SubmitOptions
 
 	Title       string             `xor:"title-source" help:"Title of the change request" placeholder:"TITLE"`
 	Body        string             `xor:"body-source" help:"Body of the change request" placeholder:"BODY"`
@@ -62,7 +64,8 @@ func (*branchSubmitCmd) Help() string {
 		For new Change Requests, a prompt will allow filling metadata.
 		Use the --title and --body flags to skip the prompt,
 		or --message-file PATH to read both from a text file.
-		Use --fill to fill them from commit messages.
+		Use --fill to populate them with the configured message command,
+		or from commit messages when no command is configured.
 		The --[no-]draft flag marks the CR as draft or not.
 		Use the 'spice.submit.draft' configuration option
 		to mark new CRs as drafts (or not) by default,

@@ -10,6 +10,8 @@ An editor will open to edit the commit message of the squashed commit. Use the
 -m/--message or -F/--file flag to specify a commit message without editing.
 
 Flags:
+      --[no-]fill            Fill the message automatically. (🔧
+                             spice.message.fill)
       --no-verify            Bypass pre-commit and commit-msg hooks.
       --[no-]restack         Whether to restack upstack branches. (🔧
                              spice.branchSquash.restack)
@@ -25,3 +27,6 @@ Global Flags:
   -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
   -C, --dir=DIR        Change to DIR before doing anything
       --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.message.fill.command    Command that edits the message file in place.

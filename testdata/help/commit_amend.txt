@@ -20,6 +20,8 @@ confirmation when amending on trunk. The --no-prompt flag can be used to skip
 this prompt in scripts.
 
 Flags:
+      --[no-]fill            Fill the message automatically. (🔧
+                             spice.message.fill)
   -a, --all                  Stage all changes before committing.
       --allow-empty          Create a commit even if it contains no changes.
   -m, --message=MSG          Use the given message as the commit message.
@@ -41,6 +43,7 @@ Global Flags:
 
 Configuration (🔧):
   spice.branchCreate.generatedBranchNameLimit
-                               Maximum length of auto-generated branch names
-                               (truncated at word boundaries). Defaults to 32.
-  spice.branchCreate.prefix    Always add a prefix to branch names.
+                                Maximum length of auto-generated branch names
+                                (truncated at word boundaries). Defaults to 32.
+  spice.branchCreate.prefix     Always add a prefix to branch names.
+  spice.message.fill.command    Command that edits the message file in place.

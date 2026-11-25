@@ -7,13 +7,14 @@ import (
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/submit"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type stackSubmitCmd struct {
-	submitOptions
+	SubmitOptions
 	submit.BatchOptions
 }
 
@@ -56,6 +57,7 @@ func (cmd *stackSubmitCmd) Run(
 	// TODO: separate preparation of the stack from submission
 
 	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
+		Operation:    msggen.StackSubmit,
 		Branches:     toSubmit,
 		Options:      &cmd.Options,
 		BatchOptions: &cmd.BatchOptions,

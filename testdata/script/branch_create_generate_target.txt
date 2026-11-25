@@ -1,0 +1,57 @@
+# branch create --fill inspects the selected base instead of the current branch.
+
+as 'Test <test@example.com>'
+at '2026-11-06T20:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m Initial
+gs repo init
+git add one.txt
+gs branch create one -m One
+git add two.txt
+
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
+
+# Failure restores the original checkout and staged changes.
+env MOCK_MESSAGE_EXIT=7
+! gs branch create --target main two --fill
+stderr 'status 7'
+git branch --show-current
+stdout '^one$'
+git diff --cached --name-only
+cmp stdout $WORK/golden/staged.txt
+
+# Retry successfully and inspect the context seen by the command.
+env MOCK_MESSAGE_EXIT=
+gs branch create --target main two --fill
+git rev-parse main
+cmp stdout $WORK/invocation/head
+cmp $WORK/invocation/staged $WORK/golden/staged.txt
+grep '^branch-create$' $WORK/invocation/operation
+git log -1 --format=%s
+stdout '^Generated for main$'
+
+# Selecting filling does not request a commit.
+env MOCK_MESSAGE_EXIT=8
+git rev-parse HEAD
+cp stdout $WORK/before.txt
+gs branch create uncommitted --fill --no-commit
+git rev-parse HEAD
+cmp stdout $WORK/before.txt
+
+# An explicit message bypasses filling.
+gs branch create supplied --fill -m 'Explicit branch message'
+git log -1 --format=%s
+stdout '^Explicit branch message$'
+
+-- repo/one.txt --
+one
+-- repo/two.txt --
+two
+-- message.txt --
+Generated for main
+-- golden/staged.txt --
+two.txt

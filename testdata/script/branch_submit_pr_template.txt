@@ -24,7 +24,8 @@ git add feature.txt
 env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/feature-commit-msg
 gs bc feature
 
-gs branch submit --fill
+# Keep the explicit title and fill the body from the commit and template.
+gs branch submit --fill --title 'Feature overview'
 stderr 'Created #1'
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pulls.json
@@ -57,7 +58,7 @@ This is the starting commit message.
   {
     "number": 1,
     "state": "open",
-    "title": "Add feature",
+    "title": "Feature overview",
     "body": "This adds a feature.\nThe feature does things.\nThis is the starting commit message.\n\n## Summary\n\nExplain the changes you made.\n\n## Testing\n\nExplain how these changes were tested.\n\n## Rollback Plan\n\nExplain how to revert these changes.\n",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {

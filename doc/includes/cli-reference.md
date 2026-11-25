@@ -247,7 +247,8 @@ for all branches in the current stack.
 Use --dry-run to print what would be submitted without submitting it.
 
 For new Change Requests, a prompt will allow filling metadata.
-Use --fill to populate title and body from the commit messages.
+Use --fill to populate title and body with the configured message command,
+or from commit messages when no command is configured.
 The --[no-]draft flag marks the CR as draft or not.
 Use the 'spice.submit.draft' configuration option
 to mark new CRs as drafts (or not) by default,
@@ -270,8 +271,8 @@ only if there are multiple CRs in the stack.
 
 **Flags**
 
+* `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.fill" }](/cli/config.md#spicemessagefill)): Fill the message automatically.
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
 * `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
@@ -285,7 +286,7 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 * `--message-file=BRANCH:PATH`: Read a new CR's message from PATH for BRANCH. First line is the title; remaining text is the body. Repeat for each branch.
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationComment.trunkComparison](/cli/config.md#spicesubmitnavigationcommenttrunkcomparison), [spice.submit.navigationCommentStyle.layout](/cli/config.md#spicesubmitnavigationcommentstylelayout), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentStyle.trunkComparisonText](/cli/config.md#spicesubmitnavigationcommentstyletrunkcomparisontext), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.message.fill](/cli/config.md#spicemessagefill), [spice.message.fill.command](/cli/config.md#spicemessagefillcommand), [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationComment.trunkComparison](/cli/config.md#spicesubmitnavigationcommenttrunkcomparison), [spice.submit.navigationCommentStyle.layout](/cli/config.md#spicesubmitnavigationcommentstylelayout), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentStyle.trunkComparisonText](/cli/config.md#spicesubmitnavigationcommentstyletrunkcomparisontext), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice stack merge {#gs-stack-merge}
 
@@ -430,7 +431,8 @@ Use --branch to start at a different branch.
 Use --dry-run to print what would be submitted without submitting it.
 
 For new Change Requests, a prompt will allow filling metadata.
-Use --fill to populate title and body from the commit messages.
+Use --fill to populate title and body with the configured message command,
+or from commit messages when no command is configured.
 The --[no-]draft flag marks the CR as draft or not.
 Use the 'spice.submit.draft' configuration option
 to mark new CRs as drafts (or not) by default,
@@ -453,8 +455,8 @@ only if there are multiple CRs in the stack.
 
 **Flags**
 
+* `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.fill" }](/cli/config.md#spicemessagefill)): Fill the message automatically.
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
 * `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
@@ -469,7 +471,7 @@ only if there are multiple CRs in the stack.
 * `--message-file=BRANCH:PATH`: Read a new CR's message from PATH for BRANCH. First line is the title; remaining text is the body. Repeat for each branch.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationComment.trunkComparison](/cli/config.md#spicesubmitnavigationcommenttrunkcomparison), [spice.submit.navigationCommentStyle.layout](/cli/config.md#spicesubmitnavigationcommentstylelayout), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentStyle.trunkComparisonText](/cli/config.md#spicesubmitnavigationcommentstyletrunkcomparisontext), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.message.fill](/cli/config.md#spicemessagefill), [spice.message.fill.command](/cli/config.md#spicemessagefillcommand), [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationComment.trunkComparison](/cli/config.md#spicesubmitnavigationcommenttrunkcomparison), [spice.submit.navigationCommentStyle.layout](/cli/config.md#spicesubmitnavigationcommentstylelayout), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentStyle.trunkComparisonText](/cli/config.md#spicesubmitnavigationcommentstyletrunkcomparisontext), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice upstack restack {#gs-upstack-restack}
 
@@ -586,7 +588,8 @@ Use --branch to start at a different branch.
 Use --dry-run to print what would be submitted without submitting it.
 
 For new Change Requests, a prompt will allow filling metadata.
-Use --fill to populate title and body from the commit messages.
+Use --fill to populate title and body with the configured message command,
+or from commit messages when no command is configured.
 The --[no-]draft flag marks the CR as draft or not.
 Use the 'spice.submit.draft' configuration option
 to mark new CRs as drafts (or not) by default,
@@ -609,8 +612,8 @@ only if there are multiple CRs in the stack.
 
 **Flags**
 
+* `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.fill" }](/cli/config.md#spicemessagefill)): Fill the message automatically.
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
 * `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
@@ -625,7 +628,7 @@ only if there are multiple CRs in the stack.
 * `--message-file=BRANCH:PATH`: Read a new CR's message from PATH for BRANCH. First line is the title; remaining text is the body. Repeat for each branch.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationComment.trunkComparison](/cli/config.md#spicesubmitnavigationcommenttrunkcomparison), [spice.submit.navigationCommentStyle.layout](/cli/config.md#spicesubmitnavigationcommentstylelayout), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentStyle.trunkComparisonText](/cli/config.md#spicesubmitnavigationcommentstyletrunkcomparisontext), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.message.fill](/cli/config.md#spicemessagefill), [spice.message.fill.command](/cli/config.md#spicemessagefillcommand), [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationComment.trunkComparison](/cli/config.md#spicesubmitnavigationcommenttrunkcomparison), [spice.submit.navigationCommentStyle.layout](/cli/config.md#spicesubmitnavigationcommentstylelayout), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentStyle.trunkComparisonText](/cli/config.md#spicesubmitnavigationcommentstyletrunkcomparisontext), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice downstack merge {#gs-downstack-merge}
 
@@ -878,6 +881,7 @@ target (A) to the specified branch:
 
 **Flags**
 
+* `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.fill" }](/cli/config.md#spicemessagefill)): Fill the message automatically.
 * `--insert`: Restack the upstack of the target branch onto the new branch
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
@@ -889,7 +893,7 @@ target (A) to the specified branch:
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
 * `--[no-]commit` ([:material-wrench:{ .middle title="spice.branchCreate.commit" }](/cli/config.md#spicebranchcreatecommit)): Commit staged changes to the new branch, or create an empty commit
 
-**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.branchCreate.restack](/cli/config.md#spicebranchcreaterestack), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
+**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.branchCreate.restack](/cli/config.md#spicebranchcreaterestack), [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.message.fill](/cli/config.md#spicemessagefill), [spice.message.fill.command](/cli/config.md#spicemessagefillcommand)
 
 ### git-spice branch delete {#gs-branch-delete}
 
@@ -1016,6 +1020,7 @@ to specify a commit message without editing.
 
 **Flags**
 
+* `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.fill" }](/cli/config.md#spicemessagefill)): Fill the message automatically.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--[no-]restack` ([:material-wrench:{ .middle title="spice.branchSquash.restack" }](/cli/config.md#spicebranchsquashrestack)): Whether to restack upstack branches.
 * `--no-edit`: Do not open an editor to edit the squashed commit message. Only applicable if --message is not used. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
@@ -1023,7 +1028,7 @@ to specify a commit message without editing.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--branch=NAME`: Branch to squash. Defaults to current branch. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 
-**Configuration**: [spice.branchSquash.restack](/cli/config.md#spicebranchsquashrestack)
+**Configuration**: [spice.branchSquash.restack](/cli/config.md#spicebranchsquashrestack), [spice.message.fill](/cli/config.md#spicemessagefill), [spice.message.fill.command](/cli/config.md#spicemessagefillcommand)
 
 ### git-spice branch edit {#gs-branch-edit}
 
@@ -1240,7 +1245,8 @@ Use the --branch flag to target a different branch.
 For new Change Requests, a prompt will allow filling metadata.
 Use the --title and --body flags to skip the prompt,
 or --message-file PATH to read both from a text file.
-Use --fill to fill them from commit messages.
+Use --fill to populate them with the configured message command,
+or from commit messages when no command is configured.
 The --[no-]draft flag marks the CR as draft or not.
 Use the 'spice.submit.draft' configuration option
 to mark new CRs as drafts (or not) by default,
@@ -1262,8 +1268,8 @@ only if there are multiple CRs in the stack.
 
 **Flags**
 
+* `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.fill" }](/cli/config.md#spicemessagefill)): Fill the message automatically.
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
 * `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
@@ -1280,7 +1286,7 @@ only if there are multiple CRs in the stack.
 * `--message-file=PATH`: Read a new CR's message from PATH. First line is the title; remaining text is the body.
 * `--branch=NAME`: Branch to submit
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationComment.trunkComparison](/cli/config.md#spicesubmitnavigationcommenttrunkcomparison), [spice.submit.navigationCommentStyle.layout](/cli/config.md#spicesubmitnavigationcommentstylelayout), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentStyle.trunkComparisonText](/cli/config.md#spicesubmitnavigationcommentstyletrunkcomparisontext), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.message.fill](/cli/config.md#spicemessagefill), [spice.message.fill.command](/cli/config.md#spicemessagefillcommand), [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationComment.trunkComparison](/cli/config.md#spicesubmitnavigationcommenttrunkcomparison), [spice.submit.navigationCommentStyle.layout](/cli/config.md#spicesubmitnavigationcommentstylelayout), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentStyle.trunkComparisonText](/cli/config.md#spicesubmitnavigationcommentstyletrunkcomparisontext), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ## Commit
 
@@ -1314,6 +1320,7 @@ when you want to apply changes to an older commit.
 
 **Flags**
 
+* `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.fill" }](/cli/config.md#spicemessagefill)): Fill the message automatically.
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a new commit even if it contains no changes.
 * `--fixup=COMMIT`: Create a fixup commit. See also 'git-spice commit fixup'.
@@ -1323,7 +1330,7 @@ when you want to apply changes to an older commit.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
 * `--[no-]restack` ([:material-wrench:{ .middle title="spice.commitCreate.restack" }](/cli/config.md#spicecommitcreaterestack)): Whether to restack upstack branches.
 
-**Configuration**: [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.commitCreate.restack](/cli/config.md#spicecommitcreaterestack)
+**Configuration**: [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.commitCreate.restack](/cli/config.md#spicecommitcreaterestack), [spice.message.fill](/cli/config.md#spicemessagefill), [spice.message.fill.command](/cli/config.md#spicemessagefillcommand)
 
 ### git-spice commit amend {#gs-commit-amend}
 
@@ -1358,6 +1365,7 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 
 **Flags**
 
+* `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.fill" }](/cli/config.md#spicemessagefill)): Fill the message automatically.
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a commit even if it contains no changes.
 * `-m`, `--message=MSG`: Use the given message as the commit message. May be repeated to add multiple paragraphs.
@@ -1367,7 +1375,7 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
 * `--[no-]restack` ([:material-wrench:{ .middle title="spice.commitAmend.restack" }](/cli/config.md#spicecommitamendrestack)): Whether to restack upstack branches.
 
-**Configuration**: [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.commitAmend.restack](/cli/config.md#spicecommitamendrestack)
+**Configuration**: [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.commitAmend.restack](/cli/config.md#spicecommitamendrestack), [spice.message.fill](/cli/config.md#spicemessagefill), [spice.message.fill.command](/cli/config.md#spicemessagefillcommand)
 
 ### git-spice commit split {#gs-commit-split}
 

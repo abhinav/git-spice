@@ -8,6 +8,7 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -17,6 +18,8 @@ import (
 
 type commitAmendCmd struct {
 	branchCreateConfig // TODO: find a way to avoid this
+
+	MessageFill msggen.Options `embed:""`
 
 	All         bool     `short:"a" help:"Stage all changes before committing."`
 	AllowEmpty  bool     `help:"Create a commit even if it contains no changes."`
@@ -66,6 +69,7 @@ func (cmd *commitAmendCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	messages *msggen.CommitEditor,
 	restackHandler RestackHandler,
 ) error {
 	var detachedHead bool
@@ -133,7 +137,7 @@ func (cmd *commitAmendCmd) Run(
 					MessageFile:        cmd.MessageFile,
 					Signoff:            cmd.Signoff,
 					Commit:             true,
-				}).Run(ctx, log, repo, wt, store, svc, restackHandler)
+				}).Run(ctx, log, repo, wt, store, svc, messages, restackHandler)
 			}
 		}
 	}
@@ -223,15 +227,24 @@ func (cmd *commitAmendCmd) Run(
 		}
 	}
 
+	var edit git.CommitEdit
+	if messages.Enabled() && len(cmd.Message) == 0 && cmd.MessageFile == "" {
+		edit, err = messages.CommitEdit(msggen.CommitAmend)
+		if err != nil {
+			return err
+		}
+	} else if cmd.NoEdit {
+		edit = git.SkipCommitEdit()
+	}
 	if err := wt.Commit(ctx, git.CommitRequest{
 		Messages:    cmd.Message,
 		MessageFile: cmd.MessageFile,
 		AllowEmpty:  cmd.AllowEmpty,
 		Amend:       true,
-		NoEdit:      cmd.NoEdit,
 		NoVerify:    cmd.NoVerify,
 		All:         cmd.All,
 		Signoff:     cmd.Signoff,
+		Edit:        edit,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

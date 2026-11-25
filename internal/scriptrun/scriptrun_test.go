@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
 func TestRunner_Run_shellScript(t *testing.T) {
@@ -190,6 +192,31 @@ func TestRunner_Run_scriptFilePath(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "one:two\n", string(res.Stdout))
+}
+
+func TestRunner_Run_executableOnPath(t *testing.T) {
+	r := &Runner{Log: silogtest.New(t)}
+	res, err := r.Run(t.Context(), &RunRequest{
+		Script: "sh",
+		Args:   []string{"-c", `printf '%s:%s\n' "$1" "$2"`, "gs-test", "one space", "two"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.ExitCode)
+	assert.Equal(t, "one space:two\n", string(res.Stdout))
+}
+
+func TestRunner_Run_implicitCurrentDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("requires an executable shell script")
+	}
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "local-script"), []byte("#!/bin/sh\nexit 0\n"), 0o700))
+	t.Chdir(dir)
+	t.Setenv("PATH", "."+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	r := &Runner{Log: silogtest.New(t)}
+	_, err := r.Run(t.Context(), &RunRequest{Script: "local-script"})
+	require.ErrorIs(t, err, exec.ErrDot)
 }
 
 func TestRunner_Run_emptyScript(t *testing.T) {

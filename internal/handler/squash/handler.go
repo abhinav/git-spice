@@ -11,12 +11,13 @@ import (
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
-//go:generate mockgen -package squash -destination mocks_test.go . GitRepository,GitWorktree,Store,Service,RestackHandler
+//go:generate go tool mockgen -package squash -destination mocks_test.go . GitRepository,GitWorktree,Store,Service,RestackHandler,MessageHandler
 
 // GitRepository provides treeless read/write access to the Git state.
 type GitRepository interface {
@@ -57,8 +58,19 @@ type RestackHandler interface {
 	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
 }
 
+// MessageHandler generates the message for a selected squash range.
+type MessageHandler interface {
+	Enabled() bool
+	Configured() bool
+	Generate(context.Context, *msggen.RangeRequest) (string, error)
+}
+
+var _ MessageHandler = (*msggen.Handler)(nil)
+
 // Handler handles git-spice's squash commands.
 type Handler struct {
+	Messages MessageHandler // required
+
 	Log        *silog.Logger  // required
 	Repository GitRepository  // required
 	Worktree   GitWorktree    // required
@@ -70,6 +82,8 @@ type Handler struct {
 // Options defines options for the SquashBranch method.
 // These are exposed as flags in the CLI
 type Options struct {
+	MessageFill msggen.Options `embed:""`
+
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 
 	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"branchSquash.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
@@ -103,31 +117,34 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 		return fmt.Errorf("lookup branch %q: %w", branchName, err)
 	}
 
-	// If no message was specified,
-	// combine the commit messages of all commits in the branch
-	// to form the initial commit message for the squashed commit.
 	var commitTemplate string
 	if opts.Message == "" && opts.MessageFile == "" {
+		fill := h.Messages.Enabled()
 		commitMessages, err := h.Repository.CommitMessageRange(ctx, branch.Head.String(), branch.BaseHash.String())
 		if err != nil {
 			return fmt.Errorf("get commit messages: %w", err)
 		}
-
 		msg := commitMessageTemplate(
 			commitMessages,
 			opts.CommentPrefix,
-			!opts.NoEdit, // generate comments only if the message will be edited
+			!opts.NoEdit && !fill, // comments only for the editor
 		)
-		if opts.NoEdit {
-			// If --no-edit is specified, use the combined commit messages
-			// as the commit message without opening an editor.
+		if fill && h.Messages.Configured() {
+			msg, err = h.Messages.Generate(ctx, &msggen.RangeRequest{
+				Operation: msggen.BranchSquash,
+				Base:      branch.BaseHash,
+				Head:      branch.Head,
+				Draft:     msg,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		if fill || opts.NoEdit {
 			opts.Message = msg
 		} else {
-			// Otherwise, use the combined commit messages as a template
-			// for the commit message, which will be opened in an editor.
 			commitTemplate = msg
 		}
-
 	}
 
 	// Detach the HEAD so that we don't mess with the current branch

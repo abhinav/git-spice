@@ -1,0 +1,56 @@
+# Each submit scope reports the actual command that invoked generation.
+
+as 'Test <test@example.com>'
+at '2026-11-06T18:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m Initial
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
+
+git add one.txt
+gs branch create one -m One
+git rev-parse HEAD^ HEAD
+cp stdout $WORK/range.txt
+gs --no-prompt branch submit --fill --no-draft
+stderr 'Created #1'
+cmp $WORK/invocation/range $WORK/range.txt
+grep '^One$' $WORK/invocation/draft
+grep '^branch-submit$' $WORK/invocation/operation
+
+git add two.txt
+gs branch create two -m Two
+gs --no-prompt upstack submit --fill --no-draft
+stderr 'Created #2'
+grep '^upstack-submit$' $WORK/invocation/operation
+
+git add three.txt
+gs branch create three -m Three
+gs --no-prompt stack submit --fill --no-draft
+stderr 'Created #3'
+grep '^stack-submit$' $WORK/invocation/operation
+
+git add four.txt
+gs branch create four -m Four
+gs --no-prompt downstack submit --fill --no-draft
+stderr 'Created #4'
+grep '^downstack-submit$' $WORK/invocation/operation
+
+-- repo/one.txt --
+one
+-- repo/two.txt --
+two
+-- repo/three.txt --
+three
+-- repo/four.txt --
+four
+-- message.txt --
+Generated

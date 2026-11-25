@@ -58,6 +58,8 @@ Arguments:
   [<name>]    Name of the new branch
 
 Flags:
+      --[no-]fill            Fill the message automatically. (🔧
+                             spice.message.fill)
       --insert               Restack the upstack of the target branch onto the
                              new branch
       --below                Place the branch below the target branch and
@@ -84,6 +86,7 @@ Global Flags:
 
 Configuration (🔧):
   spice.branchCreate.generatedBranchNameLimit
-                               Maximum length of auto-generated branch names
-                               (truncated at word boundaries). Defaults to 32.
-  spice.branchCreate.prefix    Always add a prefix to branch names.
+                                Maximum length of auto-generated branch names
+                                (truncated at word boundaries). Defaults to 32.
+  spice.branchCreate.prefix     Always add a prefix to branch names.
+  spice.message.fill.command    Command that edits the message file in place.

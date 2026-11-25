@@ -113,9 +113,9 @@ func TestExtraConfig_Args(t *testing.T) {
 	}{
 		{name: "empty"},
 		{
-			name: "editor",
-			give: extraConfig{Editor: "vim"},
-			want: []string{"-c", "core.editor=vim"},
+			name: "mergeConflictStyle",
+			give: extraConfig{MergeConflictStyle: "zdiff3"},
+			want: []string{"-c", "merge.conflictStyle=zdiff3"},
 		},
 	}
 
