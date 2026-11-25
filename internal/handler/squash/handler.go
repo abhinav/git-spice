@@ -120,33 +120,30 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 	var commitTemplate string
 	if opts.Message == "" && opts.MessageFile == "" {
 		fill := h.Messages.Enabled()
+		commitMessages, err := h.Repository.CommitMessageRange(ctx, branch.Head.String(), branch.BaseHash.String())
+		if err != nil {
+			return fmt.Errorf("get commit messages: %w", err)
+		}
+		msg := commitMessageTemplate(
+			commitMessages,
+			opts.CommentPrefix,
+			!opts.NoEdit && !fill, // comments only for the editor
+		)
 		if fill && h.Messages.Configured() {
-			message, err := h.Messages.Generate(ctx, &msggen.RangeRequest{
+			msg, err = h.Messages.Generate(ctx, &msggen.RangeRequest{
 				Operation: msggen.BranchSquash,
 				Base:      branch.BaseHash,
 				Head:      branch.Head,
+				Draft:     msg,
 			})
 			if err != nil {
 				return err
 			}
-			opts.Message = message
+		}
+		if fill || opts.NoEdit {
+			opts.Message = msg
 		} else {
-			// Combine the commit messages for built-in filling or editing.
-			commitMessages, err := h.Repository.CommitMessageRange(ctx, branch.Head.String(), branch.BaseHash.String())
-			if err != nil {
-				return fmt.Errorf("get commit messages: %w", err)
-			}
-
-			msg := commitMessageTemplate(
-				commitMessages,
-				opts.CommentPrefix,
-				!opts.NoEdit && !fill, // comments only for the editor
-			)
-			if fill || opts.NoEdit {
-				opts.Message = msg
-			} else {
-				commitTemplate = msg
-			}
+			commitTemplate = msg
 		}
 	}
 

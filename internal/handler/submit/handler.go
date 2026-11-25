@@ -1117,22 +1117,24 @@ func (h *Handler) prepareBranch(
 	pushRepository forge.RepositoryID,
 	opts *submitOptions,
 ) (*preparedBranch, error) {
-	completeMessage, err := h.resolveCompleteMessage(ctx, baseBranch, head, opts)
-	if err != nil {
-		return nil, err
-	}
-	title, body := opts.Title, opts.Body
-	if completeMessage != nil {
-		title, body = completeMessage.Title, completeMessage.Body
-	}
-
-	// Fetch the template while we're prompting the other fields.
+	// Fetch templates for filling or prompting while preparing the message.
 	changeTemplatesCh := make(chan []*forge.ChangeTemplate, 1)
 	go func() {
 		defer close(changeTemplatesCh)
 
 		changeTemplatesCh <- listChangeTemplates(ctx, h.Service, h.Log, remoteName, remoteRepo, opts.Options)
 	}()
+
+	title, body := opts.Title, opts.Body
+	var completeMessage bool
+	if opts.MessageFile != "" {
+		var err error
+		title, body, err = opts.MessageFile.read()
+		if err != nil {
+			return nil, fmt.Errorf("read message file %q: %w", opts.MessageFile, err)
+		}
+		completeMessage = true
+	}
 
 	msgs, err := h.Repository.CommitMessageRange(ctx, branchToSubmit, baseBranch)
 	if err != nil {
@@ -1205,6 +1207,44 @@ func (h *Handler) prepareBranch(
 		}
 	}
 
+	if !completeMessage && title == "" && body == "" && h.Messages.Enabled() && h.Messages.Configured() {
+		base, err := h.Repository.PeelToCommit(ctx, baseBranch)
+		if err != nil {
+			return nil, fmt.Errorf("resolve message base: %w", err)
+		}
+		draft := defaultTitle + "\n\n" + defaultBody.String()
+		if templates := <-changeTemplatesCh; len(templates) > 0 {
+			tmpl := templates[0]
+			if opts.Template != "" {
+				if idx := slices.IndexFunc(templates, func(tmpl *forge.ChangeTemplate) bool {
+					return tmpl.Filename == opts.Template
+				}); idx >= 0 {
+					tmpl = templates[idx]
+				} else {
+					h.Log.Warnf("Template %q not found", opts.Template)
+				}
+			}
+			if defaultBody.Len() > 0 {
+				draft += "\n\n"
+			}
+			draft += tmpl.Body
+		}
+		if !strings.HasSuffix(draft, "\n") {
+			draft += "\n"
+		}
+		message, err := h.Messages.Generate(ctx, &msggen.RangeRequest{
+			Operation: opts.operation,
+			Base:      base,
+			Head:      head,
+			Draft:     draft,
+		})
+		if err != nil {
+			return nil, err
+		}
+		title, body = splitMessage(message)
+		completeMessage = true
+	}
+
 	var fields []ui.Field
 	form := newBranchSubmitForm(ctx, h.Service, h.Worktree, remoteRepo, h.Log, opts.Options)
 	if title == "" {
@@ -1212,7 +1252,7 @@ func (h *Handler) prepareBranch(
 		fields = append(fields, form.titleField(&title, msgs))
 	}
 
-	if completeMessage == nil && body == "" {
+	if !completeMessage && body == "" {
 		body = defaultBody.String()
 		if opts.fillFromCommits {
 			// If the user selected --fill,
@@ -1306,50 +1346,6 @@ func (h *Handler) prepareBranch(
 		reviewers:      effectiveReviewers(opts.Options, draft),
 		assignees:      opts.Assignees,
 	}, nil
-}
-
-// changeMessage is a complete CR message.
-type changeMessage struct {
-	Title string
-
-	// Body may be empty without requesting a default or template.
-	Body string
-}
-
-// resolveCompleteMessage reads a supplied file or generates a message.
-// A file takes precedence over generation in batch submissions.
-// A nil result leaves partial title/body input and prompting to prepareBranch.
-func (h *Handler) resolveCompleteMessage(
-	ctx context.Context,
-	baseBranch string,
-	head git.Hash,
-	opts *submitOptions,
-) (*changeMessage, error) {
-	if opts.MessageFile != "" {
-		title, body, err := opts.MessageFile.read()
-		if err != nil {
-			return nil, fmt.Errorf("read message file %q: %w", opts.MessageFile, err)
-		}
-		return &changeMessage{Title: title, Body: body}, nil
-	}
-	if opts.Title != "" || opts.Body != "" || !h.Messages.Enabled() || !h.Messages.Configured() {
-		return nil, nil
-	}
-
-	base, err := h.Repository.PeelToCommit(ctx, baseBranch)
-	if err != nil {
-		return nil, fmt.Errorf("resolve message base: %w", err)
-	}
-	message, err := h.Messages.Generate(ctx, &msggen.RangeRequest{
-		Operation: opts.operation,
-		Base:      base,
-		Head:      head,
-	})
-	if err != nil {
-		return nil, err
-	}
-	title, body := splitMessage(message)
-	return &changeMessage{Title: title, Body: body}, nil
 }
 
 func listChangeTemplates(

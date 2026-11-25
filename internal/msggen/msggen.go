@@ -40,15 +40,22 @@ type RangeRequest struct {
 
 	// Base and Head are the commit endpoints of the selected range.
 	Base, Head git.Hash // required
+
+	// Draft is the initial message file content. Empty starts a blank message.
+	Draft string
 }
 
-// Generate supplies an empty message file and returns the message the command wrote.
+// Generate supplies a draft message file and returns the message the command wrote.
 func (h *Handler) Generate(ctx context.Context, req *RangeRequest) (string, error) {
 	f, err := os.CreateTemp("", "gs-message-*")
 	if err != nil {
 		return "", fmt.Errorf("create message file: %w", err)
 	}
 	defer func() { _ = os.Remove(f.Name()) }()
+	if _, err := f.WriteString(req.Draft); err != nil {
+		_ = f.Close()
+		return "", fmt.Errorf("write message draft: %w", err)
+	}
 	if err := f.Close(); err != nil {
 		return "", fmt.Errorf("close message file: %w", err)
 	}

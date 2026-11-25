@@ -22,10 +22,12 @@ git add three.txt
 gs branch create feature3 -m 'Default title three'
 git config spice.message.fill.command mock-message
 env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
 
-# A generated empty body stays empty despite the available template.
+# The command sees the normal draft but may replace it with an empty body.
 gs --no-prompt downstack submit --branch feature1 --fill --no-draft
 stderr 'Created #1'
+cmp $WORK/invocation/draft $WORK/golden/draft.txt
 git config spice.message.fill true
 ! gs --no-prompt stack submit --no-fill --no-draft
 stderr 'prompt for commit information'
@@ -72,6 +74,12 @@ Generated {{.Subject}}
 Supplied title
 
 Supplied body.
+-- golden/draft.txt --
+Default title one
+
+Default body one
+
+Default template body
 -- golden/changes.json --
 [
   {

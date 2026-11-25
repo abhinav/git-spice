@@ -1,0 +1,102 @@
+# External filling starts with the normal submit draft, even without a template.
+
+as 'Test <test@example.com>'
+at '2026-11-25T18:49:09Z'
+
+cd repo
+git init
+git commit --allow-empty -m Initial
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
+
+# Multiple commits supply the oldest subject and combined messages in order.
+git add feature.txt
+gs branch create feature -m First -m 'First body'
+gs commit create --allow-empty -m Second -m 'Second body'
+gs --no-prompt branch submit --fill --no-draft
+stderr 'Created #1'
+cmp $WORK/invocation/draft $WORK/golden/combined-draft.txt
+
+# Without commits, the draft title is the branch name.
+gs branch create empty --no-commit
+gs --no-prompt branch submit --fill --no-draft
+stderr 'Created #2'
+cmp $WORK/invocation/draft $WORK/golden/empty-branch-draft.txt
+
+# Leaving the draft unchanged produces the normal CR title and body.
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature.txt --
+feature
+-- message.txt --
+{{.Draft}}
+-- golden/combined-draft.txt --
+First
+
+First
+
+First body
+
+Second
+
+Second body
+-- golden/empty-branch-draft.txt --
+empty
+
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "First",
+    "body": "First\n\nFirst body\n\nSecond\n\nSecond body",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "fadb53e8c4b13c5354079553880d97abba482d5d"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature",
+      "sha": "ab7204992f444dbd6280181f196765ddc00ce079"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "empty",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature",
+      "sha": "ab7204992f444dbd6280181f196765ddc00ce079"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "empty",
+      "sha": "ab7204992f444dbd6280181f196765ddc00ce079"
+    }
+  }
+]

@@ -54,6 +54,7 @@ Configure it with `git config spice.message.fill.command mock-message`.
   `{{.Operation}}` is the invoking operation,
   and `{{.Subject}}` is the selected range's head subject
   (or the current commit's subject for commit operations).
+  `{{.Draft}}` is the message file content before filling.
 - `MOCK_MESSAGE_RECORD` optionally names a directory for invocation records:
   `operation`, `range`, `draft`, `head`, `subject`, `staged`, and `unstaged`.
   Paths in `staged` and `unstaged` are relative to the worktree root.

@@ -1,4 +1,4 @@
-# branch squash --fill supplies an empty draft and the selected commit range.
+# branch squash --fill supplies the normal draft and the selected commit range.
 
 as 'Test <test@example.com>'
 at '2026-11-06T20:00:00Z'
@@ -8,8 +8,8 @@ git init
 git commit --allow-empty -m Initial
 gs repo init
 git add feature.txt
-gs branch create feature -m Feature
-gs commit create --allow-empty -m Followup
+gs branch create feature -m Feature -m 'Feature body'
+gs commit create --allow-empty -m Followup -m 'Followup body'
 
 git config spice.message.fill.command mock-message
 env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
@@ -19,7 +19,7 @@ git rev-parse main feature
 cp stdout $WORK/range.txt
 gs branch squash --fill
 cmp $WORK/invocation/range $WORK/range.txt
-cmp $WORK/invocation/draft $WORK/golden/empty.txt
+cmp $WORK/invocation/draft $WORK/golden/draft.txt
 grep '^branch-squash$' $WORK/invocation/operation
 git log -1 --format=%s
 stdout '^Generated squash$'
@@ -31,13 +31,29 @@ gs branch squash --fill
 git log -1 --format=%B
 cmp stdout $WORK/golden/builtin.txt
 
+# A command can leave the normal draft unchanged, including a single commit.
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/unchanged.txt
+gs branch squash --fill
+git log -1 --format=%B
+cmp stdout $WORK/golden/builtin.txt
+
 -- repo/feature.txt --
 feature
 -- message.txt --
 Generated squash
+-- unchanged.txt --
+{{.Draft}}
 -- golden/builtin.txt --
 Generated squash
 
 Second squash message
 
--- golden/empty.txt --
+-- golden/draft.txt --
+Feature
+
+Feature body
+
+Followup
+
+Followup body

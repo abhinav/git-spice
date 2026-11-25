@@ -1,0 +1,159 @@
+# Seed external message filling with a CR template without prompting.
+
+as 'Test <test@example.com>'
+at '2026-11-25T18:42:46Z'
+
+cd repo
+git init
+git add .shamhub CHANGE_TEMPLATE.md
+git commit -m Initial
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+git config spice.message.fill.command mock-message
+env MOCK_MESSAGE_RESPONSE=$WORK/message.txt
+env MOCK_MESSAGE_RECORD=$WORK/invocation
+
+# With multiple templates, fill picks the first without asking.
+git add one.txt
+gs branch create default -m Default -m 'Default body'
+gs --no-prompt branch submit --fill --no-draft
+stderr 'Created #1'
+cmp $WORK/invocation/draft $WORK/golden/default-draft.txt
+
+# The configured template overrides the default during batch submission too.
+git config spice.submit.template CHANGE_TEMPLATE.md
+git add two.txt
+gs branch create configured -m Configured -m 'Configured body'
+gs --no-prompt stack submit --fill --no-draft
+stderr 'Created #2'
+cmp $WORK/invocation/draft $WORK/golden/configured-draft.txt
+
+# An unavailable configured template warns and falls back without a prompt.
+git config spice.submit.template missing.md
+git add three.txt
+gs branch create fallback -m Fallback -m 'Fallback body'
+gs --no-prompt branch submit --fill --no-draft
+stderr 'Template "missing.md" not found'
+stderr 'Created #3'
+cmp $WORK/invocation/draft $WORK/golden/fallback-draft.txt
+
+# The edited body is used without appending another copy of the template.
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/.shamhub/CHANGE_TEMPLATE.md --
+## Default template
+
+Describe the change.
+-- repo/CHANGE_TEMPLATE.md --
+## Configured template
+
+Describe the tests.
+-- repo/one.txt --
+one
+-- repo/two.txt --
+two
+-- repo/three.txt --
+three
+-- message.txt --
+{{.Draft}}
+-- golden/default-draft.txt --
+Default
+
+Default body
+
+## Default template
+
+Describe the change.
+-- golden/configured-draft.txt --
+Configured
+
+Configured body
+
+## Configured template
+
+Describe the tests.
+-- golden/fallback-draft.txt --
+Fallback
+
+Fallback body
+
+## Default template
+
+Describe the change.
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Default",
+    "body": "Default body\n\n## Default template\n\nDescribe the change.",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "c66fa72cfe509f376f7671a6e11b57f8c0529247"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "default",
+      "sha": "df1aad8da7eaecf761b0855cb273afa98591557e"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Configured",
+    "body": "Configured body\n\n## Configured template\n\nDescribe the tests.",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "default",
+      "sha": "df1aad8da7eaecf761b0855cb273afa98591557e"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "configured",
+      "sha": "67cf93a9fb3d25323aab6428735c78bc622f7631"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "Fallback",
+    "body": "Fallback body\n\n## Default template\n\nDescribe the change.",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "configured",
+      "sha": "67cf93a9fb3d25323aab6428735c78bc622f7631"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "fallback",
+      "sha": "7cc6a1c2d949a266dd1c4331202dda29d84e592c"
+    }
+  }
+]

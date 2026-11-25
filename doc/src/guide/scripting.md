@@ -90,13 +90,15 @@ A nonzero exit status aborts the operation.
 `OPERATION` is the hyphenated name of the operation being performed.
 For example, `commit-create`, `branch-squash`, or `stack-submit`.
 
-| Operation | Initial file and Git context |
+The file starts with the draft git-spice would normally open in your editor.
+The command can edit it or leave it unchanged.
+
+| Operation | Git context |
 |---|---|
-| `commit-create` | Git prepares the initial message and index. Use `git diff --cached` to inspect the proposed commit. |
-| `commit-amend` | Git supplies the existing commit message. Use `git diff --cached` for the amendment and `git show HEAD` for the original commit. |
-| `branch-create` | Git prepares the message and index after checking out the selected base. Use `git diff --cached` to compare the index to that base. |
-| `branch-squash` | The message file starts empty. Use `git log "$3..$4"` to read the commits being squashed or `git diff "$3" "$4"` for their net changes. |
-| `branch-submit`, `stack-submit`, `upstack-submit`, `downstack-submit` | The message file starts empty. Use `git diff "$3" "$4"` for the proposed change. For batch submission, the command runs once per new CR. |
+| `commit-create`, `branch-create` | `git diff --cached` shows the proposed commit. For branch creation, HEAD is the selected base. |
+| `commit-amend` | `git diff --cached` shows the amendment; `git show HEAD` shows the original commit. |
+| `branch-squash` | `git log "$3..$4"` shows the commits; `git diff "$3" "$4"` shows their net changes. |
+| `branch-submit`, `stack-submit`, `upstack-submit`, `downstack-submit` | `git diff "$3" "$4"` shows the proposed change. The command runs once per new CR. |
 
 For commit creation, amendment, and branch creation,
 `git diff --cached` works the same way with or without `--all`.
@@ -119,9 +121,6 @@ A title alone supplies an empty body.
     git config spice.message.fill.command 'vim "$1"'
     gs commit create --fill
     ```
-
-    This is demonstrative only; we do not recommend this command
-    as it contains no information to write the commit message with.
 
 ??? example "Fill a message with a CLI assistant"
 
